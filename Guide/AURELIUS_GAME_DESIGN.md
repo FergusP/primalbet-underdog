@@ -4,11 +4,17 @@
 ## **1. GAME OVERVIEW**
 
 ### **Core Concept**
-Aurelius is a dual-mode PvP battle arena on Solana featuring two distinct experiences:
-- **Arena Blitz**: 90-second quick battles for instant action
-- **Glory Siege**: 5-minute strategic wars for epic moments
+<!-- MVP:START -->
+Aurelius is a real-time PvP battle arena on Solana where players send gladiator warriors into the colosseum, with the last survivor claiming the prize pool.
 
-Players send gladiator warriors into the colosseum, with the last survivor(s) claiming the prize pool.
+**MVP Mode**: Arena Blitz - 90-second quick battles for instant action
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE3 -->
+**Full Vision**: Dual-mode system with:
+- **Arena Blitz**: 90-second quick battles for instant action  
+- **Glory Siege**: 5-minute strategic wars for epic moments
+<!-- POST-MVP:END -->
 
 ### **Target Audience**
 - Primary: Crypto gamers seeking both quick thrills and strategic depth
@@ -34,7 +40,8 @@ DISCOVER → ENTER → BATTLE → SURVIVE → WIN/LOSE → COLLECT
 
 ### **Detailed Loop Breakdown**
 
-#### **🔥 Arena Blitz Mode (60-90 seconds)**
+<!-- MVP:START -->
+#### **🔥 Arena Blitz Mode (60-90 seconds) - MVP FOCUS**
 
 1. **DISCOVER** (5 seconds)
    - See active arena with current pot size
@@ -58,7 +65,9 @@ DISCOVER → ENTER → BATTLE → SURVIVE → WIN/LOSE → COLLECT
    - Single winner takes 95%
    - Quick stats display
    - "Play Again" for instant rematch
+<!-- MVP:END -->
 
+<!-- POST-MVP:PHASE3 -->
 #### **🏰 Glory Siege Mode (3-5 minutes)**
 
 1. **DISCOVER** (30 seconds)
@@ -90,6 +99,7 @@ DISCOVER → ENTER → BATTLE → SURVIVE → WIN/LOSE → COLLECT
    - Detailed statistics
    - Replay highlights available
    - Next game countdown
+<!-- POST-MVP:END -->
 
 ---
 
@@ -149,24 +159,35 @@ NO PDA CREATION ON CONNECT - Only UI updates
 
 ### **4.2 First Game Entry**
 
+<!-- MVP:START -->
 ```typescript
-FIRST JOIN FLOW:
+MVP FIRST JOIN FLOW:
 1. New player clicks "Join Game"
 2. Frontend builds transaction with TWO instructions:
    
    Instruction 1: create_player_profile
    - Creates Player PDA
    - User pays rent (~0.002 SOL)
-   - Initializes player stats
+   - Initializes basic stats (no XP)
    
    Instruction 2: join_game
-   - Uses existing game logic
-   - Deposits entry fee to escrow
-   - Creates warrior in arena
+   - Fixed 0.002 SOL entry fee
+   - Max 10 players
+   - Random spawn position
 
 3. User signs ONE transaction
 4. Both operations atomic - succeed or fail together
 ```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+```typescript
+FULL FIRST JOIN FLOW:
+- Includes XP initialization
+- Multi-warrior support
+- Choose spawn position
+```
+<!-- POST-MVP:END -->
 
 ### **4.3 Account Structure**
 
@@ -325,20 +346,26 @@ STRATEGIC PRESSURE:
 
 ### **6.2 POWER-UPS**
 
-#### **Arena Blitz Power-Ups**
+<!-- MVP:START -->
+#### **MVP Power-Ups (Blitz Only)**
 ```
 1. HEALTH POTION (Green orb)
-   - Spawn rate: Every 10 seconds
+   - Spawn rate: Every 15 seconds
    - Effect: +25 HP instant heal
    - Location: Random positions
-   - Visual: Glowing green pulse
+   - Visual: Simple green circle
 
 2. RAGE MODE (Red orb)
-   - Spawn rate: Every 20 seconds
+   - Spawn rate: Every 30 seconds
    - Effect: 2x damage for 10 seconds
-   - Location: Center bias (70%)
-   - Visual: Red aura around warrior
+   - Location: Center bias
+   - Visual: Simple red circle
+```
+<!-- MVP:END -->
 
+<!-- POST-MVP:PHASE2 -->
+#### **Additional Blitz Power-Ups**
+```
 3. SPEED BOOST (Blue orb)
    - Spawn rate: Every 15 seconds
    - Effect: 1.5x movement speed for 8 seconds
@@ -351,6 +378,7 @@ STRATEGIC PRESSURE:
    - Location: Exact center
    - Visual: Golden barrier
 ```
+<!-- POST-MVP:END -->
 
 #### **Glory Siege Power-Ups**
 ```
@@ -387,26 +415,47 @@ STRATEGIC PRESSURE:
 
 ### **6.3 COMBAT SYSTEM**
 
-#### **Base Combat (Both Modes)**
+<!-- MVP:START -->
+#### **MVP Combat System**
 ```
 DAMAGE CALCULATION:
 - Base warrior HP: 100
-- Melee damage: 5-8 (ProofNetwork VRF)
+- Fixed damage: 6 HP per hit
 - Attack speed: 1 hit/second
 - Range: Adjacent grid squares only
 
 MOVEMENT:
 - Base speed: 2 squares/second
 - Diagonal movement allowed
-- Collision blocks movement
+- Simple collision detection
+
+TARGETING PRIORITY:
+1. Closest enemy in range
+2. Random if tie
+```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+#### **Full Combat System**
+```
+DAMAGE CALCULATION:
+- Base warrior HP: 100
+- Variable damage: 5-8 (ProofNetwork VRF)
+- Attack speed: 1 hit/second
+- Range: Adjacent grid squares only
+
+MOVEMENT:
 - Client-side prediction + server reconciliation
+- Advanced pathfinding
 
 TARGETING PRIORITY:
 1. Lowest HP enemy in range
 2. Closest enemy if tie
 3. ProofNetwork VRF random if still tied
 ```
+<!-- POST-MVP:END -->
 
+<!-- POST-MVP:PHASE4 -->
 #### **Entry Timing Balance**
 ```
 EARLY ENTRY BONUSES:
@@ -437,24 +486,40 @@ SECOND WIND MIRACLE:
 - Limit: First 2 warriors per wallet
 - Visual: Phoenix rebirth animation
 ```
+<!-- POST-MVP:END -->
 
 ### **6.4 TIME LIMITS & PHASES**
 
-#### **Arena Blitz Phases (60-90s)**
+<!-- MVP:START -->
+#### **MVP Arena Blitz (90s only)**
 ```
-0:00 - 0:45: PURE CHAOS
+0:00 - 0:45: BATTLE PHASE
 - Instant combat on spawn
-- Power-ups every 10 seconds
+- 2 power-up types only
 - Full arena available
-- Fast-paced action
 
-0:45 - 1:30: FINAL SHOWDOWN
+0:45 - 1:30: FINAL PHASE
 - Arena shrinks to 50%
-- Environmental damage increases
-- Power-ups spawn faster
+- Environmental damage: 2 HP/3s
 - Last warrior standing wins
 ```
+<!-- MVP:END -->
 
+<!-- POST-MVP:PHASE2 -->
+#### **Full Arena Blitz Phases**
+```
+0:00 - 0:45: PURE CHAOS
+- All 4 power-up types
+- Dynamic spawn rates
+- Advanced effects
+
+0:45 - 1:30: FINAL SHOWDOWN
+- Faster power-up spawns
+- Increased environmental damage
+```
+<!-- POST-MVP:END -->
+
+<!-- POST-MVP:PHASE3 -->
 #### **Glory Siege Phases (3-5 min)**
 ```
 0:00 - 0:30: STRATEGY PHASE
@@ -487,7 +552,9 @@ SECOND WIND MIRACLE:
 - Top 3 positions decided
 - Epic finale
 ```
+<!-- POST-MVP:END -->
 
+<!-- POST-MVP:PHASE4 -->
 ### **6.5 SPECIAL EVENTS**
 
 #### **Chaos Equalizer Events (0.5-2% chance)**
@@ -533,6 +600,7 @@ ECONOMY MODIFIERS:
 - High Stakes: 10x everything
 - Robin Hood: Top player redistributes HP
 ```
+<!-- POST-MVP:END -->
 
 ---
 
@@ -1285,5 +1353,236 @@ AUDIO NEEDED:
 
 ---
 
+<!-- POST-MVP:PHASE2 -->
+## **17. XP & PROGRESSION SYSTEM**
+
+### **17.1 XP Rewards Structure**
+
+XP is earned through various in-game actions, rewarding both participation and skill:
+
+```typescript
+// Base XP Rewards
+const XP_REWARDS = {
+  // Participation
+  BASE_PARTICIPATION: 10,        // Just for playing
+  PER_MINUTE_SURVIVED: 10,       // Survival bonus
+  
+  // Combat
+  PER_ELIMINATION: 25,           // Each kill
+  DAMAGE_DEALT: 0.1,            // 1 XP per 10 damage
+  
+  // Objectives  
+  POWER_UP_COLLECTED: 5,         // Each power-up
+  TERRITORY_CONTROLLED: 15,      // Per zone per minute (Siege)
+  
+  // Victory Bonuses
+  BLITZ_WINNER: 100,            // Single winner
+  SIEGE_1ST: 150,               // First place
+  SIEGE_2ND: 75,                // Second place  
+  SIEGE_3RD: 50,                // Third place
+  
+  // Special Bonuses
+  UNDERDOG_MULTIPLIER: 2,       // 2x all XP
+  GODSLAYER_KILL: 50,          // Using Godslayer orb
+  SPECIAL_EVENT_SURVIVAL: 20,   // Surviving chaos events
+  FIRST_BLOOD: 15,             // First elimination
+  COMEBACK_VICTORY: 30,         // Win from <20 HP
+}
+```
+
+### **17.2 Level Calculation**
+
+```typescript
+// Level Formula
+function calculateLevel(xp: number): number {
+  return Math.floor(Math.sqrt(xp / 100));
+}
+
+// XP Requirements per Level
+LEVEL_REQUIREMENTS = {
+  1: 100,         // New warrior
+  5: 2500,        // Experienced
+  10: 10000,      // Veteran
+  15: 22500,      // Elite
+  20: 40000,      // Champion
+  25: 62500,      // Master
+  30: 90000,      // Grandmaster
+  40: 160000,     // Legend
+  50: 250000,     // Mythic
+  75: 562500,     // Immortal
+  100: 1000000,   // God of War
+}
+```
+
+### **17.3 XP Calculation Example**
+
+```typescript
+// Game Server XP Calculation
+class XPCalculator {
+  calculateGameXP(
+    warrior: WarriorStats,
+    gameMode: GameMode,
+    placement: number
+  ): XPBreakdown {
+    let baseXP = XP_REWARDS.BASE_PARTICIPATION;
+    let bonusXP = 0;
+    
+    // Survival time
+    const minutesSurvived = Math.floor(warrior.survivalTime / 60);
+    baseXP += minutesSurvived * XP_REWARDS.PER_MINUTE_SURVIVED;
+    
+    // Combat XP
+    baseXP += warrior.eliminations * XP_REWARDS.PER_ELIMINATION;
+    baseXP += Math.floor(warrior.damageDealt * XP_REWARDS.DAMAGE_DEALT);
+    
+    // Objectives
+    baseXP += warrior.powerUpsCollected * XP_REWARDS.POWER_UP_COLLECTED;
+    
+    // Victory bonuses
+    if (gameMode === GameMode.Blitz && placement === 1) {
+      bonusXP += XP_REWARDS.BLITZ_WINNER;
+    } else if (gameMode === GameMode.Siege) {
+      if (placement === 1) bonusXP += XP_REWARDS.SIEGE_1ST;
+      else if (placement === 2) bonusXP += XP_REWARDS.SIEGE_2ND;
+      else if (placement === 3) bonusXP += XP_REWARDS.SIEGE_3RD;
+    }
+    
+    // Special bonuses
+    if (warrior.gotFirstBlood) bonusXP += XP_REWARDS.FIRST_BLOOD;
+    if (warrior.godslayerKills > 0) {
+      bonusXP += warrior.godslayerKills * XP_REWARDS.GODSLAYER_KILL;
+    }
+    if (warrior.survivedSpecialEvents > 0) {
+      bonusXP += warrior.survivedSpecialEvents * XP_REWARDS.SPECIAL_EVENT_SURVIVAL;
+    }
+    
+    // Apply multipliers
+    let totalXP = baseXP + bonusXP;
+    if (warrior.wasUnderdog) {
+      totalXP *= XP_REWARDS.UNDERDOG_MULTIPLIER;
+    }
+    
+    return {
+      baseXP,
+      bonusXP,
+      multiplier: warrior.wasUnderdog ? 2 : 1,
+      totalXP,
+      breakdown: this.getDetailedBreakdown(warrior)
+    };
+  }
+}
+```
+
+### **17.4 Progression Milestones**
+
+```typescript
+// Milestone Rewards (For Future Implementation)
+const LEVEL_MILESTONES = {
+  // Titles
+  1: { type: 'TITLE', reward: 'Recruit' },
+  5: { type: 'TITLE', reward: 'Warrior' },
+  10: { type: 'TITLE', reward: 'Veteran' },
+  20: { type: 'TITLE', reward: 'Champion' },
+  50: { type: 'TITLE', reward: 'Legend' },
+  
+  // Cosmetic Unlocks (Future)
+  15: { type: 'COSMETIC', reward: 'Golden Aura' },
+  25: { type: 'COSMETIC', reward: 'Victory Banner' },
+  35: { type: 'COSMETIC', reward: 'Elite Warrior Skin' },
+  
+  // Feature Access (Future)
+  30: { type: 'ACCESS', reward: 'Tournament Qualifier' },
+  40: { type: 'ACCESS', reward: 'Private Lobbies' },
+  
+  // Prestige Levels (Future)
+  100: { type: 'PRESTIGE', reward: 'Prestige 1 - Reset with Legacy Badge' }
+}
+```
+
+### **17.5 XP Events & Multipliers**
+
+```typescript
+// Temporary XP Events
+const XP_EVENTS = {
+  DOUBLE_XP_WEEKEND: {
+    multiplier: 2,
+    duration: '48 hours',
+    frequency: 'Monthly'
+  },
+  
+  FIRST_WIN_BONUS: {
+    bonus: 50,
+    frequency: 'Daily',
+    resetTime: '00:00 UTC'
+  },
+  
+  HAPPY_HOUR: {
+    multiplier: 1.5,
+    timeSlot: '20:00-22:00 UTC',
+    frequency: 'Daily'
+  },
+  
+  SEASONAL_EVENTS: {
+    multiplier: 3,
+    examples: ['Launch Week', 'Holiday Special', 'Anniversary']
+  }
+}
+```
+
+### **17.6 Level Display & UI**
+
+```typescript
+// Player Profile Display
+interface PlayerLevelDisplay {
+  level: number;
+  currentXP: number;
+  xpToNextLevel: number;
+  progressPercentage: number;
+  title: string;
+  badge: string; // Visual indicator
+}
+
+// In-Game XP Notifications
+interface XPNotification {
+  action: string;        // "Elimination!"
+  xpGained: number;     // "+25 XP"
+  multiplier?: number;  // "2x Underdog!"
+  total: number;        // Running total for session
+}
+
+// Post-Game XP Summary
+interface PostGameXPSummary {
+  breakdown: {
+    participation: number;
+    combat: number;
+    objectives: number;
+    bonuses: number;
+  };
+  multipliers: string[];
+  totalGained: number;
+  levelProgress: {
+    before: number;
+    after: number;
+    leveledUp: boolean;
+  };
+}
+```
+
+### **17.7 Future XP Features**
+
+```
+PLANNED EXPANSIONS:
+- Seasonal Battle Pass with XP requirements
+- XP Boosters (purchasable/earnable)
+- Clan/Guild shared XP bonuses
+- Mentor system (bonus XP for helping new players)
+- Achievement-based XP rewards
+- Daily/Weekly XP challenges
+- Leaderboards by XP gain rate
+```
+<!-- POST-MVP:END -->
+
+---
+
 *Last Updated: [Current Date]*
-*Version: 1.0.0*
+*Version: 1.1.0*

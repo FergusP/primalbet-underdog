@@ -1,6 +1,18 @@
 # **AURELIUS SMART CONTRACT IMPLEMENTATION GUIDE**
 *Anchor Framework Architecture for Partner A*
 
+<!-- MVP:SUMMARY -->
+## **🚀 MVP Smart Contract Features**
+For the 3-5 day MVP, only implement:
+- **Basic Player Profile**: Just wins/earnings tracking
+- **Simple Game Escrow**: Single mode (Blitz), fixed 0.002 SOL entry
+- **Core Instructions**: create_player, join_game, end_game
+- **Single Winner**: No multi-winner or XP system
+- **10 Players Max**: Simplified for quick testing
+
+Skip for MVP: Multi-warrior, late entry, XP system, Siege mode, VRF integration
+<!-- MVP:END -->
+
 ## **📁 Contract Structure**
 
 ```
@@ -32,7 +44,8 @@ contracts/
 
 ## **🔑 Core Accounts**
 
-### **1. Program Config (Singleton)**
+<!-- MVP:START -->
+### **1. Program Config (Singleton) - MVP VERSION**
 
 ```rust
 // state/config.rs
@@ -42,40 +55,40 @@ use anchor_lang::prelude::*;
 pub struct ProgramConfig {
     pub authority: Pubkey,           // Admin wallet
     pub treasury: Pubkey,            // Fee collection
-    pub game_server: Pubkey,         // Authorized server
     pub fee_percentage: u8,          // Platform fee (3%)
     pub is_paused: bool,             // Emergency pause
-    pub total_games: u64,            // Lifetime counter
-    pub total_volume: u64,           // Total SOL processed
 }
 
 impl ProgramConfig {
     pub const SIZE: usize = 8 +     // discriminator
         32 +                         // authority
         32 +                         // treasury
-        32 +                         // game_server
         1 +                          // fee_percentage
-        1 +                          // is_paused
-        8 +                          // total_games
-        8;                           // total_volume
+        1;                           // is_paused
 }
 ```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+```rust
+// Additional fields for full version:
+pub game_server: Pubkey,         // Authorized server
+pub total_games: u64,            // Lifetime counter
+pub total_volume: u64,           // Total SOL processed
+```
+<!-- POST-MVP:END -->
 
 ### **2. Player Profile PDA**
 
+<!-- MVP:START -->
 ```rust
-// state/player.rs
+// state/player.rs - MVP VERSION
 #[account]
 pub struct PlayerProfile {
     pub authority: Pubkey,           // Player wallet
-    pub total_games: u32,            // Reduce from u64 to save space
+    pub total_games: u32,              
     pub games_won: u32,              
     pub total_earnings: u64,         // Keep u64 for precision
-    pub total_wagered: u64,
-    pub last_game: i64,              // Timestamp
-    pub highest_streak: u16,
-    pub current_streak: u16,
-    pub join_date: i64,
 }
 
 impl PlayerProfile {
@@ -83,21 +96,54 @@ impl PlayerProfile {
         32 +                         // authority
         4 +                          // total_games
         4 +                          // games_won
-        8 +                          // total_earnings
-        8 +                          // total_wagered
-        8 +                          // last_game
-        2 +                          // highest_streak
-        2 +                          // current_streak
-        8;                           // join_date
+        8;                           // total_earnings
         
     pub const SEED_PREFIX: &'static [u8] = b"player";
 }
 ```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+```rust
+// Additional fields for full version:
+pub total_wagered: u64,
+pub last_game: i64,              // Timestamp
+pub highest_streak: u16,
+pub current_streak: u16,
+pub join_date: i64,
+pub xp: u64,                     // Total XP earned
+pub level: u8,                   // Current level (0-255)
+pub xp_multiplier: u16,          // Base 100 = 1x (for events)
+
+pub fn calculate_level(xp: u64) -> u8 {
+    // Level = floor(sqrt(XP / 100))
+    let level = ((xp / 100) as f64).sqrt().floor() as u8;
+    level.min(255) // Cap at 255
+}
+```
+<!-- POST-MVP:END -->
 
 ### **3. Game Escrow Account**
 
+<!-- MVP:START -->
 ```rust
-// state/game.rs
+// state/game.rs - MVP VERSION (Blitz only, simplified)
+#[account]
+pub struct GameEscrow {
+    pub game_id: [u8; 16],           // UUID as bytes
+    pub total_pot: u64,              // Total prize pool
+    pub player_count: u8,            // Current players
+    pub state: GameState,            // Current state
+    pub created_at: i64,
+    pub ended_at: Option<i64>,
+    pub timeout_at: i64,             // Auto-refund time
+}
+```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+```rust
+// Full version with both modes
 #[account]
 pub struct GameEscrow {
     pub game_id: [u8; 16],           // UUID as bytes
@@ -148,10 +194,11 @@ pub enum GameState {
 }
 ```
 
+<!-- POST-MVP:PHASE3 -->
 ### **4. Warrior Entry (Temporary)**
 
 ```rust
-// state/game.rs
+// state/game.rs - NOT NEEDED FOR MVP (single warrior per player)
 #[account]
 pub struct WarriorEntry {
     pub game_id: [u8; 16],
@@ -172,15 +219,41 @@ impl WarriorEntry {
         1;                           // is_late_entry
 }
 ```
+<!-- POST-MVP:END -->
 
 ---
 
 ## **📝 Core Instructions**
 
+<!-- MVP:START -->
 ### **1. Initialize Program**
 
 ```rust
-// instructions/initialize.rs
+// instructions/initialize.rs - MVP VERSION
+pub fn initialize(
+    ctx: Context<Initialize>,
+    treasury: Pubkey,
+) -> Result<()> {
+    let program_config = &mut ctx.accounts.program_config;
+    
+    program_config.authority = ctx.accounts.authority.key();
+    program_config.treasury = treasury;
+    program_config.fee_percentage = 3; // 3%
+    program_config.is_paused = false;
+    
+    emit!(ProgramInitialized {
+        authority: program_config.authority,
+        treasury: program_config.treasury,
+    });
+    
+    Ok(())
+}
+```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+```rust
+// Full version with server authority and stats
 pub fn initialize(
     ctx: Context<Initialize>,
     config: ProgramConfigInput,
@@ -224,10 +297,33 @@ pub struct Initialize<'info> {
 }
 ```
 
+<!-- MVP:START -->
 ### **2. Create Player Profile**
 
 ```rust
-// instructions/player.rs
+// instructions/player.rs - MVP VERSION
+pub fn create_player_profile(ctx: Context<CreatePlayer>) -> Result<()> {
+    let player = &mut ctx.accounts.player_profile;
+    let clock = Clock::get()?;
+    
+    player.authority = ctx.accounts.player.key();
+    player.total_games = 0;
+    player.games_won = 0;
+    player.total_earnings = 0;
+    
+    emit!(PlayerCreated {
+        player: player.authority,
+        timestamp: clock.unix_timestamp,
+    });
+    
+    Ok(())
+}
+```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+```rust
+// Full version with all stats
 pub fn create_player_profile(ctx: Context<CreatePlayer>) -> Result<()> {
     let player = &mut ctx.accounts.player_profile;
     let clock = Clock::get()?;
@@ -241,6 +337,9 @@ pub fn create_player_profile(ctx: Context<CreatePlayer>) -> Result<()> {
     player.highest_streak = 0;
     player.current_streak = 0;
     player.join_date = clock.unix_timestamp;
+    player.xp = 0;
+    player.level = 0;
+    player.xp_multiplier = 100; // 1x multiplier
     
     emit!(PlayerCreated {
         player: player.authority,
@@ -268,10 +367,42 @@ pub struct CreatePlayer<'info> {
 }
 ```
 
+<!-- MVP:START -->
 ### **3. Create Game**
 
 ```rust
-// instructions/game.rs
+// instructions/game.rs - MVP VERSION (Blitz only)
+pub fn create_game(
+    ctx: Context<CreateGame>,
+    game_id: [u8; 16],
+) -> Result<()> {
+    let config = &ctx.accounts.program_config;
+    require!(!config.is_paused, ErrorCode::ProgramPaused);
+    
+    let game = &mut ctx.accounts.game_escrow;
+    let clock = Clock::get()?;
+    
+    game.game_id = game_id;
+    game.total_pot = 0;
+    game.player_count = 0;
+    game.state = GameState::Waiting;
+    game.created_at = clock.unix_timestamp;
+    game.ended_at = None;
+    game.timeout_at = clock.unix_timestamp + 600; // 10 min timeout
+    
+    emit!(GameCreated {
+        game_id,
+        created_at: clock.unix_timestamp,
+    });
+    
+    Ok(())
+}
+```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+```rust
+// Full version with mode selection
 pub fn create_game(
     ctx: Context<CreateGame>,
     game_id: [u8; 16],
@@ -312,11 +443,57 @@ pub fn create_game(
     Ok(())
 }
 ```
+<!-- POST-MVP:END -->
 
+<!-- MVP:START -->
+### **4. Join Game**
+
+```rust
+// instructions/game.rs - MVP VERSION (single warrior, fixed fee)
+pub fn join_game(ctx: Context<JoinGame>) -> Result<()> {
+    let game = &mut ctx.accounts.game_escrow;
+    let player_profile = &mut ctx.accounts.player_profile;
+    
+    // Check game state
+    require!(game.state == GameState::Waiting, ErrorCode::GameNotJoinable);
+    require!(game.player_count < 10, ErrorCode::GameFull); // MVP: 10 players max
+    
+    // Fixed entry fee for MVP
+    let entry_fee = 2_000_000; // 0.002 SOL
+    
+    // Transfer fee to escrow
+    let cpi_context = CpiContext::new(
+        ctx.accounts.system_program.to_account_info(),
+        system_program::Transfer {
+            from: ctx.accounts.player.to_account_info(),
+            to: ctx.accounts.game_escrow.to_account_info(),
+        },
+    );
+    system_program::transfer(cpi_context, entry_fee)?;
+    
+    // Update game state
+    game.total_pot += entry_fee;
+    game.player_count += 1;
+    
+    // Update player stats
+    player_profile.total_games += 1;
+    
+    emit!(PlayerJoined {
+        game_id: game.game_id,
+        player: ctx.accounts.player.key(),
+        entry_fee,
+    });
+    
+    Ok(())
+}
+```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE3 -->
 ### **4. Join Game (with Multi-Warrior Support)**
 
 ```rust
-// instructions/game.rs
+// Full version with multi-warrior and dynamic fees
 pub fn join_game(
     ctx: Context<JoinGame>,
     warrior_count: u8,
@@ -404,11 +581,63 @@ fn calculate_entry_fee(game: &GameEscrow, warrior_count: u8, current_time: i64) 
     total
 }
 ```
+<!-- POST-MVP:END -->
 
+<!-- MVP:START -->
+### **5. End Game**
+
+```rust
+// instructions/game.rs - MVP VERSION (single winner)
+pub fn end_game(
+    ctx: Context<EndGame>,
+    winner: Pubkey,
+) -> Result<()> {
+    let game = &mut ctx.accounts.game_escrow;
+    let config = &ctx.accounts.program_config;
+    let clock = Clock::get()?;
+    
+    // Verify game state
+    require!(game.state == GameState::Active, ErrorCode::GameNotActive);
+    
+    // Calculate distributions
+    let total_pot = game.total_pot;
+    let treasury_fee = (total_pot * config.fee_percentage as u64) / 100;
+    let prize = total_pot - treasury_fee;
+    
+    // Transfer treasury fee
+    **game.to_account_info().try_borrow_mut_lamports()? -= treasury_fee;
+    **ctx.accounts.treasury.try_borrow_mut_lamports()? += treasury_fee;
+    
+    // Transfer prize to winner
+    **game.to_account_info().try_borrow_mut_lamports()? -= prize;
+    **ctx.accounts.winner.try_borrow_mut_lamports()? += prize;
+    
+    // Update winner stats
+    let winner_profile = &mut ctx.accounts.winner_profile;
+    winner_profile.games_won += 1;
+    winner_profile.total_earnings += prize;
+    
+    // Update game state
+    game.state = GameState::Ended;
+    game.ended_at = Some(clock.unix_timestamp);
+    
+    emit!(GameEnded {
+        game_id: game.game_id,
+        winner,
+        prize,
+        timestamp: clock.unix_timestamp,
+    });
+    
+    Ok(())
+}
+```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
 ### **5. End Game (Multi-Winner Support)**
 
 ```rust
-// instructions/game.rs
+// Full version with multi-winner and VRF proof
 pub fn end_game(
     ctx: Context<EndGame>,
     winners: Vec<WinnerInfo>,
@@ -484,6 +713,70 @@ pub struct WinnerInfo {
     pub share_percentage: u8, // e.g., 60 for 60%
 }
 ```
+<!-- POST-MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+### **6. Update Player XP (Called After Game Ends)**
+
+```rust
+// instructions/player.rs - NOT IN MVP
+pub fn update_player_xp(
+    ctx: Context<UpdatePlayerXP>,
+    xp_earned: u64,
+) -> Result<()> {
+    let player = &mut ctx.accounts.player_profile;
+    let clock = Clock::get()?;
+    
+    // Apply multiplier (for events)
+    let final_xp = (xp_earned * player.xp_multiplier as u64) / 100;
+    
+    // Update XP and level
+    player.xp = player.xp.checked_add(final_xp).unwrap();
+    let new_level = PlayerProfile::calculate_level(player.xp);
+    
+    // Check for level up
+    if new_level > player.level {
+        emit!(PlayerLevelUp {
+            player: player.authority,
+            old_level: player.level,
+            new_level,
+            total_xp: player.xp,
+        });
+        player.level = new_level;
+    }
+    
+    emit!(XPGained {
+        player: player.authority,
+        xp_earned: final_xp,
+        total_xp: player.xp,
+        level: player.level,
+    });
+    
+    Ok(())
+}
+
+#[derive(Accounts)]
+pub struct UpdatePlayerXP<'info> {
+    #[account(
+        mut,
+        seeds = [PlayerProfile::SEED_PREFIX, player.key().as_ref()],
+        bump,
+        has_one = authority
+    )]
+    pub player_profile: Account<'info, PlayerProfile>,
+    
+    pub player: Signer<'info>,
+    
+    /// CHECK: Game server authority
+    #[account(
+        constraint = server.key() == ctx.accounts.program_config.game_server
+    )]
+    pub server: Signer<'info>,
+    
+    pub program_config: Account<'info, ProgramConfig>,
+}
+```
+<!-- POST-MVP:END -->
 
 ---
 
@@ -656,6 +949,17 @@ describe("aurelius", () => {
 
 ## **🚀 Deployment Checklist**
 
+<!-- MVP:START -->
+### **MVP Deployment**
+- [ ] Basic tests passing (create player, join game, end game)
+- [ ] Treasury wallet secured
+- [ ] Emergency pause tested
+- [ ] Basic timeout mechanism tested
+- [ ] Deploy to devnet first
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE4 -->
+### **Full Production Deployment**
 - [ ] All tests passing
 - [ ] Security audit complete
 - [ ] Upgrade authority set to multisig
@@ -665,6 +969,7 @@ describe("aurelius", () => {
 - [ ] Timeout refunds tested
 - [ ] Gas costs optimized
 - [ ] Program frozen (no upgrades)
+<!-- POST-MVP:END -->
 
 ---
 

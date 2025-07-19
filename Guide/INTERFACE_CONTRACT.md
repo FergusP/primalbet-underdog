@@ -5,6 +5,18 @@
 **Last Updated**: [Current Date]  
 **Status**: ACTIVE
 
+<!-- MVP:SUMMARY -->
+## **🚀 MVP Interface Features**
+For the 3-5 day MVP, only implement:
+- **Basic WebSocket**: Simple auth (just wallet), no signatures
+- **Single Game Mode**: Blitz only (no mode selection)
+- **Simple Game State**: Warriors, 2 power-ups, basic arena
+- **Fixed Damage**: 6 HP per hit (no veteran bonus)
+- **Single Winner**: No multi-winner or XP events
+
+Skip for MVP: Siege mode, veteran bonuses, special modifiers, XP system, multi-warrior
+<!-- MVP:END -->
+
 ---
 
 ## **⚠️ SACRED RULES**
@@ -19,9 +31,32 @@
 
 ## **🔌 WebSocket Protocol**
 
-### **Connection Handshake**
+<!-- MVP:START -->
+### **Connection Handshake (MVP Version)**
 ```typescript
-// Client → Server
+// Client → Server - MVP VERSION
+{
+  type: 'connect',
+  data: {
+    wallet: string // Just wallet address, no signature verification
+  }
+}
+
+// Server → Client - MVP VERSION
+{
+  type: 'connected',
+  data: {
+    sessionId: string,
+    gameState: GameState | null
+  }
+}
+```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+### **Connection Handshake (Full Version)**
+```typescript
+// Full version with signature verification
 {
   type: 'connect',
   data: {
@@ -42,10 +77,42 @@
   }
 }
 ```
+<!-- POST-MVP:END -->
 
 ### **Game Events**
 
-#### **Game State Update** (Server → Client)
+<!-- MVP:START -->
+#### **Game State Update - MVP VERSION** (Server → Client)
+```typescript
+{
+  type: 'gameStateUpdate',
+  data: {
+    gameId: string,
+    phase: 'waiting' | 'battle' | 'ended',
+    timeRemaining: number,
+    warriors: Array<{
+      warriorId: string,
+      player: string,
+      position: { x: number, y: number },
+      hp: number,
+      maxHp: 100,
+      effects: Array<'rage'>, // Only rage power-up for MVP
+      isAlive: boolean
+    }>,
+    powerUps: Array<{
+      powerUpId: string,
+      type: 'health' | 'rage', // Only 2 types for MVP
+      position: { x: number, y: number },
+      isActive: boolean
+    }>,
+    arenaRadius: 300 // Fixed size for MVP, no shrinking
+  }
+}
+```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+#### **Game State Update - FULL VERSION** (Server → Client)
 ```typescript
 {
   type: 'gameStateUpdate',
@@ -83,9 +150,97 @@
   }
 }
 ```
+<!-- POST-MVP:END -->
 
-#### **Warrior Spawned** (Server → Client)
+<!-- MVP:START -->
+#### **Warrior Spawned - MVP VERSION** (Server → Client)
 ```typescript
+{
+  type: 'warriorSpawned',
+  data: {
+    warriorId: string,
+    player: string,
+    position: { x: number, y: number },
+    hp: 100, // Always 100 for MVP
+    maxHp: 100
+  }
+}
+```
+
+#### **Warrior Movement - MVP VERSION** (Bidirectional)
+```typescript
+// Client → Server (Request)
+{
+  type: 'moveWarrior',
+  data: {
+    direction: { x: -1 | 0 | 1, y: -1 | 0 | 1 }
+  }
+}
+
+// Server → Client (Broadcast)
+{
+  type: 'warriorMoved',
+  data: {
+    warriorId: string,
+    position: { x: number, y: number }
+  }
+}
+```
+
+#### **Combat Events - MVP VERSION** (Server → Client)
+```typescript
+{
+  type: 'combatEvent',
+  data: {
+    attackerId: string,
+    targetId: string,
+    damage: 6, // Fixed damage for MVP
+    newHp: number
+  }
+}
+```
+
+#### **Power-Up Events - MVP VERSION** (Server → Client)
+```typescript
+// Spawn
+{
+  type: 'powerUpSpawned',
+  data: {
+    powerUpId: string,
+    type: 'health' | 'rage', // Only 2 types for MVP
+    position: { x: number, y: number }
+  }
+}
+
+// Collection
+{
+  type: 'powerUpCollected',
+  data: {
+    powerUpId: string,
+    warriorId: string,
+    type: 'health' | 'rage'
+  }
+}
+```
+
+#### **Game End - MVP VERSION** (Server → Client)
+```typescript
+{
+  type: 'gameEnded',
+  data: {
+    gameId: string,
+    winner: string,
+    prize: number
+  }
+}
+```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+#### **Full Version Events**
+
+```typescript
+// Warrior Spawned (with late entry)
 {
   type: 'warriorSpawned',
   data: {
@@ -99,20 +254,8 @@
     timestamp: number
   }
 }
-```
 
-#### **Warrior Movement** (Bidirectional)
-```typescript
-// Client → Server (Request)
-{
-  type: 'moveWarrior',
-  data: {
-    direction: { x: -1 | 0 | 1, y: -1 | 0 | 1 },
-    timestamp: number
-  }
-}
-
-// Server → Client (Broadcast)
+// Enhanced Movement
 {
   type: 'warriorMoved',
   data: {
@@ -122,10 +265,8 @@
     timestamp: number
   }
 }
-```
 
-#### **Combat Events** (Server → Client)
-```typescript
+// Full Combat Events
 {
   type: 'combatEvent',
   data: {
@@ -138,11 +279,8 @@
     timestamp: number
   }
 }
-```
 
-#### **Power-Up Events** (Server → Client)
-```typescript
-// Spawn
+// Enhanced Power-ups
 {
   type: 'powerUpSpawned',
   data: {
@@ -154,7 +292,6 @@
   }
 }
 
-// Collection
 {
   type: 'powerUpCollected',
   data: {
@@ -179,7 +316,29 @@
     duration?: number
   }
 }
+
+// Full Game End Event
+{
+  type: 'gameEnded',
+  data: {
+    gameId: string,
+    gameMode: 'blitz' | 'siege',
+    winners: Array<{
+      player: string,
+      placement: number,
+      prizeShare: number
+    }>,
+    xpGained: Array<{
+      player: string,
+      xp: number,
+      newLevel: number
+    }>
+  }
+}
 ```
+<!-- POST-MVP:END -->
+
+---
 
 #### **Elimination Event** (Server → Client)
 ```typescript
@@ -221,8 +380,32 @@
       damageDealt: number,
       territoriesControlled?: number // Siege only
     }>,
+    xpGained: Array<{
+      player: string,
+      baseXP: number,
+      bonusXP: number,
+      multiplier: number,
+      totalXP: number,
+      newLevel?: number,
+      leveledUp: boolean
+    }>,
     vrfProof?: string,
     nextGameStart?: number // For siege mode scheduling
+  }
+}
+```
+
+#### **XP Update Event** (Server → Client)
+```typescript
+{
+  type: 'xpGained',
+  data: {
+    player: string,
+    action: string, // "Elimination", "Power-up Collected", etc.
+    xpAmount: number,
+    totalSessionXP: number,
+    currentLevel: number,
+    xpToNextLevel: number
   }
 }
 ```
@@ -280,7 +463,11 @@ Response: {
   totalEarnings: number,
   winRate: number,
   averagePlacement: number,
-  currentStreak: number
+  currentStreak: number,
+  xp: number,
+  level: number,
+  xpToNextLevel: number,
+  levelTitle: string
 }
 ```
 
@@ -511,6 +698,7 @@ enum ErrorCode {
 |---------|------|---------|-------------|
 | 1.0.0 | [Date] | Initial interface contract | Partner A & B |
 | 2.0.0 | [Current Date] | Added dual-mode system (Blitz/Siege), underdog mechanics, special events | Partner A |
+| 2.1.0 | [Current Date] | Added XP & Progression system, level tracking, XP events | Partner A |
 
 ---
 

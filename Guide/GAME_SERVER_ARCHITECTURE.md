@@ -1,6 +1,19 @@
 # **AURELIUS GAME SERVER ARCHITECTURE**
 *High-Performance Real-Time Backend Implementation*
 
+<!-- MVP:SUMMARY -->
+## **🚀 MVP Server Features**
+For the 3-5 day MVP, only implement:
+- **Basic Node.js + Socket.io**: Simple game state management
+- **Single Redis Instance**: No cluster needed for MVP
+- **Arena Blitz Only**: 90s games, max 10 players
+- **Fixed Damage**: 6 HP per hit (no VRF)
+- **2 Power-ups**: Health & Rage only
+- **Basic Movement**: Simple validation, no anti-cheat
+
+Skip for MVP: Siege mode, XP system, ProofNetwork VRF, Redis cluster, anti-cheat, metrics
+<!-- MVP:END -->
+
 ## **🏗️ Server Architecture Overview**
 
 ```
@@ -29,6 +42,7 @@
 
 ## **📁 Server Structure**
 
+<!-- MVP:START -->
 ```
 server/
 ├── src/
@@ -36,26 +50,40 @@ server/
 │   ├── config/
 │   │   ├── env.ts              # Environment config
 │   │   ├── redis.ts            # Redis connection
-│   │   ├── database.ts         # PostgreSQL setup
 │   │   └── solana.ts           # RPC connections
 │   ├── game/
 │   │   ├── GameManager.ts      # Core game orchestration
-│   │   ├── GameInstance.ts     # Individual game logic
-│   │   ├── BlitzGame.ts        # Blitz mode specifics
-│   │   ├── SiegeGame.ts        # Siege mode specifics
-│   │   ├── CombatEngine.ts     # Combat calculations
-│   │   └── PowerUpSystem.ts    # Power-up management
+│   │   ├── GameInstance.ts     # Individual game logic (Blitz only)
+│   │   ├── CombatEngine.ts     # Simple combat (fixed damage)
+│   │   └── PowerUpSystem.ts    # Basic power-ups (2 types)
 │   ├── entities/
 │   │   ├── Warrior.ts          # Warrior class
 │   │   ├── Arena.ts            # Arena management
 │   │   └── PowerUp.ts          # Power-up class
 │   ├── websocket/
 │   │   ├── SocketManager.ts    # WebSocket orchestration
-│   │   ├── GameEvents.ts       # Event handlers
+│   │   └── GameEvents.ts       # Event handlers
+│   ├── blockchain/
+│   │   └── SolanaService.ts    # Basic chain interactions
+│   └── utils/
+│       ├── logger.ts           # Simple logging
+│       └── constants.ts        # Game constants
+├── package.json
+```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+```
+Additional files for full version:
+│   ├── config/
+│   │   └── database.ts         # PostgreSQL setup
+│   ├── game/
+│   │   ├── BlitzGame.ts        # Blitz mode specifics
+│   │   ├── SiegeGame.ts        # Siege mode specifics
+│   ├── websocket/
 │   │   ├── ClientManager.ts    # Client connections
 │   │   └── MessageValidator.ts # Input validation
 │   ├── blockchain/
-│   │   ├── SolanaService.ts    # Chain interactions
 │   │   ├── GameSettlement.ts   # Result submission
 │   │   └── WalletAuth.ts       # Wallet verification
 │   ├── services/
@@ -64,22 +92,72 @@ server/
 │   │   ├── AntiCheatService.ts # Security layer
 │   │   └── MetricsService.ts   # Performance tracking
 │   └── utils/
-│       ├── logger.ts           # Structured logging
-│       ├── errors.ts           # Error handling
-│       └── constants.ts        # Game constants
+│       └── errors.ts           # Error handling
 ├── tests/
 ├── scripts/
-└── package.json
 ```
+<!-- POST-MVP:END -->
 
 ---
 
 ## **🎮 Core Game Server Implementation**
 
+<!-- MVP:START -->
 ### **1. Server Entry Point**
 
 ```typescript
-// src/index.ts
+// src/index.ts - MVP VERSION
+import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import Redis from 'ioredis';
+import { GameManager } from './game/GameManager';
+import { SocketManager } from './websocket/SocketManager';
+import { SolanaService } from './blockchain/SolanaService';
+
+const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    credentials: true
+  }
+});
+
+// Initialize single Redis instance (no cluster for MVP)
+const redis = new Redis({
+  host: process.env.REDIS_HOST || 'localhost',
+  port: 6379
+});
+
+// Initialize core services
+const solanaService = new SolanaService();
+const gameManager = new GameManager(redis, solanaService);
+const socketManager = new SocketManager(io, gameManager);
+
+// Basic health check
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: Date.now(),
+    activeGames: gameManager.getActiveGameCount()
+  });
+});
+
+// Start server
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  
+  // Start game loops
+  gameManager.startGameLoops();
+});
+```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+```typescript
+// Full version with Fastify and Redis cluster
 import Fastify from 'fastify';
 import socketIO from 'socket.io';
 import Redis from 'ioredis';
@@ -138,10 +216,112 @@ const start = async () => {
 
 start();
 ```
+<!-- POST-MVP:END -->
 
+<!-- MVP:START -->
 ### **2. Game Manager**
 
 ```typescript
+// src/game/GameManager.ts - MVP VERSION
+import { Redis } from 'ioredis';
+import { GameInstance } from './GameInstance';
+import { v4 as uuidv4 } from 'uuid';
+
+export class GameManager {
+  private activeGames: Map<string, GameInstance> = new Map();
+  
+  constructor(
+    private redis: Redis,
+    private solanaService: SolanaService
+  ) {}
+  
+  async createGame(): Promise<GameInstance> {
+    const gameId = uuidv4();
+    
+    // Create on-chain game escrow
+    const escrowAddress = await this.solanaService.createGameEscrow(gameId);
+    
+    // Create game instance (Blitz only for MVP)
+    const game = new GameInstance(gameId, escrowAddress);
+    
+    this.activeGames.set(gameId, game);
+    
+    // Store in Redis
+    await this.redis.setex(
+      `game:${gameId}`,
+      3600, // 1 hour expiry
+      JSON.stringify(game.getState())
+    );
+    
+    return game;
+  }
+  
+  async joinGame(
+    gameId: string,
+    playerId: string
+  ): Promise<JoinResult> {
+    const game = this.activeGames.get(gameId);
+    if (!game) throw new Error('Game not found');
+    
+    // Verify on-chain payment
+    const txSignature = await this.solanaService.verifyGameEntry(
+      gameId,
+      playerId
+    );
+    
+    // Add single warrior
+    const warrior = game.addWarrior(playerId);
+    
+    // Update Redis
+    await this.updateGameState(gameId, game);
+    
+    return { warrior, txSignature };
+  }
+  
+  startGameLoops(): void {
+    // Game update loop - 20 FPS for MVP
+    setInterval(() => this.updateAllGames(), 50);
+    
+    // Cleanup finished games
+    setInterval(() => this.cleanupGames(), 30000);
+  }
+  
+  private async updateAllGames(): Promise<void> {
+    for (const [gameId, game] of this.activeGames) {
+      if (game.isActive()) {
+        game.update(Date.now());
+        await this.updateGameState(gameId, game);
+      }
+    }
+  }
+  
+  private async updateGameState(
+    gameId: string, 
+    game: GameInstance
+  ): Promise<void> {
+    const state = game.getState();
+    
+    // Update Redis
+    await this.redis.setex(
+      `game:${gameId}`,
+      300, // 5 min expiry
+      JSON.stringify(state)
+    );
+    
+    // Broadcast to connected clients
+    this.emit('gameStateUpdate', { gameId, state });
+  }
+  
+  getActiveGameCount(): number {
+    return this.activeGames.size;
+  }
+}
+```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+```typescript
+// Full version with dual modes and XP
 // src/game/GameManager.ts
 import { Redis } from 'ioredis';
 import { BlitzGame } from './BlitzGame';
@@ -152,11 +332,14 @@ export class GameManager {
   private activeGames: Map<string, GameInstance> = new Map();
   private blitzQueue: Set<string> = new Set();
   private siegeSchedule: Map<number, string> = new Map();
+  private xpCalculator: XPCalculator;
   
   constructor(
     private redis: Redis,
     private solanaService: SolanaService
-  ) {}
+  ) {
+    this.xpCalculator = new XPCalculator();
+  }
   
   async createGame(mode: GameMode): Promise<GameInstance> {
     const gameId = uuidv4();
@@ -257,16 +440,180 @@ export class GameManager {
   }
 }
 ```
+<!-- POST-MVP:END -->
 
-### **3. Game Instance Base Class**
+<!-- MVP:START -->
+### **3. Game Instance (Simple MVP Version)**
 
 ```typescript
-// src/game/GameInstance.ts
+// src/game/GameInstance.ts - MVP VERSION (Blitz only)
 import { Warrior } from '../entities/Warrior';
 import { Arena } from '../entities/Arena';
 import { PowerUpSystem } from './PowerUpSystem';
 import { CombatEngine } from './CombatEngine';
 
+export class GameInstance {
+  private warriors: Map<string, Warrior> = new Map();
+  private arena: Arena;
+  private powerUpSystem: PowerUpSystem;
+  private combatEngine: CombatEngine;
+  private startTime?: number;
+  private endTime?: number;
+  private phase: GamePhase = GamePhase.Waiting;
+  
+  constructor(
+    public readonly id: string,
+    public readonly escrowAddress: string
+  ) {
+    this.arena = new Arena();
+    this.powerUpSystem = new PowerUpSystem();
+    this.combatEngine = new CombatEngine();
+  }
+  
+  update(currentTime: number): void {
+    if (!this.startTime) {
+      // Start game when we have enough players
+      if (this.warriors.size >= 2) {
+        this.startTime = currentTime;
+        this.phase = GamePhase.Active;
+      }
+      return;
+    }
+    
+    const elapsed = currentTime - this.startTime;
+    
+    // End game after 90 seconds
+    if (elapsed >= 90000) {
+      this.endGame();
+      return;
+    }
+    
+    // Update systems
+    this.updateWarriorMovement();
+    this.updateCombat();
+    this.powerUpSystem.update(currentTime);
+    this.checkPowerUpCollections();
+    
+    // Check for winner
+    const alive = this.getAliveWarriors();
+    if (alive.length === 1) {
+      this.endGame();
+    }
+  }
+  
+  addWarrior(playerId: string): Warrior {
+    const warriorId = `${playerId}`;
+    
+    // Random spawn position
+    const position = this.arena.getRandomSpawnPosition();
+    
+    // Create warrior with 100 HP
+    const warrior = new Warrior({
+      id: warriorId,
+      playerId,
+      position,
+      hp: 100,
+      maxHp: 100
+    });
+    
+    this.warriors.set(warriorId, warrior);
+    return warrior;
+  }
+  
+  canJoin(): boolean {
+    return this.phase === GamePhase.Waiting && this.warriors.size < 10;
+  }
+  
+  isActive(): boolean {
+    return this.phase === GamePhase.Active;
+  }
+  
+  getState(): any {
+    return {
+      id: this.id,
+      phase: this.phase,
+      warriors: Array.from(this.warriors.values()).map(w => w.serialize()),
+      powerUps: this.powerUpSystem.getActivePowerUps(),
+      startTime: this.startTime,
+      timeRemaining: this.startTime ? 90 - ((Date.now() - this.startTime) / 1000) : 90
+    };
+  }
+  
+  private updateCombat(): void {
+    // Simple combat for MVP
+    for (const attacker of this.warriors.values()) {
+      if (!attacker.isAlive() || attacker.isOnCooldown()) continue;
+      
+      const target = this.combatEngine.findTarget(
+        attacker,
+        Array.from(this.warriors.values())
+      );
+      
+      if (target) {
+        // Fixed damage for MVP
+        target.takeDamage(6);
+        attacker.setAttackCooldown();
+        
+        // Check for elimination
+        if (!target.isAlive()) {
+          this.handleElimination(attacker, target);
+        }
+      }
+    }
+  }
+  
+  private handleElimination(killer: Warrior, victim: Warrior): void {
+    // Killer gets HP reward
+    killer.heal(5);
+    
+    // Remove victim
+    this.warriors.delete(victim.id);
+    
+    // Emit event
+    this.emit('warriorEliminated', {
+      victim: victim.id,
+      killer: killer.id
+    });
+  }
+  
+  private checkPowerUpCollections(): void {
+    for (const warrior of this.warriors.values()) {
+      if (!warrior.isAlive()) continue;
+      
+      const powerUp = this.powerUpSystem.checkCollection(warrior.position);
+      if (powerUp) {
+        this.applyPowerUp(warrior, powerUp);
+      }
+    }
+  }
+  
+  private async endGame(): Promise<void> {
+    this.phase = GamePhase.Ended;
+    this.endTime = Date.now();
+    
+    // Get winner
+    const alive = this.getAliveWarriors();
+    const winner = alive.length === 1 ? alive[0] : 
+                  alive.sort((a, b) => b.hp - a.hp)[0];
+    
+    // Submit result to blockchain
+    await this.solanaService.submitGameResult(this.id, winner.playerId);
+    
+    // Emit event
+    this.emit('gameEnded', {
+      gameId: this.id,
+      winner: winner.playerId
+    });
+  }
+}
+```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+### **3. Game Instance Base Class (Full Version)**
+
+```typescript
+// Full abstract class with XP and dual mode support
 export abstract class GameInstance {
   protected warriors: Map<string, Warrior> = new Map();
   protected arena: Arena;
@@ -382,13 +729,65 @@ export abstract class GameInstance {
       timeRemaining: this.getTimeRemaining()
     };
   }
+  
+  async endGame(): Promise<void> {
+    this.phase = GamePhase.Ended;
+    this.endTime = Date.now();
+    
+    // Get final placements
+    const winners = this.getWinners();
+    const allWarriors = this.getAllWarriorStats();
+    
+    // Calculate XP for all participants
+    const xpResults = await this.calculateAllXP(allWarriors, winners);
+    
+    // Submit results to blockchain
+    await this.submitGameResults(winners, xpResults);
+    
+    // Emit game ended event
+    this.emit('gameEnded', {
+      gameId: this.id,
+      gameMode: this.mode,
+      winners,
+      xpGained: xpResults,
+      finalPot: this.getTotalPot()
+    });
+  }
+  
+  private async calculateAllXP(
+    warriors: WarriorStats[],
+    winners: WinnerInfo[]
+  ): Promise<XPResult[]> {
+    const xpResults = [];
+    
+    for (const warrior of warriors) {
+      // Determine placement
+      const placement = winners.findIndex(w => w.playerId === warrior.playerId) + 1;
+      
+      // Calculate XP using XPCalculator
+      const xpResult = this.gameManager.xpCalculator.calculateWarriorXP(
+        warrior,
+        this.mode,
+        placement || warriors.length // If not in winners, last place
+      );
+      
+      xpResults.push({
+        player: warrior.playerId,
+        ...xpResult
+      });
+    }
+    
+    return xpResults;
+  }
 }
 ```
+<!-- POST-MVP:END -->
 
+<!-- POST-MVP:PHASE2 -->
 ### **4. Blitz Mode Implementation**
 
 ```typescript
-// src/game/BlitzGame.ts
+// src/game/BlitzGame.ts - NOT NEEDED FOR MVP
 export class BlitzGame extends GameInstance {
   private static readonly DURATION = 90000; // 90 seconds
   private static readonly SHRINK_TIME = 45000; // 45 seconds
@@ -466,11 +865,42 @@ export class BlitzGame extends GameInstance {
   }
 }
 ```
+<!-- POST-MVP:END -->
 
+<!-- MVP:START -->
 ### **5. Combat Engine**
 
 ```typescript
-// src/game/CombatEngine.ts
+// src/game/CombatEngine.ts - MVP VERSION (no VRF)
+export class CombatEngine {
+  findTarget(attacker: Warrior, allWarriors: Warrior[]): Warrior | null {
+    const inRange = allWarriors.filter(w => 
+      w.id !== attacker.id &&
+      w.isAlive() &&
+      this.isInRange(attacker.position, w.position)
+    );
+    
+    if (inRange.length === 0) return null;
+    
+    // Priority: Lowest HP
+    const byHP = inRange.sort((a, b) => a.hp - b.hp);
+    return byHP[0];
+  }
+  
+  private isInRange(pos1: Position, pos2: Position): boolean {
+    const dx = Math.abs(pos1.x - pos2.x);
+    const dy = Math.abs(pos1.y - pos2.y);
+    return dx <= 1 && dy <= 1; // Adjacent cells
+  }
+}
+```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+### **5. Combat Engine (Full Version)**
+
+```typescript
+// Full version with VRF and modifiers
 import { ProofNetworkVRF } from '../services/ProofNetworkVRF';
 
 export class CombatEngine {
@@ -531,11 +961,96 @@ export class CombatEngine {
   }
 }
 ```
+<!-- POST-MVP:END -->
 
+<!-- MVP:START -->
 ### **6. WebSocket Handler**
 
 ```typescript
-// src/websocket/SocketManager.ts
+// src/websocket/SocketManager.ts - MVP VERSION
+import { Server } from 'socket.io';
+
+export class SocketManager {
+  private io: Server;
+  private clients: Map<string, ClientInfo> = new Map();
+  
+  constructor(io: Server, private gameManager: GameManager) {
+    this.io = io;
+    this.setupHandlers();
+  }
+  
+  private setupHandlers(): void {
+    this.io.on('connection', async (socket) => {
+      console.log(`Client connected: ${socket.id}`);
+      
+      // Simple auth - just store wallet
+      socket.on('auth', async (data) => {
+        const { wallet } = data;
+        
+        this.clients.set(socket.id, {
+          wallet,
+          socketId: socket.id
+        });
+        
+        socket.emit('authenticated', { wallet });
+      });
+      
+      // Join game
+      socket.on('joinGame', async (data) => {
+        try {
+          const client = this.clients.get(socket.id);
+          if (!client) {
+            socket.emit('error', { code: 'NOT_AUTHENTICATED' });
+            return;
+          }
+          
+          const result = await this.gameManager.joinGame(
+            data.gameId,
+            client.wallet
+          );
+          
+          socket.join(`game:${data.gameId}`);
+          socket.emit('joinedGame', result);
+          
+        } catch (error) {
+          socket.emit('error', { 
+            code: 'JOIN_FAILED',
+            message: error.message 
+          });
+        }
+      });
+      
+      // Move warrior
+      socket.on('moveWarrior', async (data) => {
+        const client = this.clients.get(socket.id);
+        if (!client) return;
+        
+        // Process movement
+        await this.gameManager.processMove(
+          data.gameId,
+          client.wallet,
+          data.direction
+        );
+      });
+      
+      socket.on('disconnect', () => {
+        this.clients.delete(socket.id);
+      });
+    });
+  }
+  
+  broadcastToGame(gameId: string, event: string, data: any): void {
+    this.io.to(`game:${gameId}`).emit(event, data);
+  }
+}
+```
+<!-- MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+### **6. WebSocket Handler (Full Version)**
+
+```typescript
+// Full version with validation and security
 import { Server } from 'socket.io';
 import { verifyWallet } from '../blockchain/WalletAuth';
 import { MessageValidator } from './MessageValidator';
@@ -657,11 +1172,13 @@ export class SocketManager {
   }
 }
 ```
+<!-- POST-MVP:END -->
 
+<!-- POST-MVP:PHASE2 -->
 ### **7. Anti-Cheat Service**
 
 ```typescript
-// src/services/AntiCheatService.ts
+// src/services/AntiCheatService.ts - NOT IN MVP
 export class AntiCheatService {
   private moveHistory: Map<string, MoveRecord[]> = new Map();
   private suspiciousActivity: Map<string, number> = new Map();
@@ -734,10 +1251,204 @@ export class AntiCheatService {
 }
 ```
 
-### **8. ProofNetwork Integration**
+### **8. XP Calculation Service**
 
 ```typescript
-// src/services/ProofNetworkVRF.ts
+// src/services/XPCalculator.ts - NOT IN MVP
+export class XPCalculator {
+  // XP reward constants
+  private readonly XP_REWARDS = {
+    BASE_PARTICIPATION: 10,
+    PER_MINUTE_SURVIVED: 10,
+    PER_ELIMINATION: 25,
+    DAMAGE_DEALT_RATIO: 0.1, // 1 XP per 10 damage
+    POWER_UP_COLLECTED: 5,
+    TERRITORY_CONTROLLED: 15, // Per zone per minute
+    
+    // Victory bonuses
+    BLITZ_WINNER: 100,
+    SIEGE_1ST: 150,
+    SIEGE_2ND: 75,
+    SIEGE_3RD: 50,
+    
+    // Special bonuses
+    UNDERDOG_MULTIPLIER: 2,
+    GODSLAYER_KILL: 50,
+    SPECIAL_EVENT_SURVIVAL: 20,
+    FIRST_BLOOD: 15,
+    COMEBACK_VICTORY: 30
+  };
+  
+  calculateWarriorXP(
+    warrior: WarriorStats,
+    gameMode: GameMode,
+    placement: number
+  ): XPResult {
+    let baseXP = this.XP_REWARDS.BASE_PARTICIPATION;
+    let bonusXP = 0;
+    const breakdown: XPBreakdown = {};
+    
+    // Survival time
+    const minutesSurvived = Math.floor(warrior.survivalTime / 60000);
+    const survivalXP = minutesSurvived * this.XP_REWARDS.PER_MINUTE_SURVIVED;
+    baseXP += survivalXP;
+    breakdown.survival = survivalXP;
+    
+    // Combat XP
+    const eliminationXP = warrior.eliminations * this.XP_REWARDS.PER_ELIMINATION;
+    const damageXP = Math.floor(warrior.damageDealt * this.XP_REWARDS.DAMAGE_DEALT_RATIO);
+    baseXP += eliminationXP + damageXP;
+    breakdown.combat = eliminationXP + damageXP;
+    
+    // Objectives
+    const powerUpXP = warrior.powerUpsCollected * this.XP_REWARDS.POWER_UP_COLLECTED;
+    baseXP += powerUpXP;
+    breakdown.objectives = powerUpXP;
+    
+    // Territory control (Siege only)
+    if (gameMode === GameMode.Siege && warrior.territoriesControlled) {
+      const territoryXP = warrior.territoriesControlled * this.XP_REWARDS.TERRITORY_CONTROLLED;
+      baseXP += territoryXP;
+      breakdown.objectives = (breakdown.objectives || 0) + territoryXP;
+    }
+    
+    // Victory bonuses
+    if (gameMode === GameMode.Blitz && placement === 1) {
+      bonusXP += this.XP_REWARDS.BLITZ_WINNER;
+      breakdown.victory = this.XP_REWARDS.BLITZ_WINNER;
+    } else if (gameMode === GameMode.Siege) {
+      const siegeBonuses = [
+        this.XP_REWARDS.SIEGE_1ST,
+        this.XP_REWARDS.SIEGE_2ND,
+        this.XP_REWARDS.SIEGE_3RD
+      ];
+      if (placement <= 3) {
+        bonusXP += siegeBonuses[placement - 1];
+        breakdown.victory = siegeBonuses[placement - 1];
+      }
+    }
+    
+    // Special bonuses
+    if (warrior.gotFirstBlood) {
+      bonusXP += this.XP_REWARDS.FIRST_BLOOD;
+      breakdown.firstBlood = this.XP_REWARDS.FIRST_BLOOD;
+    }
+    
+    if (warrior.godslayerKills > 0) {
+      const godslayerXP = warrior.godslayerKills * this.XP_REWARDS.GODSLAYER_KILL;
+      bonusXP += godslayerXP;
+      breakdown.godslayer = godslayerXP;
+    }
+    
+    if (warrior.survivedSpecialEvents > 0) {
+      const eventXP = warrior.survivedSpecialEvents * this.XP_REWARDS.SPECIAL_EVENT_SURVIVAL;
+      bonusXP += eventXP;
+      breakdown.specialEvents = eventXP;
+    }
+    
+    if (warrior.comebackVictory) {
+      bonusXP += this.XP_REWARDS.COMEBACK_VICTORY;
+      breakdown.comeback = this.XP_REWARDS.COMEBACK_VICTORY;
+    }
+    
+    // Calculate total with multipliers
+    let totalXP = baseXP + bonusXP;
+    let multiplier = 1;
+    
+    if (warrior.wasUnderdog) {
+      multiplier *= this.XP_REWARDS.UNDERDOG_MULTIPLIER;
+    }
+    
+    // Apply any active XP events
+    multiplier *= this.getActiveEventMultiplier();
+    
+    totalXP = Math.floor(totalXP * multiplier);
+    
+    return {
+      baseXP,
+      bonusXP,
+      multiplier,
+      totalXP,
+      breakdown,
+      newLevel: this.calculateLevel(warrior.currentXP + totalXP),
+      leveledUp: this.calculateLevel(warrior.currentXP + totalXP) > warrior.currentLevel
+    };
+  }
+  
+  calculateLevel(xp: number): number {
+    return Math.floor(Math.sqrt(xp / 100));
+  }
+  
+  getXPToNextLevel(currentXP: number): number {
+    const currentLevel = this.calculateLevel(currentXP);
+    const nextLevel = currentLevel + 1;
+    const nextLevelXP = nextLevel * nextLevel * 100;
+    return nextLevelXP - currentXP;
+  }
+  
+  private getActiveEventMultiplier(): number {
+    const now = new Date();
+    const hour = now.getUTCHours();
+    
+    // Happy Hour: 20:00-22:00 UTC
+    if (hour >= 20 && hour < 22) {
+      return 1.5;
+    }
+    
+    // Check for weekend double XP
+    const day = now.getUTCDay();
+    if (day === 0 || day === 6) {
+      return 2.0;
+    }
+    
+    return 1.0;
+  }
+}
+
+interface WarriorStats {
+  playerId: string;
+  survivalTime: number;
+  eliminations: number;
+  damageDealt: number;
+  powerUpsCollected: number;
+  territoriesControlled?: number;
+  gotFirstBlood: boolean;
+  godslayerKills: number;
+  survivedSpecialEvents: number;
+  comebackVictory: boolean;
+  wasUnderdog: boolean;
+  currentXP: number;
+  currentLevel: number;
+}
+
+interface XPResult {
+  baseXP: number;
+  bonusXP: number;
+  multiplier: number;
+  totalXP: number;
+  breakdown: XPBreakdown;
+  newLevel: number;
+  leveledUp: boolean;
+}
+
+interface XPBreakdown {
+  survival?: number;
+  combat?: number;
+  objectives?: number;
+  victory?: number;
+  firstBlood?: number;
+  godslayer?: number;
+  specialEvents?: number;
+  comeback?: number;
+}
+```
+<!-- POST-MVP:END -->
+
+<!-- POST-MVP:PHASE2 -->
+### **9. ProofNetwork Integration**
+
+```typescript
+// src/services/ProofNetworkVRF.ts - NOT IN MVP
 import axios from 'axios';
 import { blackbox } from '@proofnetwork/sdk';
 
@@ -789,9 +1500,11 @@ export class ProofNetworkVRF {
   }
 }
 ```
+<!-- POST-MVP:END -->
 
 ---
 
+<!-- POST-MVP:PHASE3 -->
 ## **📊 Performance Optimization**
 
 ### **1. Redis Caching Strategy**
@@ -1001,3 +1714,4 @@ export class MetricsService {
 ---
 
 *This architecture provides a scalable, secure foundation for real-time gameplay with <100ms latency.*
+<!-- POST-MVP:END -->

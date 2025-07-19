@@ -111,6 +111,25 @@ VETERAN_BONUS: +1% per 10s
 // Special Events
 GODSLAYER_ORB: 0.5% spawn, 50 damage
 SECOND_WIND: 2% chance at <10 HP
+
+// XP System
+BASE_PARTICIPATION: 10 XP
+PER_ELIMINATION: 25 XP
+PER_MINUTE_SURVIVED: 10 XP
+DAMAGE_DEALT: 1 XP per 10 damage
+POWER_UP_COLLECTED: 5 XP
+
+// Victory XP
+BLITZ_WINNER: 100 XP
+SIEGE_1ST: 150 XP, 2ND: 75 XP, 3RD: 50 XP
+
+// Special Bonuses
+UNDERDOG_MULTIPLIER: 2x
+GODSLAYER_KILL: 50 XP
+FIRST_BLOOD: 15 XP
+
+// Level Formula
+Level = floor(sqrt(XP / 100))
 ```
 
 ## **Auto-Check List**
