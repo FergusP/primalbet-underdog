@@ -4,17 +4,23 @@
 ## **1. GAME OVERVIEW**
 
 ### **Core Concept**
-Aurelius is a real-time PvP battle arena on Solana where players send gladiator warriors into a colosseum to fight until only one remains. The last warrior standing claims the entire prize pool.
+Aurelius is a dual-mode PvP battle arena on Solana featuring two distinct experiences:
+- **Arena Blitz**: 90-second quick battles for instant action
+- **Glory Siege**: 5-minute strategic wars for epic moments
+
+Players send gladiator warriors into the colosseum, with the last survivor(s) claiming the prize pool.
 
 ### **Target Audience**
-- Primary: Crypto gamers seeking quick, exciting PvP action
-- Secondary: DeFi users looking for gamified yield
-- Tertiary: Casual mobile gamers (future expansion)
+- Primary: Crypto gamers seeking both quick thrills and strategic depth
+- Secondary: DeFi users looking for gamified yield opportunities
+- Tertiary: Mobile gamers wanting bite-sized or epic sessions
+- Quaternary: Streamers/content creators seeking viral moments
 
 ### **Platform**
 - Web-based (MVP)
 - Mobile responsive
 - Native mobile apps (future)
+- Streaming-optimized spectator mode
 
 ---
 
@@ -28,39 +34,62 @@ DISCOVER → ENTER → BATTLE → SURVIVE → WIN/LOSE → COLLECT
 
 ### **Detailed Loop Breakdown**
 
+#### **🔥 Arena Blitz Mode (60-90 seconds)**
+
 1. **DISCOVER** (5 seconds)
    - See active arena with current pot size
    - Watch ongoing battles as spectator
    - Check timer and warrior count
+   - "Quick Match" label for mobile users
 
-2. **ENTER** (10 seconds)
+2. **ENTER** (5 seconds)
    - Connect wallet
-   - Pay entry fee (0.002 SOL base)
-   - Choose entry position (click on arena)
-   - Warrior spawns with entrance animation
+   - Pay entry fee (0.002 SOL)
+   - Random spawn position
+   - Instant combat begins
 
-3. **BATTLE** (60-120 seconds)
-   - Warriors auto-battle in real-time
-   - Collect power-ups by positioning
-   - Watch HP decrease from combat/environment
-   - Strategic movement to avoid crowds
+3. **BATTLE** (60-90 seconds)
+   - No prep phase - immediate action
+   - Fast power-up spawns (every 10s)
+   - High environmental damage (2 HP/3s)
+   - Arena shrinks at 45 seconds
 
-4. **SURVIVE** (Ongoing)
-   - Monitor warrior health
-   - Anticipate power-up spawns
-   - Position for final showdown
-   - Watch rivals fall
+4. **WIN/LOSE** (5 seconds)
+   - Single winner takes 95%
+   - Quick stats display
+   - "Play Again" for instant rematch
 
-5. **WIN/LOSE** (5 seconds)
-   - Victory fanfare or defeat animation
-   - Show final statistics
-   - Display winnings/rank
+#### **🏰 Glory Siege Mode (3-5 minutes)**
 
-6. **COLLECT** (10 seconds)
-   - Auto-credit winnings to wallet
-   - Show XP gained (future)
-   - Update leaderboard position
-   - "Play Again" prompt
+1. **DISCOVER** (30 seconds)
+   - See scheduled game countdown
+   - Preview current entries (up to 100)
+   - Watch previous game highlights
+   - Study arena zones and strategy
+
+2. **ENTER** (Until game start)
+   - Connect wallet
+   - Pay entry fee (0.01 SOL)
+   - Choose strategic position
+   - Form pre-game alliances (chat)
+
+3. **PREPARATION** (30 seconds)
+   - Position warriors strategically
+   - No damage during this phase
+   - Study opponent placements
+   - Plan power-up routes
+
+4. **BATTLE** (3-4 minutes)
+   - Zone-based combat
+   - Power-ups can be saved/combined
+   - Slower environmental damage (1 HP/5s)
+   - Multiple shrinking phases
+
+5. **WIN/LOSE** (10 seconds)
+   - Top 3 split prizes (60%/25%/10%)
+   - Detailed statistics
+   - Replay highlights available
+   - Next game countdown
 
 ---
 
@@ -256,63 +285,109 @@ pub fn claim_prize(ctx: Context<ClaimPrize>) -> Result<()> {
 ARENA LAYOUT:
 - Shape: Circular colosseum (600px diameter)
 - Grid: Invisible 20x20 movement grid
-- Zones: Center (high risk/reward), Edge (safer)
 - Visual: Top-down view with 2.5D perspective
 
-VISUAL ELEMENTS:
-- Stone texture floor with grid overlay
-- Dramatic lighting from center
-- Blood stains that persist (show battle history)
-- Crowd sprites in background
-- Dynamic shadows under warriors
+BLITZ MODE:
+- Single zone arena
+- Center spawns most power-ups
+- Edges relatively safe early
+- Rapid shrinking at 45s
+
+SIEGE MODE:
+- Three distinct zones:
+  - Outer Ring: Safe, few power-ups
+  - Mid Ring: Balanced risk/reward
+  - Center: High risk, best rewards
+- Territory control points
+- Gradual multi-phase shrinking
 ```
 
 **Environmental Mechanics:**
-```
-ARENA SHRINKING:
-- Last 30 seconds: Arena shrinks by 20%
-- Forces remaining warriors to center
-- Red danger zone indication
-- 2 damage/second outside safe zone
 
-ENVIRONMENTAL HAZARDS:
-- Arena deals 1 damage every 3 seconds to all
-- Increases to 2 damage in final 20 seconds
-- Creates time pressure
-- Prevents camping strategies
+#### **Arena Blitz Environmental**
+```
+FAST PRESSURE:
+- Environmental damage: 2 HP/3 seconds
+- Shrink begins: 45 seconds (50% reduction)
+- Outside damage: 5 HP/second
+- Final phase: 3 HP/2 seconds
+```
+
+#### **Glory Siege Environmental**
+```
+STRATEGIC PRESSURE:
+- Environmental damage: 1 HP/5 seconds
+- Phase 1 shrink: 2 minutes (20% reduction)
+- Phase 2 shrink: 3.5 minutes (40% total)
+- Phase 3 shrink: 4.5 minutes (60% total)
+- Outside damage: 3 HP/second
 ```
 
 ### **6.2 POWER-UPS**
 
-**Types and Effects:**
+#### **Arena Blitz Power-Ups**
 ```
 1. HEALTH POTION (Green orb)
-   - Spawn rate: Every 15 seconds
+   - Spawn rate: Every 10 seconds
    - Effect: +25 HP instant heal
    - Location: Random positions
    - Visual: Glowing green pulse
 
 2. RAGE MODE (Red orb)
-   - Spawn rate: Every 30 seconds
+   - Spawn rate: Every 20 seconds
    - Effect: 2x damage for 10 seconds
-   - Location: Center bias (60%)
+   - Location: Center bias (70%)
    - Visual: Red aura around warrior
 
 3. SPEED BOOST (Blue orb)
-   - Spawn rate: Every 20 seconds
+   - Spawn rate: Every 15 seconds
    - Effect: 1.5x movement speed for 8 seconds
-   - Location: Edge positions
+   - Location: Random positions
    - Visual: Blue trail effect
 
 4. SHIELD (Yellow orb)
-   - Spawn rate: Once at 50% time
+   - Spawn rate: Once at 30 seconds
    - Effect: Block next 2 hits
    - Location: Exact center
    - Visual: Golden barrier
 ```
 
+#### **Glory Siege Power-Ups**
+```
+1. HEALTH POTION (Green orb)
+   - Spawn rate: Every 20 seconds
+   - Effect: +25 HP instant (or save for +40 HP)
+   - Location: All zones
+   - Can combine: 2 potions = full heal
+
+2. RAGE MODE (Red orb)
+   - Spawn rate: Every 40 seconds
+   - Effect: 1.5x damage for 20 seconds
+   - Location: Mid/Center zones only
+   - Can stack duration (max 40s)
+
+3. SPEED BOOST (Blue orb)
+   - Spawn rate: Every 30 seconds
+   - Effect: 1.3x movement speed for 15 seconds
+   - Location: Outer/Mid zones
+   - Can share with allies
+
+4. SHIELD (Yellow orb)
+   - Spawn rate: Every 60 seconds
+   - Effect: Block next 3 hits
+   - Location: Center zone only
+   - Can transfer to ally
+
+5. GODSLAYER ORB (Divine gold) - Siege Only
+   - Spawn rate: 0.5% chance when pot > 1 SOL
+   - Effect: 50 damage projectile
+   - Requirements: ≤3 warriors from same wallet
+   - Visual: Divine golden explosion
+```
+
 ### **6.3 COMBAT SYSTEM**
 
+#### **Base Combat (Both Modes)**
 ```
 DAMAGE CALCULATION:
 - Base warrior HP: 100
@@ -321,7 +396,7 @@ DAMAGE CALCULATION:
 - Range: Adjacent grid squares only
 
 MOVEMENT:
-- Speed: 2 squares/second
+- Base speed: 2 squares/second
 - Diagonal movement allowed
 - Collision blocks movement
 - Client-side prediction + server reconciliation
@@ -332,31 +407,131 @@ TARGETING PRIORITY:
 3. ProofNetwork VRF random if still tied
 ```
 
-### **6.4 TIME LIMIT**
-
+#### **Entry Timing Balance**
 ```
-GAME PHASES:
-0:00 - 0:10: PREPARATION PHASE
-- Warriors can move but no damage
-- Power-ups don't spawn yet
-- "Battle begins in..." countdown
+EARLY ENTRY BONUSES:
+- Veteran Damage: +1% per 10 seconds survived
+- Territory Control: +2 HP/10s in controlled zones
+- Kill Reward: +5 HP per elimination
+- Power-up Priority: 5s early access window
 
-0:10 - 1:30: BATTLE PHASE
-- Full combat enabled
+LATE ENTRY PENALTIES:
+- Spawn HP: 70 (not 100)
+- Random spawn in danger zones
+- Spawn immunity: 1 second (vs 5 for early)
+- Entry fee scaling: up to 3x base fee
+```
+
+#### **Underdog Mechanics**
+```
+WHEN OUTNUMBERED 5:1:
+- Underdog Rage: +10% damage
+- Survivor Speed: +10% movement
+- Evasion Chance: 20% dodge
+- Visual: "Lone Wolf" glowing aura
+
+SECOND WIND MIRACLE:
+- Trigger: HP < 10
+- Chance: 2% (ProofNetwork VRF)
+- Effect: Instant heal to 30 HP
+- Limit: First 2 warriors per wallet
+- Visual: Phoenix rebirth animation
+```
+
+### **6.4 TIME LIMITS & PHASES**
+
+#### **Arena Blitz Phases (60-90s)**
+```
+0:00 - 0:45: PURE CHAOS
+- Instant combat on spawn
+- Power-ups every 10 seconds
+- Full arena available
+- Fast-paced action
+
+0:45 - 1:30: FINAL SHOWDOWN
+- Arena shrinks to 50%
+- Environmental damage increases
+- Power-ups spawn faster
+- Last warrior standing wins
+```
+
+#### **Glory Siege Phases (3-5 min)**
+```
+0:00 - 0:30: STRATEGY PHASE
+- No damage allowed
+- Position warriors
+- Study opponents
+- Form alliances
+
+0:30 - 2:00: EARLY GAME
+- Combat begins
+- Territory control matters
 - Power-ups spawn normally
-- Arena at full size
+- Full arena available
 
-1:30 - 2:00: SUDDEN DEATH
-- Arena shrinks
-- Double environmental damage
-- Power-ups spawn 2x faster
-- Dramatic music intensifies
+2:00 - 3:30: MID GAME
+- First shrink (20%)
+- Alliances tested
+- Power-up combinations active
+- Veteran bonuses accumulate
 
-2:00: FORCE END
-- If multiple warriors alive:
-  - Highest HP wins
-  - Tiebreak: Last to enter
-- Nuclear explosion animation
+3:30 - 4:30: LATE GAME
+- Second shrink (40% total)
+- Environmental damage increases
+- Special events may trigger
+- Top warriors emerge
+
+4:30 - 5:00: FINAL BATTLE
+- Final shrink (60% total)
+- Chaos events more likely
+- Top 3 positions decided
+- Epic finale
+```
+
+### **6.5 SPECIAL EVENTS**
+
+#### **Chaos Equalizer Events (0.5-2% chance)**
+```
+1. THE GREAT EQUALIZER
+   - Lightning strikes top 3 HP warriors
+   - Damage: 30-50 HP
+   - Visual: Thunder and lightning
+   
+2. BERSERKER PLAGUE
+   - All warriors set to 50 HP
+   - Temporary 2x damage for all
+   - Visual: Red mist covers arena
+   
+3. TELEPORT CHAOS
+   - All positions randomized
+   - 3 second immunity for all
+   - Visual: Portal effects
+   
+4. DIVINE SHIELD
+   - Lowest HP warrior gets immunity
+   - Duration: 5 seconds
+   - Visual: Golden bubble
+```
+
+#### **Dynamic Modifiers (0-2 per game)**
+```
+COMBAT MODIFIERS:
+- Blood Moon: 2x damage for all
+- Glass Cannon: 2x damage given/taken
+- Pacifist's Curse: -50% all damage
+- Berserker Mode: 2x attack speed
+
+ARENA MODIFIERS:
+- Tiny Arena: 50% size from start
+- Fog of War: Limited vision range
+- Lava Floor: Constant 1 HP/sec damage
+- Ice Rink: 2x speed, reduced control
+
+ECONOMY MODIFIERS:
+- Gold Rush: 3x entry fees and prizes
+- Penny Arcade: 0.0005 SOL entry
+- High Stakes: 10x everything
+- Robin Hood: Top player redistributes HP
 ```
 
 ---
@@ -561,23 +736,86 @@ SCREEN EFFECTS:
 
 ```
 PRIMARY:
-- 3% platform fee on prize pools
-- Premium cosmetic warrior skins (future)
+- 3% platform fee on all prize pools
+- Mode-specific revenue:
+  - Blitz: High volume × 0.002 SOL
+  - Siege: Lower volume × 0.01 SOL
+- Multi-warrior entry scaling fees
 
 SECONDARY:
+- Premium cosmetic warrior skins (future)
 - Battle pass system (future)
 - Tournament entry fees (future)
 - Sponsored arenas (future)
 ```
 
-### **10.2 Token Economics (Future)**
+### **10.2 Entry Fee Structure**
 
 ```
-$GLADIUS TOKEN:
+BASE FEES:
+- Arena Blitz: 0.002 SOL (~$0.50)
+- Glory Siege: 0.01 SOL (~$2.50)
+
+MULTI-WARRIOR SCALING:
+1st warrior: Base fee
+2nd warrior: Base × 1.05
+3rd warrior: Base × 1.10
+4th warrior: Base × 1.15
+5th+ warrior: Base × 1.20
+
+LATE ENTRY SCALING:
+- First 25% of game: Base fee
+- 25-50% of game: Base × 1.5
+- 50-75% of game: Base × 2.0
+- Last 25% of game: Base × 3.0
+```
+
+### **10.3 Prize Distribution**
+
+```
+ARENA BLITZ:
+- Winner: 95% of pot
+- Treasury: 3%
+- Burn: 2%
+
+GLORY SIEGE:
+- 1st Place: 60% of pot
+- 2nd Place: 25% of pot
+- 3rd Place: 10% of pot
+- Treasury: 3%
+- Burn: 2%
+```
+
+### **10.4 Special Events**
+
+```
+DAILY CINDERELLA ARENA:
+- One special Blitz game per day
+- Max 1 warrior per wallet
+- Entry: 0.001 SOL (half price)
+- Guaranteed pot: 10 SOL
+- True equal odds for all
+
+WEEKLY GLORY CHAMPIONSHIP:
+- Special Siege game
+- Entry: 0.05 SOL
+- Guaranteed pot: 100 SOL
+- Top 10 receive prizes
+- Streaming featured
+```
+
+### **10.5 Token Economics (Future)**
+
+```
+$AURELIUS TOKEN:
 - Governance over game parameters
-- Staking for fee reduction
+- Vote on special event rules
+- Staking for fee reduction:
+  - 1000 tokens: 5% discount
+  - 5000 tokens: 10% discount
+  - 10000 tokens: 20% discount
 - Exclusive tournament access
-- Cosmetic purchases
+- Premium cosmetic purchases
 ```
 
 ---

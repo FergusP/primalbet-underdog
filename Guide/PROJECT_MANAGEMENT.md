@@ -3,10 +3,11 @@
 
 ## **📋 Project Overview**
 
-**Project**: Aurelius - Real-time PvP Battle Arena on Solana  
-**Duration**: 7-10 days (MVP)  
+**Project**: Aurelius - Dual-Mode PvP Battle Arena on Solana  
+**Duration**: 10-14 days (MVP with both modes)  
 **Team Size**: 2 developers  
-**Methodology**: Vibecoding (Domain-based collaboration)
+**Methodology**: Vibecoding (Domain-based collaboration)  
+**Game Modes**: Arena Blitz (quick) & Glory Siege (strategic)
 
 ---
 
@@ -15,11 +16,11 @@
 ### **Partner A: Blockchain & Backend Specialist**
 **Primary Domain**: Smart Contracts, Game Server, Infrastructure
 
-**Total Tasks**: ~31 major tasks
-- Smart Contract Development: 6 main tasks
-- ProofNetwork Integration: 6 tasks
-- Game Server Development: 13 tasks
-- Infrastructure & DevOps: 6 tasks
+**Total Tasks**: ~42 major tasks
+- Smart Contract Development: 9 main tasks
+- ProofNetwork Integration: 8 tasks
+- Game Server Development: 18 tasks
+- Infrastructure & DevOps: 7 tasks
 
 **Core Responsibilities**:
 - All on-chain logic (PDAs, escrow, prizes)
@@ -32,11 +33,11 @@
 ### **Partner B: Frontend & Game Experience**
 **Primary Domain**: UI/UX, Phaser Game Engine, Visual Design
 
-**Total Tasks**: ~34 major tasks
-- Phaser Game Development: 17 tasks
-- React/Next.js Frontend: 12 tasks
-- State Management: 8 tasks
-- Visual & Audio Design: 13 tasks
+**Total Tasks**: ~45 major tasks
+- Phaser Game Development: 22 tasks
+- React/Next.js Frontend: 15 tasks
+- State Management: 10 tasks
+- Visual & Audio Design: 15 tasks
 
 **Core Responsibilities**:
 - Complete game visualization in Phaser
@@ -151,21 +152,27 @@ interface GameResult {
   - [ ] create_player_profile instruction
   - [ ] Update player stats logic
 - [ ] Implement Game Escrow system
-  - [ ] GameEscrow account structure
+  - [ ] GameEscrow account structure with GameMode enum
   - [ ] Fund management logic
   - [ ] Security constraints
+  - [ ] Support for multi-winner payouts
 - [ ] Build game entry flow
-  - [ ] join_game instruction
-  - [ ] Entry fee calculation
-  - [ ] Position validation
+  - [ ] join_game instruction with mode selection
+  - [ ] Entry fee calculation with scaling
+  - [ ] Multi-warrior entry support
+  - [ ] Late entry penalty logic
 - [ ] Create winner determination
-  - [ ] end_game instruction
+  - [ ] end_game instruction for both modes
   - [ ] VRF integration for ties
-  - [ ] Prize distribution logic
+  - [ ] Top 3 prize distribution (Siege)
+  - [ ] Single winner logic (Blitz)
 - [ ] Implement claim_prize instruction
-  - [ ] Winner verification
+  - [ ] Multi-winner verification
   - [ ] Transfer mechanics
   - [ ] Treasury fee handling
+- [ ] Add special event support
+  - [ ] Daily Cinderella Arena logic
+  - [ ] Modifier bit flags in GameEscrow
 
 #### **ProofNetwork Integration**
 - [ ] Set up ProofNetwork account
@@ -174,26 +181,37 @@ interface GameResult {
 - [ ] Add tiebreaker randomness
 - [ ] Store VRF proofs for verification
 - [ ] Implement Blackbox for secret keys
+- [ ] Special event trigger randomness
+- [ ] Godslayer Orb spawn logic
 
 #### **Game Server Development**
 - [ ] Set up Node.js/Socket.io server
 - [ ] Create WebSocket connection handler
-- [ ] Implement game state management
-  - [ ] Warrior tracking
-  - [ ] Power-up management
+- [ ] Implement dual-mode game state management
+  - [ ] Blitz mode state (90s games)
+  - [ ] Siege mode state (5min games)
+  - [ ] Warrior tracking with veteran bonuses
+  - [ ] Power-up management (normal/enhanced)
   - [ ] Phase transitions
+  - [ ] Territory control (Siege)
 - [ ] Build combat calculation engine
-  - [ ] Damage calculations
+  - [ ] Damage calculations with bonuses
   - [ ] Range checking
   - [ ] Target selection
+  - [ ] Underdog mechanics
+  - [ ] Second Wind miracle logic
 - [ ] Create movement validation
   - [ ] Grid position tracking
   - [ ] Collision detection
-  - [ ] Speed validation
+  - [ ] Speed validation with modifiers
 - [ ] Implement environmental effects
-  - [ ] Arena shrinking logic
+  - [ ] Mode-specific arena shrinking
   - [ ] Danger zone damage
   - [ ] Time-based hazards
+- [ ] Special event system
+  - [ ] Chaos equalizer events
+  - [ ] Dynamic modifier application
+  - [ ] Event probability calculations
 
 #### **Infrastructure & DevOps**
 - [ ] Set up Helius RPC endpoints
@@ -209,26 +227,32 @@ interface GameResult {
 - [ ] Initialize Phaser 3 project
 - [ ] Create scene architecture
   - [ ] PreloaderScene
-  - [ ] MainMenuScene
-  - [ ] ArenaScene
+  - [ ] MainMenuScene with mode selection
+  - [ ] ArenaScene (dual-mode support)
   - [ ] UIScene (overlay)
   - [ ] GameOverScene
+  - [ ] LobbyScene (Siege waiting room)
 - [ ] Design arena environment
   - [ ] Circular colosseum (600px)
   - [ ] Grid system (20x20)
-  - [ ] Zone indicators
-  - [ ] Shrinking animation
+  - [ ] Zone indicators (Siege: outer/mid/center)
+  - [ ] Mode-specific shrinking animations
+  - [ ] Territory control visuals (Siege)
 - [ ] Implement warrior system
   - [ ] BaseWarrior class
   - [ ] Movement mechanics
   - [ ] Health bar display
   - [ ] Name tags
+  - [ ] Veteran bonus indicator
+  - [ ] Underdog aura effect
   - [ ] Death animations
 - [ ] Create power-up sprites
   - [ ] Health potion (green)
   - [ ] Rage mode (red)
   - [ ] Speed boost (blue)
   - [ ] Shield (yellow)
+  - [ ] Godslayer Orb (divine gold)
+  - [ ] Enhanced versions (Siege)
   - [ ] Collection effects
 - [ ] Build combat visuals
   - [ ] Attack animations
@@ -236,6 +260,13 @@ interface GameResult {
   - [ ] Hit effects
   - [ ] Blood spatters
   - [ ] Critical hit indicators
+  - [ ] Special event animations
+- [ ] Special effects system
+  - [ ] Chaos equalizer visuals
+  - [ ] Second Wind phoenix effect
+  - [ ] Divine Shield bubble
+  - [ ] Teleport portals
+  - [ ] Dynamic modifier indicators
 
 #### **React/Next.js Frontend**
 - [ ] Set up Next.js 15 project
@@ -243,24 +274,35 @@ interface GameResult {
   - [ ] Wallet adapter integration
   - [ ] Connection modal
   - [ ] Account display
-- [ ] Build game lobby
+- [ ] Build mode selection screen
+  - [ ] Blitz mode card
+  - [ ] Siege mode card
+  - [ ] Mode comparison table
+  - [ ] Active games display
+- [ ] Build game lobbies
+  - [ ] Blitz: Instant join
+  - [ ] Siege: Scheduled countdown
   - [ ] Current pot display
-  - [ ] Player count
-  - [ ] Join button
-  - [ ] Entry fee display
+  - [ ] Player count/max players
+  - [ ] Multi-warrior entry UI
+  - [ ] Entry fee calculator
 - [ ] Design HUD components
-  - [ ] Timer display
+  - [ ] Mode-specific timer
   - [ ] Phase indicator
   - [ ] Kill feed
   - [ ] Player status
+  - [ ] Territory control (Siege)
+  - [ ] Active modifiers display
 - [ ] Create victory/defeat screens
-  - [ ] Winner announcement
+  - [ ] Winner(s) announcement
+  - [ ] Top 3 display (Siege)
   - [ ] Stats breakdown
   - [ ] Prize display
-  - [ ] Play again button
+  - [ ] Play again/switch mode
 - [ ] Implement spectator mode UI
   - [ ] Camera controls
-  - [ ] Player list
+  - [ ] Player list with warrior counts
+  - [ ] Betting interface (future)
   - [ ] Emote system
 
 #### **State Management & Integration**
@@ -279,25 +321,38 @@ interface GameResult {
   - [ ] Error states
 
 #### **Visual & Audio Design**
-- [ ] Create warrior sprites (5 variations)
+- [ ] Create warrior sprites (8 variations)
 - [ ] Design UI elements
-  - [ ] Buttons
+  - [ ] Mode-specific buttons
   - [ ] Modals
   - [ ] Health bars
   - [ ] Icons
+  - [ ] Modifier badges
 - [ ] Implement particle effects
   - [ ] Power-up collection
   - [ ] Combat impacts
   - [ ] Environmental effects
+  - [ ] Special event particles
+  - [ ] Underdog aura
 - [ ] Add sound effects
   - [ ] Combat sounds
   - [ ] UI feedback
   - [ ] Ambient arena
   - [ ] Victory/defeat music
+  - [ ] Special event sounds
+  - [ ] Mode-specific music
 - [ ] Create mobile controls
   - [ ] Virtual joystick
   - [ ] Touch targets
+  - [ ] Mode switcher
   - [ ] Responsive layout
+- [ ] Arena themes (6 total)
+  - [ ] Classic Colosseum
+  - [ ] Cyber Arena
+  - [ ] Volcano Pit
+  - [ ] Frozen Wasteland
+  - [ ] Space Station
+  - [ ] Underwater Dome
 
 ### **Shared Responsibilities**
 
@@ -344,11 +399,13 @@ interface GameResult {
 
 ### **Integration Checkpoints**
 1. **Wallet Connection Test** (Day 2)
-2. **Game Entry Flow** (Day 3)
-3. **Movement Sync Test** (Day 4)
-4. **Combat Integration** (Day 5)
-5. **Full Game Loop** (Day 6)
-6. **Production Test** (Day 7)
+2. **Game Mode Selection** (Day 3)
+3. **Blitz Mode Entry Flow** (Day 4)
+4. **Siege Mode Entry Flow** (Day 5)
+5. **Movement & Combat Sync** (Day 6)
+6. **Special Events Test** (Day 7)
+7. **Full Game Loop Both Modes** (Day 8)
+8. **Production Test** (Day 9)
 
 ---
 
@@ -379,6 +436,9 @@ Aurelius/
 - `dev` - Integration branch
 - `feat/partner-a-*` - Partner A features
 - `feat/partner-b-*` - Partner B features
+- `design/*` - Game design changes
+- `mode/blitz-*` - Blitz mode specific
+- `mode/siege-*` - Siege mode specific
 
 ### **Commit Convention**
 ```
