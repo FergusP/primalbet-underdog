@@ -5,9 +5,9 @@
 
 ### **Core Concept**
 <!-- MVP:START -->
-Aurelius is a real-time PvP battle arena on Solana where players send gladiator warriors into the colosseum, with the last survivor claiming the prize pool.
+Aurelius is an auto-battle PvP arena on Solana where players send AI-controlled warriors into the colosseum and buy power-ups to help them win. The last survivor claims the growing prize pool funded by all player actions.
 
-**MVP Mode**: Arena Blitz - 90-second quick battles for instant action
+**MVP Mode**: Arena Blitz - 90-second auto-battles with strategic power-up purchases
 <!-- MVP:END -->
 
 <!-- POST-MVP:PHASE3 -->
@@ -424,10 +424,11 @@ DAMAGE CALCULATION:
 - Attack speed: 1 hit/second
 - Range: Adjacent grid squares only
 
-MOVEMENT:
+MOVEMENT (AI-CONTROLLED):
 - Base speed: 2 squares/second
 - Diagonal movement allowed
 - Simple collision detection
+- AI pathfinding to nearest enemy
 
 TARGETING PRIORITY:
 1. Closest enemy in range
@@ -488,7 +489,120 @@ SECOND WIND MIRACLE:
 ```
 <!-- POST-MVP:END -->
 
-### **6.4 TIME LIMITS & PHASES**
+### **6.3.5 INPUT-DRIVEN BATTLE SYSTEM**
+
+#### **Player Input System**
+```
+STRATEGIC INPUTS:
+- Join Timing: Early bird bonus vs late entry risk
+- Position Choice: Center (risky) vs edges (safe)
+- Power-Up Timing: When to activate for max weight
+- Alliance Decisions: Form, maintain, or betray
+- Resource Management: Save or spend power-ups
+
+VISUAL FEEDBACK (Not Real Combat):
+- See warriors "fighting" (animation only)
+- Watch HP bars decrease (fake damage)
+- Power-up effects trigger (visual only)
+- Momentum bar fills (psychological)
+```
+
+#### **Backend Processing**
+```
+WEIGHT CALCULATION FACTORS:
+1. Entry timing score (earlier = better)
+2. Action efficiency (quality over quantity)
+3. Power-up timing (strategic usage)
+4. Alliance behavior (cooperation bonus)
+5. Risk-taking score (bold moves rewarded)
+6. Combo multiplier (chained actions)
+7. Hidden luck factor (0.8-1.2x)
+
+VRF WINNER SELECTION:
+- Sum all warrior weights
+- VRF picks random number
+- Winner = warrior whose weight range contains number
+- Higher weight = better odds (but not guaranteed)
+```
+
+### **6.4 POWER-UP MARKETPLACE**
+
+#### **How It Works**
+```
+MARKETPLACE SYSTEM:
+- Power-ups displayed with SOL prices
+- Limited time offers (10-30 seconds)
+- Purchase adds to prize pool
+- Affects your weight calculation
+
+WEIGHT IMPACT:
+- Timing matters (use at right moment)
+- Efficiency counts (don't waste them)
+- Combos increase weight (chain actions)
+- Strategic usage = higher weight
+```
+
+#### **Power-Up Effects**
+```
+VISUAL EFFECTS (What You See):
+1. Health Boost: +25 HP animation (fake)
+2. Rage Mode: Red aura, 2x damage text
+3. Speed Boost: Blue trails, faster movement
+4. Shield: Golden bubble effect
+
+WEIGHT MODIFIERS (Hidden):
+1. Health Boost: +Defensive score
+2. Rage Mode: +Aggressive score
+3. Speed Boost: +Tactical score
+4. Shield: +Survival score
+
+PRICING:
+- Basic (0.001-0.002 SOL): Small weight boost
+- Advanced (0.003-0.005 SOL): Medium weight boost
+- Ultimate (0.008-0.01 SOL): Large weight boost
+```
+
+### **6.5 WINNER DETERMINATION SYSTEM**
+
+#### **Input Processing**
+```
+BACKEND COLLECTS ALL INPUTS:
+1. Entry time & position
+2. Power-up purchases & activation
+3. Alliance formations/betrayals
+4. Action timing & efficiency
+5. Risk-taking behavior
+
+CONVERTS TO WEIGHT FACTORS:
+- Entry bonus: +50-200 (early bird)
+- Position value: +20-100 (risk/reward)
+- Action count: +5 per action
+- Efficiency: ×1.0-2.0 multiplier
+- Combos: ×1.1-3.0 multiplier
+- Luck: ×0.8-1.2 (random)
+```
+
+#### **VRF Selection**
+```
+FINAL WEIGHT CALCULATION:
+1. Base weight (1000) + all bonuses
+2. Apply all multipliers
+3. Result: Each warrior has final weight
+
+WINNER SELECTION:
+1. Sum all warrior weights (e.g., 10,000)
+2. VRF picks number 0-10,000
+3. Find warrior whose range contains number
+4. That warrior wins entire pot!
+
+Example:
+- Warrior A: 0-2500 (weight 2500)
+- Warrior B: 2501-6000 (weight 3500)
+- Warrior C: 6001-10000 (weight 4000)
+- VRF picks: 7234 → Warrior C wins!
+```
+
+### **6.6 TIME LIMITS & PHASES**
 
 <!-- MVP:START -->
 #### **MVP Arena Blitz (90s only)**
@@ -890,13 +1004,45 @@ $AURELIUS TOKEN:
 
 ## **11. PROOFNETWORK INTEGRATION**
 
-### **11.1 VRF Implementation**
+### **11.1 VRF Implementation for Auto-Battle AI**
 
-ProofNetwork provides cryptographically secure randomness with verifiable proofs, essential for fair gameplay mechanics.
+ProofNetwork provides cryptographically secure randomness with verifiable proofs, essential for fair AI decisions and gameplay mechanics.
 
 ```javascript
-// Game Server VRF Integration
+// Game Server VRF Integration for Auto-Battle
 const ProofNetworkAPI = {
+  // AI Target Selection (When multiple enemies at same distance)
+  async selectAITarget(warrior, equalDistanceEnemies) {
+    const result = await vrfApi.selectFromArray(equalDistanceEnemies, 1);
+    return {
+      target: result.result[0],
+      proof: result.proof,
+      reason: "Multiple enemies at equal distance"
+    };
+  },
+
+  // AI Movement Direction (When multiple paths available)
+  async selectMovementPath(warrior, validPaths) {
+    const result = await vrfApi.selectFromArray(validPaths, 1);
+    return {
+      path: result.result[0],
+      proof: result.proof,
+      reason: "Multiple valid paths to target"
+    };
+  },
+
+  // AI Power-up Usage Timing
+  async decidePowerUpUsage(warrior, powerUp) {
+    const useChance = await vrfApi.selectNumber(1, 100);
+    const shouldUse = useChance.result <= powerUp.aiUsageChance;
+    return {
+      shouldUse,
+      proof: useChance.proof,
+      roll: useChance.result,
+      threshold: powerUp.aiUsageChance
+    };
+  },
+
   // Combat damage calculation
   async calculateDamage(warriorId) {
     const result = await vrfApi.selectNumber(5, 8);
@@ -907,21 +1053,44 @@ const ProofNetworkAPI = {
     };
   },
 
-  // Power-up spawn location
-  async selectPowerUpLocation(validPositions) {
-    const result = await vrfApi.selectFromArray(validPositions, 1);
+  // Spawn position selection
+  async selectSpawnPosition(availablePositions) {
+    const result = await vrfApi.selectFromArray(availablePositions, 1);
     return {
       position: result.result[0],
-      verificationSteps: result.verificationSteps
+      proof: result.proof
     };
-  },
-
-  // Target selection for AI
-  async selectTarget(equalPriorityTargets) {
-    const result = await vrfApi.selectFromArray(equalPriorityTargets, 1);
-    return result.result[0];
   }
 };
+
+// Example AI Decision with Proof
+async function makeAIDecision(warrior) {
+  const enemies = findEnemiesInRange(warrior);
+  
+  // If multiple enemies at same distance, use VRF
+  const groupedByDistance = groupEnemiesByDistance(enemies);
+  const closestDistance = Math.min(...Object.keys(groupedByDistance));
+  const closestEnemies = groupedByDistance[closestDistance];
+  
+  if (closestEnemies.length > 1) {
+    // Provably fair random selection
+    const decision = await ProofNetworkAPI.selectAITarget(warrior, closestEnemies);
+    
+    // Log decision for transparency
+    await logAIDecision({
+      warriorId: warrior.id,
+      decision: 'target_selection',
+      options: closestEnemies.map(e => e.id),
+      selected: decision.target.id,
+      proof: decision.proof,
+      timestamp: Date.now()
+    });
+    
+    return decision.target;
+  }
+  
+  return closestEnemies[0];
+}
 ```
 
 ### **11.2 Smart Contract Integration**

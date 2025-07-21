@@ -2,52 +2,49 @@
 *High-Performance Real-Time Backend Implementation*
 
 <!-- MVP:SUMMARY -->
-## **🚀 MVP Server Features**
-For the 3-5 day MVP, only implement:
-- **Basic Node.js + Socket.io**: Simple game state management
-- **Single Redis Instance**: No cluster needed for MVP
-- **Arena Blitz Only**: 90s games, max 10 players
-- **Fixed Damage**: 6 HP per hit (no VRF)
-- **2 Power-ups**: Health & Rage only
-- **Basic Movement**: Simple validation, no anti-cheat
+## **🚀 MVP Server Features (INPUT-DRIVEN SYSTEM)**
+For the 2-day MVP, only implement:
+- **Basic Node.js + Express**: Simple HTTP API
+- **In-Memory State**: Player inputs & visual state
+- **Input Processing**: Convert actions to weights
+- **Visual Feedback Engine**: Fake combat animations
+- **Weight Calculator**: Process all inputs
+- **VRF Integration**: For weighted winner selection
 
-Skip for MVP: Siege mode, XP system, ProofNetwork VRF, Redis cluster, anti-cheat, metrics
+Skip for MVP: Real combat, AI logic, databases
 <!-- MVP:END -->
 
-## **🏗️ Server Architecture Overview**
+## **🏗️ Simplified Polling Architecture**
 
 ```
-┌─────────────────────┐     ┌─────────────────────┐
-│   Web Clients       │     │   Mobile Clients    │
-│  (Next.js/Phaser)   │     │  (React Native)     │
-└──────────┬──────────┘     └──────────┬──────────┘
-           │                           │
-           └───────────┬───────────────┘
-                       │
-┌──────────────────────▼──────────────────────────┐
-│               Load Balancer                      │
-│               (Cloudflare)                       │
-└──────────────────────┬──────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────┐
-│               Game Server                        │
-│          (Node.js/Fastify/Socket.io)            │
-│                                                  │
-│  Features:                                       │
-│  - Platform-agnostic WebSocket                  │
-│  - Mobile reconnection handling                 │
-│  - Optimized message batching                   │
-└──────────┬─────────────────────┬────────────────┘
-           │                     │
-┌──────────▼──────────┐ ┌───────▼─────────┐
-│   Redis Cluster     │ │   PostgreSQL    │
-│   (Game State)      │ │  (Historical)   │
-└─────────────────────┘ └─────────────────┘
+┌─────────────────────┐
+│   Web Frontend      │
+│  (Next.js/Phaser)   │
+└──────────┬──────────┘
+           │ Polling (500ms)
+           ▼
+┌─────────────────────┐
+│  Next.js API Routes │ (Proxy)
+└──────────┬──────────┘
            │
-┌──────────▼──────────┐ ┌─────────────────┐
-│  ProofNetwork API   │ │  Solana RPC     │
-│   (VRF/Blackbox)    │ │   (Helius)      │
-└─────────────────────┘ └─────────────────┘
+           ▼
+┌─────────────────────┐
+│   Backend Service   │
+│   (Node.js/Express) │
+│                     │
+│  Features:          │
+│  - In-memory state  │
+│  - AI game logic    │
+│  - Power-up market  │
+└──────────┬──────────┘
+           │
+┌──────────▼──────────┐
+│  Solana Blockchain  │
+│     (Anchor)        │
+└─────────────────────┘
+
+No WebSockets, No Redis, No Database
+Just simple HTTP polling every 500ms
 ```
 
 ---
@@ -56,31 +53,24 @@ Skip for MVP: Siege mode, XP system, ProofNetwork VRF, Redis cluster, anti-cheat
 
 <!-- MVP:START -->
 ```
-server/
+backend/
 ├── src/
 │   ├── index.ts                 # Server entry point
-│   ├── config/
-│   │   ├── env.ts              # Environment config
-│   │   ├── redis.ts            # Redis connection
-│   │   └── solana.ts           # RPC connections
+│   ├── config.ts               # Simple config
 │   ├── game/
-│   │   ├── GameManager.ts      # Core game orchestration
-│   │   ├── GameInstance.ts     # Individual game logic (Blitz only)
-│   │   ├── CombatEngine.ts     # Simple combat (fixed damage)
-│   │   └── PowerUpSystem.ts    # Basic power-ups (2 types)
-│   ├── entities/
-│   │   ├── Warrior.ts          # Warrior class
-│   │   ├── Arena.ts            # Arena management
-│   │   └── PowerUp.ts          # Power-up class
-│   ├── websocket/
-│   │   ├── SocketManager.ts    # WebSocket orchestration
-│   │   └── GameEvents.ts       # Event handlers
-│   ├── blockchain/
-│   │   └── SolanaService.ts    # Basic chain interactions
+│   │   ├── GameManager.ts      # Game state & inputs
+│   │   ├── InputProcessor.ts   # Convert inputs to weights
+│   │   ├── VisualEngine.ts     # Generate fake combat
+│   │   ├── WeightCalculator.ts # Calculate final weights
+│   │   ├── PowerUpMarket.ts    # Dynamic offers
+│   │   └── constants.ts        # Weight factors
+│   ├── api/
+│   │   ├── routes.ts           # API endpoints
+│   │   └── handlers.ts         # Input handlers
 │   └── utils/
-│       ├── logger.ts           # Simple logging
-│       └── constants.ts        # Game constants
+│       └── vrf.ts              # VRF winner selection
 ├── package.json
+└── .env
 ```
 <!-- MVP:END -->
 
@@ -118,51 +108,34 @@ Additional files for full version:
 ### **1. Server Entry Point**
 
 ```typescript
-// src/index.ts - MVP VERSION
+// src/index.ts - INPUT-DRIVEN VERSION
 import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import Redis from 'ioredis';
+import cors from 'cors';
 import { GameManager } from './game/GameManager';
-import { SocketManager } from './websocket/SocketManager';
-import { SolanaService } from './blockchain/SolanaService';
+import { setupRoutes } from './api/routes';
 
 const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
-    credentials: true
-  }
-});
 
-// Initialize single Redis instance (no cluster for MVP)
-const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: 6379
-});
+// Middleware
+app.use(cors());
+app.use(express.json());
 
-// Initialize core services
-const solanaService = new SolanaService();
-const gameManager = new GameManager(redis, solanaService);
-const socketManager = new SocketManager(io, gameManager);
+// Initialize managers
+const gameManager = new GameManager();
 
-// Basic health check
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: Date.now(),
-    activeGames: gameManager.getActiveGameCount()
-  });
-});
+// Setup API routes
+setupRoutes(app, gameManager);
 
 // Start server
-const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+  console.log(`Input-driven backend running on port ${PORT}`);
   
-  // Start game loops
-  gameManager.startGameLoops();
+  // Start visual update loop (for animations)
+  gameManager.startVisualLoop();
+  
+  // Start game end checker
+  gameManager.startGameEndChecker();
 });
 ```
 <!-- MVP:END -->
@@ -231,40 +204,42 @@ start();
 <!-- POST-MVP:END -->
 
 <!-- MVP:START -->
-### **2. Game Manager**
+### **2. Input-Driven Game Manager**
 
 ```typescript
-// src/game/GameManager.ts - MVP VERSION
-import { Redis } from 'ioredis';
-import { GameInstance } from './GameInstance';
+// src/game/GameManager.ts - INPUT COLLECTION VERSION
 import { v4 as uuidv4 } from 'uuid';
+import { InputProcessor } from './InputProcessor';
+import { VisualEngine } from './VisualEngine';
+import { WeightCalculator } from './WeightCalculator';
 
 export class GameManager {
-  private activeGames: Map<string, GameInstance> = new Map();
+  private games: Map<string, GameState> = new Map();
+  private playerInputs: Map<string, PlayerInput[]> = new Map();
+  private inputProcessor: InputProcessor;
+  private visualEngine: VisualEngine;
+  private weightCalculator: WeightCalculator;
   
-  constructor(
-    private redis: Redis,
-    private solanaService: SolanaService
-  ) {}
+  constructor() {
+    this.inputProcessor = new InputProcessor();
+    this.visualEngine = new VisualEngine();
+    this.weightCalculator = new WeightCalculator();
+  }
   
-  async createGame(): Promise<GameInstance> {
+  createGame(): GameState {
     const gameId = uuidv4();
+    const game: GameState = {
+      id: gameId,
+      phase: 'waiting',
+      startTime: null,
+      warriors: [],
+      visualEffects: [],
+      pot: 0,
+      playerInputs: new Map(),
+      processedWeights: null
+    };
     
-    // Create on-chain game escrow
-    const escrowAddress = await this.solanaService.createGameEscrow(gameId);
-    
-    // Create game instance (Blitz only for MVP)
-    const game = new GameInstance(gameId, escrowAddress);
-    
-    this.activeGames.set(gameId, game);
-    
-    // Store in Redis
-    await this.redis.setex(
-      `game:${gameId}`,
-      3600, // 1 hour expiry
-      JSON.stringify(game.getState())
-    );
-    
+    this.games.set(gameId, game);
     return game;
   }
   
@@ -455,39 +430,70 @@ export class GameManager {
 <!-- POST-MVP:END -->
 
 <!-- MVP:START -->
-### **3. Game Instance (Simple MVP Version)**
+### **3. Input Processing System**
 
 ```typescript
-// src/game/GameInstance.ts - MVP VERSION (Blitz only)
-import { Warrior } from '../entities/Warrior';
-import { Arena } from '../entities/Arena';
-import { PowerUpSystem } from './PowerUpSystem';
-import { CombatEngine } from './CombatEngine';
-
-export class GameInstance {
-  private warriors: Map<string, Warrior> = new Map();
-  private arena: Arena;
-  private powerUpSystem: PowerUpSystem;
-  private combatEngine: CombatEngine;
-  private startTime?: number;
-  private endTime?: number;
-  private phase: GamePhase = GamePhase.Waiting;
+// src/game/InputProcessor.ts - CONVERT INPUTS TO WEIGHTS
+export class InputProcessor {
+  processPlayerInput(input: PlayerInput): ProcessedInput {
+    const timestamp = Date.now();
+    
+    return {
+      playerId: input.wallet,
+      inputType: input.type,
+      timestamp,
+      data: input.data,
+      // Calculate immediate weight factors
+      weightFactors: this.calculateWeightFactors(input, timestamp)
+    };
+  }
+  
+  private calculateWeightFactors(input: PlayerInput, timestamp: number) {
+    switch (input.type) {
+      case 'JOIN_GAME':
+        return {
+          entryTiming: this.calculateEntryBonus(timestamp),
+          positionValue: this.evaluatePosition(input.data.position)
+        };
+        
+      case 'ACTIVATE_POWERUP':
+        return {
+          efficiency: this.calculateEfficiency(input, timestamp),
+          combo: this.checkCombo(input.wallet, timestamp)
+        };
+        
+      case 'FORM_ALLIANCE':
+        return {
+          cooperation: 50,
+          trustBonus: 20
+        };
+        
+      case 'BETRAY_ALLIANCE':
+        return {
+          betrayalPenalty: -100,
+          riskTaker: 30
+        };
+    }
+  }
+}
   
   constructor(
     public readonly id: string,
     public readonly escrowAddress: string
   ) {
     this.arena = new Arena();
-    this.powerUpSystem = new PowerUpSystem();
-    this.combatEngine = new CombatEngine();
+    this.vrf = new ProofNetworkVRF();
+    this.warriorAI = new WarriorAI(this.vrf);
+    this.powerUpMarket = new PowerUpMarket(this.poolTracker);
+    this.poolTracker = new PrizePoolTracker();
   }
   
-  update(currentTime: number): void {
+  async update(currentTime: number): Promise<void> {
     if (!this.startTime) {
-      // Start game when we have enough players
       if (this.warriors.size >= 2) {
         this.startTime = currentTime;
         this.phase = GamePhase.Active;
+        this.powerUpMarket.startOffering(); // Start power-up sales
       }
       return;
     }
@@ -496,126 +502,138 @@ export class GameInstance {
     
     // End game after 90 seconds
     if (elapsed >= 90000) {
-      this.endGame();
+      await this.endGame();
       return;
     }
     
-    // Update systems
-    this.updateWarriorMovement();
-    this.updateCombat();
-    this.powerUpSystem.update(currentTime);
-    this.checkPowerUpCollections();
+    // Update all AI warriors
+    await this.updateAllWarriorAI();
+    
+    // Update power-up market
+    this.powerUpMarket.update(currentTime);
     
     // Check for winner
     const alive = this.getAliveWarriors();
     if (alive.length === 1) {
-      this.endGame();
+      await this.endGame();
     }
   }
   
-  addWarrior(playerId: string): Warrior {
-    const warriorId = `${playerId}`;
+  async addWarrior(playerId: string): Promise<Warrior> {
+    // Use VRF for random spawn position
+    const availablePositions = this.arena.getAvailableSpawnPositions();
+    const spawnResult = await this.vrf.selectSpawnPosition(availablePositions);
     
-    // Random spawn position
-    const position = this.arena.getRandomSpawnPosition();
-    
-    // Create warrior with 100 HP
     const warrior = new Warrior({
-      id: warriorId,
+      id: `${playerId}-${Date.now()}`,
       playerId,
-      position,
+      position: spawnResult.position,
       hp: 100,
       maxHp: 100
     });
     
-    this.warriors.set(warriorId, warrior);
+    this.warriors.set(warrior.id, warrior);
+    
+    // Update prize pool
+    this.poolTracker.addJoinContribution(0.002);
+    
+    this.emit('warriorSpawned', {
+      warriorId: warrior.id,
+      position: spawnResult.position,
+      proof: spawnResult.proof
+    });
+    
     return warrior;
   }
   
-  canJoin(): boolean {
-    return this.phase === GamePhase.Waiting && this.warriors.size < 10;
+  async buyPowerUp(playerId: string, offerId: string): Promise<void> {
+    const offer = this.powerUpMarket.getOffer(offerId);
+    if (!offer) throw new Error('Invalid offer');
+    
+    // Apply power-up to player's warriors
+    const playerWarriors = Array.from(this.warriors.values())
+      .filter(w => w.playerId === playerId && w.isAlive());
+    
+    for (const warrior of playerWarriors) {
+      this.applyPowerUp(warrior, offer.type);
+    }
+    
+    // Update prize pool
+    this.poolTracker.addPowerUpContribution(offer.price);
+    
+    this.emit('powerUpPurchased', {
+      buyer: playerId,
+      powerUpType: offer.type,
+      price: offer.price,
+      newPotSize: this.poolTracker.getCurrentPot()
+    });
   }
   
-  isActive(): boolean {
-    return this.phase === GamePhase.Active;
+  private async updateAllWarriorAI(): Promise<void> {
+    for (const warrior of this.warriors.values()) {
+      if (!warrior.isAlive()) continue;
+      
+      // AI makes decisions for each warrior
+      const decision = await this.warriorAI.makeDecision(
+        warrior,
+        Array.from(this.warriors.values()),
+        this.arena
+      );
+      
+      switch (decision.action) {
+        case 'move':
+          this.moveWarrior(warrior, decision.target);
+          break;
+        case 'attack':
+          await this.performAttack(warrior, decision.target);
+          break;
+        case 'usePowerUp':
+          this.usePowerUp(warrior, decision.powerUp);
+          break;
+      }
+    }
   }
   
-  getState(): any {
+  private moveWarrior(warrior: Warrior, targetPosition: Position): void {
+    warrior.moveTo(targetPosition);
+    
+    this.emit('warriorMoved', {
+      warriorId: warrior.id,
+      position: targetPosition
+    });
+  }
+  
+  private async performAttack(attacker: Warrior, target: Warrior): Promise<void> {
+    // Use VRF for damage calculation
+    const damageResult = await this.vrf.calculateDamage();
+    
+    target.takeDamage(damageResult.damage);
+    attacker.setAttackCooldown();
+    
+    this.emit('combatEvent', {
+      attackerId: attacker.id,
+      targetId: target.id,
+      damage: damageResult.damage,
+      newHp: target.hp,
+      proof: damageResult.proof
+    });
+    
+    if (!target.isAlive()) {
+      this.handleElimination(attacker, target);
+    }
+  }
+  
+  getState(): GameState {
     return {
       id: this.id,
       phase: this.phase,
       warriors: Array.from(this.warriors.values()).map(w => w.serialize()),
-      powerUps: this.powerUpSystem.getActivePowerUps(),
+      powerUpOffers: this.powerUpMarket.getCurrentOffers(),
+      currentPot: this.poolTracker.getCurrentPot(),
+      potBreakdown: this.poolTracker.getBreakdown(),
       startTime: this.startTime,
       timeRemaining: this.startTime ? 90 - ((Date.now() - this.startTime) / 1000) : 90
     };
-  }
-  
-  private updateCombat(): void {
-    // Simple combat for MVP
-    for (const attacker of this.warriors.values()) {
-      if (!attacker.isAlive() || attacker.isOnCooldown()) continue;
-      
-      const target = this.combatEngine.findTarget(
-        attacker,
-        Array.from(this.warriors.values())
-      );
-      
-      if (target) {
-        // Fixed damage for MVP
-        target.takeDamage(6);
-        attacker.setAttackCooldown();
-        
-        // Check for elimination
-        if (!target.isAlive()) {
-          this.handleElimination(attacker, target);
-        }
-      }
-    }
-  }
-  
-  private handleElimination(killer: Warrior, victim: Warrior): void {
-    // Killer gets HP reward
-    killer.heal(5);
-    
-    // Remove victim
-    this.warriors.delete(victim.id);
-    
-    // Emit event
-    this.emit('warriorEliminated', {
-      victim: victim.id,
-      killer: killer.id
-    });
-  }
-  
-  private checkPowerUpCollections(): void {
-    for (const warrior of this.warriors.values()) {
-      if (!warrior.isAlive()) continue;
-      
-      const powerUp = this.powerUpSystem.checkCollection(warrior.position);
-      if (powerUp) {
-        this.applyPowerUp(warrior, powerUp);
-      }
-    }
-  }
-  
-  private async endGame(): Promise<void> {
-    this.phase = GamePhase.Ended;
-    this.endTime = Date.now();
-    
-    // Get winner
-    const alive = this.getAliveWarriors();
-    const winner = alive.length === 1 ? alive[0] : 
-                  alive.sort((a, b) => b.hp - a.hp)[0];
-    
-    // Submit result to blockchain
-    await this.solanaService.submitGameResult(this.id, winner.playerId);
-    
-    // Emit event
-    this.emit('gameEnded', {
-      gameId: this.id,
-      winner: winner.playerId
-    });
   }
 }
 ```
@@ -880,29 +898,265 @@ export class BlitzGame extends GameInstance {
 <!-- POST-MVP:END -->
 
 <!-- MVP:START -->
-### **5. Combat Engine**
+### **4. Visual Engine System**
 
 ```typescript
-// src/game/CombatEngine.ts - MVP VERSION (no VRF)
-export class CombatEngine {
-  findTarget(attacker: Warrior, allWarriors: Warrior[]): Warrior | null {
-    const inRange = allWarriors.filter(w => 
-      w.id !== attacker.id &&
-      w.isAlive() &&
-      this.isInRange(attacker.position, w.position)
-    );
+// src/game/VisualEngine.ts - FAKE COMBAT ANIMATIONS
+export class VisualEngine {
+  private visualHP: Map<string, number> = new Map();
+  private animations: VisualEffect[] = [];
+  
+  // Generate visual state (not real combat)
+  generateVisualState(game: GameState): VisualState {
+    const warriors = [];
     
-    if (inRange.length === 0) return null;
+    for (const [id, warrior] of game.warriors) {
+      // Update visual positions (random movement)
+      const visualPos = this.updateVisualPosition(warrior);
+      
+      // Update fake HP (decreases over time)
+      const hp = this.updateVisualHP(id, game.startTime);
+      
+      warriors.push({
+        id,
+        position: visualPos,
+        visualHp: hp,
+        effects: this.getActiveEffects(id)
+      });
+    }
     
-    // Priority: Lowest HP
-    const byHP = inRange.sort((a, b) => a.hp - b.hp);
-    return byHP[0];
+    return {
+      warriors,
+      effects: this.animations,
+      momentum: this.calculateVisualMomentum(game)
+    };
   }
   
-  private isInRange(pos1: Position, pos2: Position): boolean {
+  // Create visual feedback for inputs
+  createInputFeedback(input: ProcessedInput): VisualEffect {
+    switch (input.inputType) {
+      case 'ACTIVATE_POWERUP':
+        return {
+          id: uuid(),
+          type: 'powerup',
+          position: this.getWarriorPosition(input.playerId),
+          animation: 'rage_aura',
+          duration: 2000,
+          message: '+15 Power!'
+        };
+        
+      case 'FORM_ALLIANCE':
+        return {
+          id: uuid(),
+          type: 'alliance',
+          position: { x: 400, y: 300 },
+          animation: 'handshake',
+          duration: 1500,
+          message: 'Alliance Formed!'
+        };
+    }
+  }
+    // Find all enemies
+    const enemies = allWarriors.filter(w => 
+      w.playerId !== warrior.playerId && w.isAlive()
+    );
+    
+    if (enemies.length === 0) {
+      return { action: 'wait' };
+    }
+    
+    // Check if we can attack
+    const adjacentEnemies = enemies.filter(e => 
+      this.isAdjacent(warrior.position, e.position)
+    );
+    
+    if (adjacentEnemies.length > 0) {
+      // Multiple targets? Use VRF to choose
+      let target: Warrior;
+      if (adjacentEnemies.length > 1) {
+        const decision = await this.vrf.selectAITarget(warrior, adjacentEnemies);
+        target = decision.target;
+      } else {
+        target = adjacentEnemies[0];
+      }
+      
+      return { action: 'attack', target };
+    }
+    
+    // Find closest enemy
+    const closestEnemy = this.findClosestEnemy(warrior, enemies);
+    
+    // Calculate path
+    const validPaths = this.calculateValidPaths(
+      warrior.position,
+      closestEnemy.position,
+      arena
+    );
+    
+    // Multiple paths? Use VRF to choose
+    let chosenPath: Position;
+    if (validPaths.length > 1) {
+      const pathDecision = await this.vrf.selectMovementPath(warrior, validPaths);
+      chosenPath = pathDecision.path;
+    } else {
+      chosenPath = validPaths[0];
+    }
+    
+    return { action: 'move', target: chosenPath };
+  }
+  
+  private isAdjacent(pos1: Position, pos2: Position): boolean {
     const dx = Math.abs(pos1.x - pos2.x);
     const dy = Math.abs(pos1.y - pos2.y);
-    return dx <= 1 && dy <= 1; // Adjacent cells
+    return dx <= 1 && dy <= 1;
+  }
+  
+  private findClosestEnemy(warrior: Warrior, enemies: Warrior[]): Warrior {
+    return enemies.reduce((closest, enemy) => {
+      const distToCurrent = this.getDistance(warrior.position, enemy.position);
+      const distToClosest = this.getDistance(warrior.position, closest.position);
+      return distToCurrent < distToClosest ? enemy : closest;
+    });
+  }
+  
+  private getDistance(pos1: Position, pos2: Position): number {
+    return Math.abs(pos1.x - pos2.x) + Math.abs(pos1.y - pos2.y);
+  }
+}
+
+interface AIDecision {
+  action: 'move' | 'attack' | 'usePowerUp' | 'wait';
+  target?: Position | Warrior;
+  powerUp?: PowerUpType;
+}
+```
+
+### **5. Weight Calculator System**
+
+```typescript
+// src/game/WeightCalculator.ts - PROCESS ALL INPUTS INTO WEIGHTS
+export class WeightCalculator {
+  calculateFinalWeights(
+    game: GameState,
+    allInputs: Map<string, ProcessedInput[]>
+  ): Map<string, number> {
+    const weights = new Map<string, number>();
+    
+    for (const [playerId, inputs] of allInputs) {
+      const factors = this.calculateAllFactors(inputs, game);
+      const finalWeight = this.computeFinalWeight(factors);
+      weights.set(playerId, finalWeight);
+    }
+    
+    return weights;
+  }
+  
+  private createNewOffers(): void {
+    const potSize = this.poolTracker.getCurrentPot();
+    
+    // Dynamic pricing based on pot size
+    const priceMultiplier = Math.max(1, potSize / 10); // Scale with pot
+    
+    const offers: PowerUpOffer[] = [
+      {
+        id: uuidv4(),
+        type: 'health',
+        price: 0.001 * priceMultiplier,
+        description: 'Heal all your warriors +25 HP',
+        target: 'self',
+        expiresIn: 20
+      },
+      {
+        id: uuidv4(),
+        type: 'rage',
+        price: 0.002 * priceMultiplier,
+        description: 'Double damage for 10 seconds',
+        target: 'self',
+        expiresIn: 15
+      },
+      {
+        id: uuidv4(),
+        type: 'chaos',
+        price: 0.01 * priceMultiplier,
+        description: 'Deal 20 damage to ALL warriors',
+        target: 'all',
+        expiresIn: 10
+      }
+    ];
+    
+    // Clear old offers
+    this.currentOffers.clear();
+    
+    // Add new offers
+    offers.forEach(offer => {
+      this.currentOffers.set(offer.id, offer);
+      
+      // Auto-expire offers
+      setTimeout(() => {
+        this.currentOffers.delete(offer.id);
+      }, offer.expiresIn * 1000);
+    });
+    
+    // Emit new offers event
+    this.emit('powerUpOffers', { offers });
+  }
+  
+  getCurrentOffers(): PowerUpOffer[] {
+    return Array.from(this.currentOffers.values());
+  }
+  
+  getOffer(offerId: string): PowerUpOffer | undefined {
+    return this.currentOffers.get(offerId);
+  }
+}
+```
+
+### **6. Prize Pool Tracker**
+
+```typescript
+// src/game/PrizePoolTracker.ts - REAL-TIME POT TRACKING
+export class PrizePoolTracker {
+  private currentPot: number = 0;
+  private joinContributions: number = 0;
+  private powerupContributions: number = 0;
+  
+  addJoinContribution(amount: number): void {
+    const poolAmount = amount * 0.95; // 95% to pool
+    this.currentPot += poolAmount;
+    this.joinContributions += poolAmount;
+    
+    this.emit('potUpdate', {
+      currentPot: this.currentPot,
+      lastChange: poolAmount,
+      source: 'join',
+      totalPlayers: this.getPlayerCount()
+    });
+  }
+  
+  addPowerUpContribution(amount: number): void {
+    const poolAmount = amount * 0.90; // 90% to pool
+    this.currentPot += poolAmount;
+    this.powerupContributions += poolAmount;
+    
+    this.emit('potUpdate', {
+      currentPot: this.currentPot,
+      lastChange: poolAmount,
+      source: 'powerup',
+      totalPlayers: this.getPlayerCount()
+    });
+  }
+  
+  getCurrentPot(): number {
+    return this.currentPot;
+  }
+  
+  getBreakdown(): PotBreakdown {
+    return {
+      total: this.currentPot,
+      fromJoins: this.joinContributions,
+      fromPowerUps: this.powerupContributions,
+      percentFromPowerUps: (this.powerupContributions / this.currentPot) * 100
+    };
   }
 }
 ```
@@ -1032,17 +1286,23 @@ export class SocketManager {
         }
       });
       
-      // Move warrior
-      socket.on('moveWarrior', async (data) => {
+      // Buy power-up
+      socket.on('buyPowerUp', async (data) => {
         const client = this.clients.get(socket.id);
         if (!client) return;
         
-        // Process movement
-        await this.gameManager.processMove(
-          data.gameId,
-          client.wallet,
-          data.direction
-        );
+        try {
+          await this.gameManager.processPowerUpPurchase(
+            data.gameId,
+            client.wallet,
+            data.offerId
+          );
+        } catch (error) {
+          socket.emit('error', { 
+            code: 'PURCHASE_FAILED',
+            message: error.message 
+          });
+        }
       });
       
       socket.on('disconnect', () => {

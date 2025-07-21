@@ -2,22 +2,22 @@
 *This file is automatically loaded by Claude when working in this directory*
 
 ## **Project Context**
-You are helping with Aurelius, a dual-mode real-time PvP battle arena on Solana featuring Arena Blitz (90s quick battles) and Glory Siege (5min strategic wars). The game is being developed for BOTH web and mobile platforms to target two hackathons simultaneously.
+You are helping with Aurelius, an auto-battle PvP arena on Solana where AI controls warrior movement and players buy power-ups to influence battles. Features Arena Blitz (90s quick battles) and Glory Siege (5min strategic wars). The game is being developed as a WEB-ONLY application with responsive design for mobile browsers.
 
 ## **Guide Documents Overview**
 
 ### **Core Design Documents**
 1. **AURELIUS_GAME_DESIGN.md** - Complete game design with dual modes
 2. **DUAL_MODE_COMPLETE_DESIGN.md** - Detailed dual-mode mechanics and balance
-3. **INTERFACE_CONTRACT.md v3.0** - Sacred data structures and protocols
-4. **DUAL_PLATFORM_STRATEGY.md** - Web + Mobile development strategy
-5. **MINIMUM_MVP.md** - Dual-platform MVP guide (5-7 days)
+3. **INTERFACE_CONTRACT.md v4.0** - Sacred data structures and protocols (AUTO-BATTLE)
+4. **ARCHIVED_DUAL_PLATFORM_STRATEGY.md** - (No longer used - web-only now)
+5. **MINIMUM_MVP.md** - Web-only MVP guide (2 days)
 
 ### **Technical Implementation**
 6. **TECHNICAL_ARCHITECTURE.md** - System architecture and tech stack
 7. **SMART_CONTRACT_IMPLEMENTATION.md** - Anchor framework guide
 8. **GAME_SERVER_ARCHITECTURE.md** - Real-time backend implementation
-9. **SHARED_CODE_PATTERNS.md** - Code sharing between web/mobile platforms
+9. **SHARED_CODE_PATTERNS.md** - (Archived - no longer needed for web-only)
 
 ### **Collaboration & Process**
 10. **PROJECT_MANAGEMENT.md** - Task division and responsibilities
@@ -27,6 +27,22 @@ You are helping with Aurelius, a dual-mode real-time PvP battle arena on Solana 
 ### **Reference Materials**
 13. **proofnetwork-documentation.md** - VRF and randomness guide
 14. **AURELIUS_APPEAL_STRATEGY.md** - User psychology insights
+
+## **🎮 CRITICAL: Input-Driven Battle System**
+
+### **How It Works**
+1. **NO REAL COMBAT** - Warriors don't actually fight each other
+2. **INPUT COLLECTION** - Backend collects all player strategic decisions
+3. **WEIGHT CALCULATION** - Each input affects player's final weight
+4. **VISUAL FEEDBACK** - Frontend shows fake combat animations
+5. **VRF SELECTION** - Winner chosen based on weight distribution
+
+### **Key Points**
+- Visual HP bars are FAKE (just for show)
+- Damage numbers are FAKE (not calculated)
+- Movement is VISUAL ONLY (no pathfinding)
+- All that matters is WHEN and HOW players make inputs
+- Better strategy = Higher weight = Better odds (but not guaranteed)
 
 ## **Automatic Behaviors**
 
@@ -55,10 +71,11 @@ You are helping with Aurelius, a dual-mode real-time PvP battle arena on Solana 
 - Include underdog mechanics and special events
 
 ### **When I ask about implementation:**
-1. Check INTERFACE_CONTRACT.md v2.0 for data structures
+1. Check INTERFACE_CONTRACT.md v4.0 for data structures
 2. Verify task ownership in PROJECT_MANAGEMENT.md
-3. Follow the 10-14 day implementation roadmap
+3. Follow the 2-day MVP implementation roadmap
 4. Use TypeScript/Rust types exactly as defined
+5. Remember: AI controls movement, players only join/buy power-ups
 
 ### **When I make design changes:**
 1. Follow DESIGN_CHANGE_PROTOCOL.md strictly
@@ -67,32 +84,26 @@ You are helping with Aurelius, a dual-mode real-time PvP battle arena on Solana 
 4. Increment INTERFACE_CONTRACT.md version if breaking
 
 ### **When writing code:**
-- Partner A: Smart contracts (Anchor), game server (Node.js), ProofNetwork
-- Partner B: Web Frontend (Next.js/Phaser), Mobile Frontend (React Native/Skia)
-- Always use exact types from INTERFACE_CONTRACT.md v3.0
-- Share code via /shared folder (copy-paste approach)
-- Follow security patterns from architecture guides
+- Partner A: Smart contracts (Anchor), backend service (Node.js), AI logic
+- Partner B: Web Frontend (Next.js/Phaser) with polling
+- Always use exact types from INTERFACE_CONTRACT.md v5.0 (Polling API)
+- Follow simplified architecture (no WebSockets)
+- Remember: NO player movement controls, only join/power-up buttons
 
-### **When working with platforms:**
-1. **Shared code changes**: Update /shared first, then sync to both platforms
-2. **Platform-specific code**: Clearly mark with comments
-3. **Testing**: Always test on BOTH platforms before marking complete
-4. **Performance**: Web targets 60 FPS, Mobile targets 30 FPS
-5. **Code patterns**: Follow SHARED_CODE_PATTERNS.md for cross-platform code
-
-### **When dual-platform development:**
-1. Reference DUAL_PLATFORM_STRATEGY.md for architecture
-2. Use SHARED_CODE_PATTERNS.md for code sharing
-3. Check MINIMUM_MVP.md for MVP scope (5-7 days)
-4. Follow platform-specific optimizations
+### **When working with web development:**
+1. **Responsive design**: Ensure UI works on all screen sizes
+2. **Mobile browsers**: Test on Chrome/Safari mobile
+3. **Performance**: Desktop targets 60 FPS, mobile browsers 30 FPS
+4. **Touch controls**: Buttons must be touch-friendly (44x44px minimum)
+5. **Auto-battle**: All warrior movement is AI-controlled
 
 ### **When committing:**
 ```bash
-[A] feat: Implement game escrow with multi-winner support
-[B-Web] ui: Add Phaser arena scene for web
-[B-Mobile] ui: Add React Native Skia arena for mobile
-[B-Shared] feat: Create shared battle logic
-[AB] fix: Sync warrior position calculation
+[A] feat: Implement game escrow with power-up purchases
+[B] ui: Add Phaser arena scene with auto-battle display
+[A] feat: Implement AI warrior logic
+[B] ui: Add power-up marketplace UI
+[AB] fix: Sync AI movement with frontend display
 ```
 
 ## **Key Technical Decisions**
@@ -102,7 +113,7 @@ You are helping with Aurelius, a dual-mode real-time PvP battle arena on Solana 
 - **Maximum Performance**: 60 FPS, <100ms latency
 - **Security First**: Funds always in escrow PDAs
 - **Cost Efficient**: ~0.003 SOL rent per account
-- **Quick Delivery**: MVP in 10-14 days
+- **Quick Delivery**: MVP in 2 days
 
 ### **Anti-Overengineering Principles**
 1. **Always choose the simplest solution** that meets the requirements
@@ -114,21 +125,23 @@ You are helping with Aurelius, a dual-mode real-time PvP battle arena on Solana 
 5. **MVP means MVP** - resist adding "nice to have" features
 6. **Prefer copy-paste over complex sharing** mechanisms
 7. **Avoid premature optimization** - make it work first
+8. **Use polling over WebSockets** - simpler to implement and debug
+9. **In-memory state over databases** - faster development for MVP
 
-### **Tech Stack**
-- **Smart Contracts**: Anchor 0.30.0 (shared)
-- **Game Server**: Fastify + Socket.io + Redis (shared)
+### **Tech Stack (Simplified)**
+- **Smart Contracts**: Anchor 0.30.0
+- **Backend Service**: Node.js + Express (in-memory state)
 - **Web Frontend**: Next.js 15 + Phaser 3.90
-- **Mobile Frontend**: React Native + Skia
-- **Shared Logic**: TypeScript modules (copy-paste)
-- **Infrastructure**: Vercel (web) + EAS (mobile) + Railway + Helius RPC
+- **Randomness**: Simple VRF for winner selection
+- **Infrastructure**: Vercel (web + API) + Railway (backend)
 
 ## **Current Development Status**
 - Role: Partner A (Backend)
-- Phase: Dual-Platform Architecture Complete
-- Next: Core Development (Day 1-3)
-- Timeline: 5-7 days for dual-platform MVP
+- Phase: Web-Only Architecture Complete
+- Next: Core Development (Day 1-2)
+- Timeline: 2 days for web MVP
 - Branch: main
+- Key Feature: AUTO-BATTLE with power-up marketplace
 
 ## **Critical Constants**
 ```typescript
@@ -136,21 +149,24 @@ You are helping with Aurelius, a dual-mode real-time PvP battle arena on Solana 
 BLITZ: { duration: 90s, fee: 0.002 SOL, max: 20 }
 SIEGE: { duration: 300s, fee: 0.01 SOL, max: 100 }
 
-// Combat
-HP: 100 (70 for late entry)
-DAMAGE: 5-8 (VRF)
-VETERAN_BONUS: +1% per 10s
+// Visual Combat (NOT REAL)
+VISUAL_HP: 100 (fake HP bar)
+VISUAL_DAMAGE: 5-8 (shown only)
+EFFECT_DURATION: varies
+VISUAL_UPDATE_RATE: 50ms
 
-// Special Events
-GODSLAYER_ORB: 0.5% spawn, 50 damage
-SECOND_WIND: 2% chance at <10 HP
+// Input Types
+JOIN_GAME: Entry with position choice
+ACTIVATE_POWERUP: Use at strategic moment
+FORM_ALLIANCE: Cooperate for bonus
+BETRAY_ALLIANCE: Risk for reward
 
-// XP System
-BASE_PARTICIPATION: 10 XP
-PER_ELIMINATION: 25 XP
-PER_MINUTE_SURVIVED: 10 XP
-DAMAGE_DEALT: 1 XP per 10 damage
-POWER_UP_COLLECTED: 5 XP
+// Weight Factors (Hidden from players)
+ENTRY_TIMING: +50-200 (early bird bonus)
+ACTION_EFFICIENCY: x1.0-2.0 multiplier
+POWER_UP_TIMING: +20-100 per use
+ALLIANCE_BONUS: +50 (cooperation)
+BETRAYAL_PENALTY: -100 (trust broken)
 
 // Victory XP
 BLITZ_WINNER: 100 XP
@@ -168,70 +184,65 @@ Level = floor(sqrt(XP / 100))
 ## **Auto-Check List**
 Before any implementation:
 - [ ] Check task ownership in PROJECT_MANAGEMENT.md
-- [ ] Verify against INTERFACE_CONTRACT.md v3.0
+- [ ] Verify against INTERFACE_CONTRACT.md v5.0
 - [ ] Follow patterns from technical guides
 - [ ] Consider on-chain vs off-chain placement
 - [ ] Ensure security measures are in place
-- [ ] Will this affect BOTH web and mobile implementations?
-- [ ] Is this code shareable between platforms?
+- [ ] Is the UI responsive for mobile browsers?
+- [ ] Are inputs being collected with timestamps?
+- [ ] Is visual feedback immediate and engaging?
 
 ## **Quick Command Reference**
 ```bash
 # Initial setup
 mkdir aurelius && cd aurelius
-mkdir -p programs/aurelius server shared web mobile
-
-# Sync shared code
-npm run sync:shared
+mkdir -p programs/aurelius server web
 
 # Development commands
 npm run dev:all      # Run everything
-npm run dev:web      # Web only
-npm run dev:mobile   # Mobile only
-npm run dev:server   # Server only
+npm run dev:web      # Web frontend
+npm run dev:server   # Game server
 
 # Deploy contracts
 cd programs/aurelius && anchor deploy --provider.cluster devnet
 
-# Platform builds
-cd web && vercel       # Deploy web
-cd mobile && eas build # Build mobile
+# Deploy web
+cd web && vercel
 ```
 
-## **Dual-Platform Project Structure**
+## **Simplified Project Structure**
 ```
 /Aurelius
-├── /web                    # Next.js web app
-├── /mobile                 # React Native mobile app
-├── /shared                 # Shared game logic (copy-paste)
+├── /web                    # Next.js + Phaser + API routes
 ├── /programs               # Anchor smart contracts
-├── /server                 # Shared game server
+├── /backend                # Simple Node.js service
 └── /Guide                  # All documentation
 ```
 
-### **Platform-Specific Rules**
-- **Web**: Full features, keyboard controls, 60 FPS, all browsers
-- **Mobile**: Touch controls, 30 FPS, battery optimization, reconnection handling
-- **Shared**: Pure TypeScript functions, no platform-specific imports
-- **Server**: Platform-agnostic WebSocket, mobile-optimized batching
+### **Web Development Rules**
+- **Desktop**: 60 FPS, full effects, keyboard shortcuts
+- **Mobile Browsers**: 30 FPS, touch-friendly UI, simplified effects
+- **Input System**: Collect strategic decisions with timestamps
+- **Visual Feedback**: Show fake combat to maintain engagement
+- **Power-Ups**: Strategic purchases affect weight calculation!
 
 ## **📚 Complete Documentation Index**
 
 All 15 guide documents are now synchronized:
 
 **Design & Strategy (5)**
-- AURELIUS_GAME_DESIGN.md - Core game design
+- AURELIUS_GAME_DESIGN.md - Core game design (INPUT-DRIVEN)
 - DUAL_MODE_COMPLETE_DESIGN.md - Mode balance
-- DUAL_PLATFORM_STRATEGY.md - Platform strategy
-- MINIMUM_MVP.md - MVP implementation
+- ARCHIVED_DUAL_PLATFORM_STRATEGY.md - (Archived)
+- MINIMUM_MVP.md - MVP implementation (2-day web)
 - AURELIUS_APPEAL_STRATEGY.md - User psychology
 
 **Technical (5)**
-- TECHNICAL_ARCHITECTURE.md - System design
+- TECHNICAL_ARCHITECTURE.md - Simplified polling design
 - SMART_CONTRACT_IMPLEMENTATION.md - Blockchain
-- GAME_SERVER_ARCHITECTURE.md - Backend
-- INTERFACE_CONTRACT.md - Data contracts
-- SHARED_CODE_PATTERNS.md - Code sharing
+- GAME_SERVER_ARCHITECTURE.md - Backend service
+- INTERFACE_CONTRACT.md v5.0 - Data contracts (POLLING API)
+- SHARED_CODE_PATTERNS.md - (Archived)
 
 **Process & Collaboration (3)**
 - PROJECT_MANAGEMENT.md - Task tracking
@@ -243,4 +254,4 @@ All 15 guide documents are now synchronized:
 - CLAUDE.md - This file (auto-loaded)
 
 ---
-*Updated with dual-platform architecture and comprehensive project context. All guide documentation files are now referenced and synchronized.*
+*Updated for web-only auto-battle architecture. The game now features AI-controlled warriors with a power-up marketplace where every purchase grows the prize pool!*

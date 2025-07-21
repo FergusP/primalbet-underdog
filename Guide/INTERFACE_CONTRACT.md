@@ -1,20 +1,20 @@
 # **AURELIUS INTERFACE CONTRACT**
 *Sacred Agreement Between Partners*
 
-**Version**: 3.0.0  
+**Version**: 4.0.0  
 **Last Updated**: [Current Date]  
-**Status**: ACTIVE
+**Status**: ACTIVE - AUTO-BATTLE UPDATE
 
 <!-- MVP:SUMMARY -->
-## **🚀 MVP Interface Features**
-For the 3-5 day MVP, only implement:
-- **Basic WebSocket**: Simple auth (just wallet), no signatures
-- **Single Game Mode**: Blitz only (no mode selection)
-- **Simple Game State**: Warriors, 2 power-ups, basic arena
-- **Fixed Damage**: 6 HP per hit (no veteran bonus)
-- **Single Winner**: No multi-winner or XP events
+## **🚀 MVP Interface Features (INPUT-DRIVEN API)**
+For the 2-day MVP, only implement:
+- **Simple HTTP API**: RESTful endpoints for inputs
+- **Polling Updates**: Client polls for visual state
+- **Input Collection**: Strategic decisions, not movement
+- **Visual Feedback**: Fake combat animations
+- **Weight Processing**: Backend calculates from inputs
 
-Skip for MVP: Siege mode, veteran bonuses, special modifiers, XP system, multi-warrior
+Skip for MVP: WebSockets, Direct combat, Complex features
 <!-- MVP:END -->
 
 ---
@@ -29,26 +29,85 @@ Skip for MVP: Siege mode, veteran bonuses, special modifiers, XP system, multi-w
 
 ---
 
-## **🔌 WebSocket Protocol**
+## **🔌 API Protocol (HTTP Polling)**
 
 <!-- MVP:START -->
-### **Connection Handshake (MVP Version)**
+### **API Endpoints (MVP Version)**
+
+#### **GET /api/game/state**
 ```typescript
-// Client → Server - MVP VERSION
+// Request (query params)
+?gameId=string&wallet=string
+
+// Response
 {
-  type: 'connect',
-  data: {
-    wallet: string // Just wallet address, no signature verification
-  }
+  gameId: string,
+  phase: 'waiting' | 'battle' | 'ended',
+  timeRemaining: number,
+  warriors: Warrior[],
+  powerUps: PowerUp[],
+  pot: number,
+  playerCount: number,
+  marketplace: PowerUpOffer[]
+}
+```
+
+#### **POST /api/game/join**
+```typescript
+// Request body
+{
+  wallet: string,
+  gameId?: string, // Optional, joins next available
+  position?: { x: number, y: number } // Strategic position choice
 }
 
-// Server → Client - MVP VERSION
+// Response
 {
-  type: 'connected',
-  data: {
-    sessionId: string,
-    gameState: GameState | null
-  }
+  success: boolean,
+  gameId: string,
+  warriorId: string,
+  entryBonus: number, // Weight bonus for timing
+  message?: string
+}
+```
+
+#### **POST /api/game/input**
+```typescript
+// Request body
+{
+  wallet: string,
+  gameId: string,
+  inputType: 'ACTIVATE_POWERUP' | 'FORM_ALLIANCE' | 'BETRAY_ALLIANCE' | 'TARGET_ENEMY' | 'BOOST_WARRIOR',
+  data: any // Input-specific data
+}
+
+// Response
+{
+  success: boolean,
+  visualFeedback: {
+    type: 'positive' | 'negative' | 'neutral',
+    message: string,
+    animation: string
+  },
+  newPotSize?: number
+}
+```
+
+#### **POST /api/game/buyPowerUp**
+```typescript
+// Request body
+{
+  wallet: string,
+  gameId: string,
+  offerId: string
+}
+
+// Response
+{
+  success: boolean,
+  newPotSize: number,
+  powerUpId: string, // For later activation
+  message?: string
 }
 ```
 <!-- MVP:END -->
@@ -79,34 +138,62 @@ Skip for MVP: Siege mode, veteran bonuses, special modifiers, XP system, multi-w
 ```
 <!-- POST-MVP:END -->
 
-### **Game Events**
+### **Data Types**
 
 <!-- MVP:START -->
-#### **Game State Update - MVP VERSION** (Server → Client)
+#### **Game State - MVP VERSION**
 ```typescript
-{
-  type: 'gameStateUpdate',
-  data: {
-    gameId: string,
-    phase: 'waiting' | 'battle' | 'ended',
-    timeRemaining: number,
-    warriors: Array<{
-      warriorId: string,
-      player: string,
-      position: { x: number, y: number },
-      hp: number,
-      maxHp: 100,
-      effects: Array<'rage'>, // Only rage power-up for MVP
-      isAlive: boolean
-    }>,
-    powerUps: Array<{
-      powerUpId: string,
-      type: 'health' | 'rage', // Only 2 types for MVP
-      position: { x: number, y: number },
-      isActive: boolean
-    }>,
-    arenaRadius: 300 // Fixed size for MVP, no shrinking
-  }
+interface GameState {
+  gameId: string;
+  phase: 'waiting' | 'battle' | 'ended';
+  timeRemaining: number; // seconds
+  warriors: Warrior[]; // Visual positions only
+  visualEffects: VisualEffect[]; // Current animations
+  pot: number; // in SOL
+  playerCount: number;
+  marketplace: PowerUpOffer[];
+  momentum: Map<string, number>; // Visual momentum bars
+  winner?: string; // wallet address when ended
+  winnerWeight?: number; // Show final weight
+}
+
+interface Warrior {
+  warriorId: string;
+  player: string; // wallet
+  position: { x: number; y: number }; // Visual only
+  visualHp: number; // Fake HP for display
+  maxHp: 100;
+  effects: string[]; // Visual effects active
+  momentum: number; // Visual momentum 0-100
+  lastAction?: {
+    type: string;
+    timestamp: number;
+  };
+}
+
+interface PowerUp {
+  powerUpId: string;
+  type: 'health' | 'rage' | 'chaos';
+  position: { x: number; y: number };
+  isActive: boolean;
+}
+
+interface PowerUpOffer {
+  id: string;
+  type: 'health' | 'rage' | 'chaos' | 'assassinate';
+  price: number; // in SOL
+  description: string;
+  weightHint: 'defensive' | 'aggressive' | 'tactical' | 'chaotic';
+  expiresIn: number; // seconds
+}
+
+interface VisualEffect {
+  id: string;
+  type: 'damage' | 'heal' | 'powerup' | 'alliance' | 'betrayal';
+  position: { x: number; y: number };
+  target?: string;
+  value?: number; // Fake damage/heal amount
+  duration: number;
 }
 ```
 <!-- MVP:END -->
@@ -167,17 +254,63 @@ Skip for MVP: Siege mode, veteran bonuses, special modifiers, XP system, multi-w
 }
 ```
 
-#### **Warrior Movement - MVP VERSION** (Bidirectional)
+#### **Power-Up Purchase - MVP VERSION** (Bidirectional)
 ```typescript
 // Client → Server (Request)
 {
-  type: 'moveWarrior',
+  type: 'buyPowerUp',
   data: {
-    direction: { x: -1 | 0 | 1, y: -1 | 0 | 1 }
+    offerId: string,
+    targetWarriorId?: string // Optional for targeted power-ups
   }
 }
 
-// Server → Client (Broadcast)
+// Server → Client (Confirmation)
+{
+  type: 'powerUpPurchased',
+  data: {
+    buyer: string,
+    powerUpType: string,
+    price: number,
+    targetWarrior?: string,
+    newPotSize: number
+  }
+}
+```
+
+#### **Power-Up Marketplace - MVP VERSION** (Server → Client)
+```typescript
+{
+  type: 'powerUpOffers',
+  data: {
+    offers: Array<{
+      id: string,
+      type: 'health' | 'rage' | 'chaos' | 'assassinate',
+      price: number, // in SOL
+      description: string,
+      target: 'self' | 'all' | 'enemy',
+      expiresIn: number // seconds
+    }>
+  }
+}
+```
+
+#### **Prize Pool Update - MVP VERSION** (Server → Client)
+```typescript
+{
+  type: 'potUpdate',
+  data: {
+    currentPot: number, // in SOL
+    lastChange: number,
+    source: 'join' | 'powerup',
+    totalPlayers: number
+  }
+}
+```
+
+#### **Warrior Movement - MVP VERSION** (Server → Client ONLY)
+```typescript
+// Server broadcasts AI movement
 {
   type: 'warriorMoved',
   data: {
@@ -809,9 +942,10 @@ enum ErrorCode {
 | Version | Date | Changes | Approved By |
 |---------|------|---------|-------------|
 | 1.0.0 | [Date] | Initial interface contract | Partner A & B |
-| 2.0.0 | [Current Date] | Added dual-mode system (Blitz/Siege), underdog mechanics, special events | Partner A |
-| 2.1.0 | [Current Date] | Added XP & Progression system, level tracking, XP events | Partner A |
-| 3.0.0 | [Current Date] | Added platform-specific interfaces for web/mobile dual deployment | Partner A |
+| 2.0.0 | [Date] | Added dual-mode system (Blitz/Siege), underdog mechanics, special events | Partner A |
+| 2.1.0 | [Date] | Added XP & Progression system, level tracking, XP events | Partner A |
+| 3.0.0 | [Date] | Added platform-specific interfaces for web/mobile dual deployment | Partner A |
+| 4.0.0 | [Current Date] | **MAJOR UPDATE**: Switched to auto-battle AI system, removed player movement, added power-up marketplace | Partner A |
 
 ---
 

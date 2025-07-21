@@ -116,25 +116,25 @@ Unlike other crypto games:
 
 ---
 
-## **📈 Retention Mechanics**
+## **📈 Launch Marketing Strategy**
 
-### **Daily Engagement**
-- **Daily Login Bonus**: Free entry ticket
-- **Daily Challenges**: "Get 3 kills" = bonus SOL
-- **Happy Hours**: Reduced entry fees
-- **Daily Tournaments**: Special rewards
+### **Pre-Launch Hype**
+- **Countdown Campaign**: "Auto-Battle Arena Coming"
+- **Teaser Videos**: Show pots growing
+- **Early Bird List**: "First 1000 get bonus"
+- **Influencer Previews**: Let them play early
 
-### **Weekly Cycles**
-- **Monday Madness**: Double XP
-- **Wednesday Warriors**: Exclusive skins
-- **Friday Frenzy**: Mega pots
-- **Weekend Wars**: Clan battles
+### **Launch Week**
+- **Big Pot Guarantee**: Seed with 10 SOL
+- **Winner Stories**: Amplify first big wins
+- **Live Streams**: Show real gameplay
+- **Twitter Raids**: Coordinated posting
 
-### **Monthly Events**
-- **Gladiator Championships**: Top 100 compete
-- **New Arena Releases**: Fresh environments
-- **Celebrity Matches**: Influencer tournaments
-- **Community Votes**: Choose next features
+### **Growth Phase**
+- **Winner Interviews**: Real people, real wins
+- **Pot Tracker Bot**: Tweet biggest pots
+- **Clip Contests**: Best moments win SOL
+- **Referral Race**: Top referrer prizes
 
 ---
 

@@ -2,15 +2,15 @@
 *Anchor Framework Architecture for Partner A*
 
 <!-- MVP:SUMMARY -->
-## **🚀 MVP Smart Contract Features**
-For the 3-5 day MVP, only implement:
+## **🚀 MVP Smart Contract Features (INPUT-DRIVEN)**
+For the 2-day MVP, only implement:
 - **Basic Player Profile**: Just wins/earnings tracking
-- **Simple Game Escrow**: Single mode (Blitz), fixed 0.002 SOL entry
-- **Core Instructions**: create_player, join_game, end_game
-- **Single Winner**: No multi-winner or XP system
-- **10 Players Max**: Simplified for quick testing
+- **Game Escrow with Pool Tracking**: Tracks contributions from joins & power-ups
+- **Core Instructions**: create_player, join_game, buy_power_up, end_game
+- **Winner Selection**: Store VRF-selected winner with weight proof
+- **Single Winner**: Takes entire pool minus fees
 
-Skip for MVP: Multi-warrior, late entry, XP system, Siege mode, VRF integration
+Skip for MVP: Input strategy logic, multi-warrior, XP system, complex features
 <!-- MVP:END -->
 
 ## **📁 Contract Structure**
@@ -127,16 +127,31 @@ pub fn calculate_level(xp: u64) -> u8 {
 
 <!-- MVP:START -->
 ```rust
-// state/game.rs - MVP VERSION (Blitz only, simplified)
+// state/game.rs - MVP VERSION (Auto-Battle with Power-ups)
 #[account]
 pub struct GameEscrow {
     pub game_id: [u8; 16],           // UUID as bytes
     pub total_pot: u64,              // Total prize pool
+    pub join_contributions: u64,     // SOL from joins
+    pub powerup_contributions: u64,  // SOL from power-ups
     pub player_count: u8,            // Current players
     pub state: GameState,            // Current state
     pub created_at: i64,
     pub ended_at: Option<i64>,
     pub timeout_at: i64,             // Auto-refund time
+}
+
+impl GameEscrow {
+    pub const SIZE: usize = 8 +     // discriminator
+        16 +                         // game_id
+        8 +                          // total_pot
+        8 +                          // join_contributions
+        8 +                          // powerup_contributions
+        1 +                          // player_count
+        1 +                          // state
+        8 +                          // created_at
+        9 +                          // ended_at (Option)
+        8;                           // timeout_at
 }
 ```
 <!-- MVP:END -->
@@ -473,6 +488,7 @@ pub fn join_game(ctx: Context<JoinGame>) -> Result<()> {
     
     // Update game state
     game.total_pot += entry_fee;
+    game.join_contributions += entry_fee;
     game.player_count += 1;
     
     // Update player stats
@@ -485,6 +501,98 @@ pub fn join_game(ctx: Context<JoinGame>) -> Result<()> {
     });
     
     Ok(())
+}
+
+#[derive(Accounts)]
+pub struct JoinGame<'info> {
+    #[account(mut)]
+    pub game_escrow: Account<'info, GameEscrow>,
+    
+    #[account(mut)]
+    pub player_profile: Account<'info, PlayerProfile>,
+    
+    #[account(mut)]
+    pub player: Signer<'info>,
+    
+    pub system_program: Program<'info, System>,
+}
+```
+
+### **4.5. Buy Power-Up (INPUT-DRIVEN SYSTEM)**
+
+```rust
+// instructions/game.rs - MVP VERSION
+pub fn buy_power_up(
+    ctx: Context<BuyPowerUp>,
+    power_up_type: PowerUpType,
+    power_up_price: u64,
+) -> Result<()> {
+    let game = &mut ctx.accounts.game_escrow;
+    
+    // Verify game is active (collecting inputs)
+    require!(game.state == GameState::Active, ErrorCode::GameNotActive);
+    
+    // Verify price matches (prevent front-running)
+    let expected_price = get_power_up_price(&power_up_type);
+    require!(power_up_price == expected_price, ErrorCode::InvalidPrice);
+    
+    // Calculate fee split
+    let platform_fee = (power_up_price * 10) / 100; // 10% platform
+    let pool_contribution = power_up_price - platform_fee; // 90% to pool
+    
+    // Transfer to escrow (grows the pot!)
+    let cpi_context = CpiContext::new(
+        ctx.accounts.system_program.to_account_info(),
+        system_program::Transfer {
+            from: ctx.accounts.player.to_account_info(),
+            to: ctx.accounts.game_escrow.to_account_info(),
+        },
+    );
+    system_program::transfer(cpi_context, pool_contribution)?;
+    
+    // Transfer platform fee
+    let fee_context = CpiContext::new(
+        ctx.accounts.system_program.to_account_info(),
+        system_program::Transfer {
+            from: ctx.accounts.player.to_account_info(),
+            to: ctx.accounts.treasury.to_account_info(),
+        },
+    );
+    system_program::transfer(fee_context, platform_fee)?;
+    
+    // Update game state
+    game.total_pot += pool_contribution;
+    game.powerup_contributions += pool_contribution;
+    
+    // NOTE: Actual power-up effect is determined by backend weight calculation
+    // This just records the purchase for input processing
+    
+    emit!(PowerUpPurchased {
+        game_id: game.game_id,
+        player: ctx.accounts.player.key(),
+        power_up_type,
+        price: power_up_price,
+        new_pot: game.total_pot,
+    });
+    
+    Ok(())
+}
+
+fn get_power_up_price(power_up_type: &PowerUpType) -> u64 {
+    match power_up_type {
+        PowerUpType::Health => 1_000_000,      // 0.001 SOL
+        PowerUpType::Rage => 2_000_000,        // 0.002 SOL
+        PowerUpType::Chaos => 10_000_000,      // 0.01 SOL
+        PowerUpType::Assassinate => 5_000_000, // 0.005 SOL
+    }
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq)]
+pub enum PowerUpType {
+    Health,
+    Rage,
+    Chaos,
+    Assassinate,
 }
 ```
 <!-- MVP:END -->
@@ -587,10 +695,12 @@ fn calculate_entry_fee(game: &GameEscrow, warrior_count: u8, current_time: i64) 
 ### **5. End Game**
 
 ```rust
-// instructions/game.rs - MVP VERSION (single winner)
+// instructions/game.rs - MVP VERSION (VRF-selected winner)
 pub fn end_game(
     ctx: Context<EndGame>,
     winner: Pubkey,
+    winner_weight: u64,
+    vrf_proof: String,
 ) -> Result<()> {
     let game = &mut ctx.accounts.game_escrow;
     let config = &ctx.accounts.program_config;
@@ -598,6 +708,9 @@ pub fn end_game(
     
     // Verify game state
     require!(game.state == GameState::Active, ErrorCode::GameNotActive);
+    
+    // Store VRF proof for transparency
+    // In a real implementation, you'd verify the VRF proof on-chain
     
     // Calculate distributions
     let total_pot = game.total_pot;
@@ -620,11 +733,15 @@ pub fn end_game(
     // Update game state
     game.state = GameState::Ended;
     game.ended_at = Some(clock.unix_timestamp);
+    game.winner = Some(winner);
+    game.winner_weight = Some(winner_weight);
     
     emit!(GameEnded {
         game_id: game.game_id,
         winner,
+        winner_weight,
         prize,
+        vrf_proof,
         timestamp: clock.unix_timestamp,
     });
     

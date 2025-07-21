@@ -8,34 +8,37 @@
 2. **Maximum Performance**: 60 FPS gameplay, <100ms latency
 3. **Security First**: No single point of failure for funds
 4. **Cost Efficient**: Minimize transaction fees and RPC calls
-5. **Quick Delivery**: MVP in 10-14 days
+5. **Quick Delivery**: MVP in 2-3 days
 
 ---
 
 ## **🏗️ System Architecture Overview**
 
-### **Dual-Platform Architecture**
+### **Simplified Polling Architecture**
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   Web Frontend  │────▶│                 │────▶│   Game Server    │────▶│  Solana Chain   │
-│  (Next + Phaser)│     │                 │◀────│  (Node + Redis)  │◀────│   (Anchor)      │
-└─────────────────┘     │  Shared Logic   │     └──────────────────┘     └─────────────────┘
-                        │                 │              │                         │
-┌─────────────────┐     │                 │              ▼                         │
-│ Mobile Frontend │────▶│                 │     ┌──────────────────┐              │
-│   (RN + Skia)   │     │                 │     │  ProofNetwork    │◀─────────────┘
-└─────────────────┘     └─────────────────┘     │   (VRF + Keys)   │
-                                                 └──────────────────┘
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│   Web Frontend  │────▶│  Next.js API     │────▶│  Backend Service│
+│  (Next + Phaser)│◀────│    (Proxy)       │◀────│  (Node + Memory)│
+└─────────────────┘     └──────────────────┘     └─────────────────┘
+        │                                                  │
+        │                                                  ▼
+        │                                         ┌─────────────────┐
+        └────────────────────────────────────────▶│  Solana Chain   │
+                                                  │   (Anchor)      │
+                                                  └─────────────────┘
+
+Polling: Frontend → API → Backend (every 500ms)
+No WebSockets, No Redis, Just HTTP polling
 ```
 
 ### **Project Structure**
 ```
 /Aurelius
-├── /web                    # Next.js web app
-├── /mobile                 # React Native mobile app
-├── /shared                 # Shared game logic (copy-paste)
+├── /web                    # Next.js + Phaser.js web app
+│   ├── /pages/api         # API routes (proxy to backend)
+│   └── /game              # Phaser game files
 ├── /programs               # Anchor smart contracts
-├── /server                 # Shared game server
+├── /backend                # Backend service (Node.js)
 └── /Guide                  # Documentation
 ```
 
@@ -69,32 +72,33 @@ WHAT GOES ON-CHAIN:
    - Game server signatures
 ```
 
-### **OFF-CHAIN (Game Server) - Performance Required**
+### **OFF-CHAIN (Backend) - Input Processing**
 ```yaml
-PURPOSE: Real-time gameplay and complex calculations
+PURPOSE: Collect inputs and calculate weights
 
 WHAT STAYS OFF-CHAIN:
-1. Real-Time State:
-   - Warrior positions (60 updates/sec)
-   - HP tracking
-   - Combat calculations
-   - Power-up spawning
+1. Input Collection:
+   - Player strategic decisions
+   - Timing tracking
+   - Action sequences
+   - Alliance management
 
-2. Game Logic:
-   - Movement validation
-   - Collision detection
-   - Damage calculations
-   - Special event triggers
+2. Weight Processing:
+   - Convert inputs to factors
+   - Calculate efficiency scores
+   - Apply multipliers
+   - Generate final weights
 
-3. Matchmaking:
-   - Game scheduling (Siege)
-   - Player queuing
-   - Mode selection
+3. Visual Generation:
+   - Fake combat animations
+   - HP bar updates (visual only)
+   - Effect animations
+   - Momentum displays
 
-4. Temporary Data:
-   - Battle animations
-   - Particle effects
-   - Sound triggers
+4. VRF Integration:
+   - Submit weights to VRF
+   - Receive winner selection
+   - Verify randomness proof
 ```
 
 ---
@@ -354,38 +358,38 @@ class SolanaConnection {
 }
 ```
 
-### **3. WebSocket Optimization**
+### **3. Polling Optimization**
 
 ```javascript
-// Message batching and compression
-class GameBroadcaster {
+// Simple polling with in-memory state
+class GameStateManager {
   constructor() {
-    this.updateQueue = new Map();
-    
-    // Batch updates every 50ms
-    setInterval(() => this.flushUpdates(), 50);
+    this.games = new Map();
+    this.gameLoop();
   }
   
-  queueUpdate(type, data) {
-    if (!this.updateQueue.has(type)) {
-      this.updateQueue.set(type, []);
-    }
-    this.updateQueue.get(type).push(data);
+  gameLoop() {
+    setInterval(() => {
+      for (const [gameId, game] of this.games) {
+        if (game.status === 'active') {
+          this.updateGame(game);
+        }
+      }
+    }, 50); // Game updates every 50ms
   }
   
-  flushUpdates() {
-    if (this.updateQueue.size === 0) return;
+  // API endpoint handler
+  getGameState(gameId) {
+    const game = this.games.get(gameId);
+    if (!game) return null;
     
-    const batch = {
-      timestamp: Date.now(),
-      updates: Object.fromEntries(this.updateQueue)
+    return {
+      warriors: game.warriors,
+      powerUps: game.powerUps,
+      pot: game.pot,
+      timeRemaining: 90 - ((Date.now() - game.startTime) / 1000),
+      status: game.status
     };
-    
-    // Compress and broadcast
-    const compressed = zlib.gzipSync(JSON.stringify(batch));
-    io.emit('batch', compressed);
-    
-    this.updateQueue.clear();
   }
 }
 ```
@@ -535,54 +539,71 @@ solana-program = "1.18.0"
 
 ---
 
-## **📱 Dual-Platform Architecture**
+## **🌐 Web-Optimized Architecture**
 
-### **Code Sharing Strategy**
+### **Auto-Battle AI Logic**
 ```typescript
-// shared/battleLogic.ts - Platform agnostic game logic
-export function calculateDamage(attacker: Warrior, defender: Warrior): number {
-  const baseDamage = Math.floor(Math.random() * 4) + 5; // 5-8
-  return attacker.effects.includes('rage') ? baseDamage * 2 : baseDamage;
+// server/src/ai.ts - Server-side AI control
+export function calculateAIMove(warrior: Warrior, gameState: GameState): AIDecision {
+  const enemies = gameState.warriors.filter(w => w.player !== warrior.player && w.hp > 0);
+  const nearest = findNearestEnemy(warrior, enemies);
+  
+  if (!nearest) return { type: 'idle' };
+  
+  const distance = getDistance(warrior.position, nearest.position);
+  if (distance <= 1) {
+    return { type: 'attack', target: nearest.id };
+  }
+  
+  return { 
+    type: 'move', 
+    position: calculatePath(warrior.position, nearest.position)
+  };
 }
 
-// web/lib/gameEngine.ts - Web-specific implementation
-import { calculateDamage } from './shared/battleLogic';
-import * as Phaser from 'phaser';
-
-// mobile/lib/gameEngine.ts - Mobile-specific implementation  
-import { calculateDamage } from './shared/battleLogic';
-import { Canvas } from '@shopify/react-native-skia';
-```
-
-### **Platform Abstractions**
-```typescript
-// shared/types.ts
-export interface GameRenderer {
-  initialize(container: any): void;
-  renderWarrior(warrior: Warrior): void;
-  renderPowerUp(powerUp: PowerUp): void;
-  cleanup(): void;
-}
-
-export interface WalletAdapter {
-  connect(): Promise<PublicKey>;
-  signTransaction(tx: Transaction): Promise<Transaction>;
-  disconnect(): Promise<void>;
+// Power-up marketplace
+export function generatePowerUpOffers(): PowerUpOffer[] {
+  return [
+    { id: uuid(), type: 'health', price: 0.001, expiresIn: 20 },
+    { id: uuid(), type: 'rage', price: 0.002, expiresIn: 20 },
+    { id: uuid(), type: 'chaos', price: 0.01, expiresIn: 20 }
+  ];
 }
 ```
 
-### **Mobile-Specific Optimizations**
-- **Reduced particle effects** for battery life
-- **Touch gesture controls** instead of keyboard
-- **Background/foreground handling** for reconnection
-- **Offline queue** for unstable connections
-- **Haptic feedback** for combat events
+### **Responsive Web Design**
+```typescript
+// Adaptive canvas sizing for all devices
+export const getCanvasConfig = (): Phaser.Types.Core.GameConfig => {
+  const isMobile = window.innerWidth < 768;
+  return {
+    type: Phaser.AUTO,
+    width: isMobile ? 350 : 600,
+    height: isMobile ? 350 : 600,
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH
+    },
+    fps: {
+      target: isMobile ? 30 : 60,
+      forceSetTimeOut: true
+    }
+  };
+};
+```
 
-### **Web-Specific Features**
+### **Mobile Browser Optimizations**
+- **Touch-friendly buttons** (minimum 44x44px)
+- **Simplified graphics** for better performance
+- **Reduced particle count** on mobile devices
+- **Viewport meta tag** for proper scaling
+- **PWA support** for app-like experience
+
+### **Desktop Browser Features**
 - **Full particle effects** and animations
-- **Keyboard shortcuts** for power users
-- **Multi-tab detection** to prevent cheating
-- **Desktop notifications** for game events
+- **Keyboard shortcuts** for quick actions
+- **Higher resolution** graphics
+- **60 FPS** target performance
 - **Social sharing** integration
 
 ---
@@ -612,12 +633,12 @@ export interface WalletAdapter {
 - VRF proofs ensure fairness
 - Open-source verification possible
 
-### **5. Why Dual-Platform Strategy?**
-- **Two hackathon submissions** from one codebase
-- **Wider audience reach** (desktop + mobile users)
-- **Shared game logic** reduces bugs
-- **Independent deployment** allows platform-specific optimization
-- **Copy-paste sharing** avoids monorepo complexity
+### **5. Why Web-First Strategy?**
+- **Instant accessibility** - no app download required
+- **Cross-platform reach** - works on all devices with browsers
+- **Faster iteration** - deploy updates instantly
+- **Lower barrier to entry** - players can try immediately
+- **Responsive design** - one codebase for all screen sizes
 
 ---
 

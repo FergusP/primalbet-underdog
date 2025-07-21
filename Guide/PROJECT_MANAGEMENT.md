@@ -3,126 +3,121 @@
 
 ## **📋 Project Overview**
 
-**Project**: Aurelius - Dual-Mode PvP Battle Arena on Solana  
+**Project**: Aurelius - Input-Driven PvP Arena on Solana  
+**Game Type**: Strategic input collection with visual battle feedback  
 **Platforms**: Web (Next.js) + Mobile (React Native)  
-**MVP Duration**: 5-7 days (Both platforms, Arena Blitz only)  
+**MVP Duration**: 3 days (Both platforms, Arena Blitz only)  
 **Full Duration**: 14-21 days (Both platforms, all features)  
 **Team Size**: 2 developers  
 **Methodology**: Vibecoding (Domain-based collaboration)  
 **Target**: 2 Hackathon submissions  
 
-### **Development Phases**
-- **Phase 1 - Core (Days 1-3)**: Shared logic, smart contracts, game server
-- **Phase 2 - MVP (Days 4-7)**: Web MVP + Mobile MVP (Arena Blitz only)
-- **Phase 3 (Week 2)**: Add VRF, XP system, platform polish
-- **Phase 4 (Week 3)**: Glory Siege mode, advanced features
-- **Phase 5 (Week 4+)**: Hackathon submissions and demos
+### **Development Phases (INPUT-DRIVEN)**
+- **Phase 1 - MVP (Days 1-3)**: Input collection with power-ups
+  - Day 1: Smart contracts with power-up purchases
+  - Day 2: Input processing server with weight calculation
+  - Day 3: Simple UI for both platforms
+- **Phase 2 (Week 2)**: Add VRF, better AI, more power-ups
+- **Phase 3 (Week 3)**: Glory Siege mode, advanced features
+- **Phase 4 (Week 4+)**: Hackathon submissions and demos
 
 ---
 
 ## **👥 Team Roles & Responsibilities**
 
 ### **Partner A: Blockchain & Backend Specialist**
-**Primary Domain**: Smart Contracts, Game Server, Infrastructure
+**Primary Domain**: Smart Contracts, Input Processing, Infrastructure
 
-**MVP Tasks (Days 1-5)**: ~15 tasks
-- Basic smart contracts (player profile, game escrow, join/end game)
-- Simple Node.js + Socket.io server
-- Fixed damage combat (no VRF)
-- Basic Redis game state
+**MVP Tasks (Days 1-2)**: ~12 tasks
+- Smart contracts with power-up purchases (buy_power_up instruction)
+- Input processing server (InputProcessor.ts)
+- Weight calculation engine (WeightCalculator.ts)
+- Prize pool tracking (tracks joins + power-ups)
+- ProofNetwork VRF for winner selection
 
-**Full Project Tasks**: ~42 major tasks
-- Smart Contract Development: 9 main tasks
+**Full Project Tasks**: ~35 major tasks
+- Smart Contract Development: 8 main tasks
+- Input Processing & Weights: 10 tasks
 - ProofNetwork Integration: 8 tasks  
-- Game Server Development: 18 tasks
 - Infrastructure & DevOps: 7 tasks
+- Power-Up System: 2 tasks
 
 ### **Partner B: Frontend & Game Experience**
-**Primary Domain**: Web UI/UX, Mobile UI/UX, Game Engines, Visual Design
+**Primary Domain**: Web UI/UX, Mobile UI/UX, Visual Design
 
-**MVP Tasks (Days 1-7)**: ~25 tasks
-- Web: Phaser arena, wallet adapter, desktop UI
-- Mobile: React Native Skia arena, mobile wallet, touch controls
-- Shared: Warrior sprites, power-ups, game states
+**MVP Tasks (Day 3)**: ~8 tasks
+- Simple UI (no complex controls):
+  - Join button (send warrior)
+  - Power-up marketplace
+  - Live prize pool counter
+  - Warriors fighting (watch-only)
+- Web: Basic Phaser/Canvas arena
+- Mobile: React Native Skia arena
 
-**Full Project Tasks**: ~60 major tasks
-- Web Frontend (Next.js + Phaser): 25 tasks
-- Mobile Frontend (React Native): 25 tasks
-- Shared Components: 10 tasks
-- Visual & Audio Design: 15 tasks
+**Full Project Tasks**: ~45 major tasks
+- Web Frontend (Next.js): 20 tasks
+- Mobile Frontend (React Native): 20 tasks
+- Visual & Audio Design: 5 tasks
 
 ---
 
 ## **🔗 Sacred Interface Contract**
 
-### **WebSocket Events (Server → Client)**
+### **Polling API (INPUT-DRIVEN)**
 ```typescript
-// Game State Events
+// Server → Client (Visual feedback only)
 'gameStateUpdate': {
-  warriors: Warrior[]
-  powerUps: PowerUp[]
+  warriors: Warrior[]    // Visual positions only
+  visualEffects: VisualEffect[]  // Fake combat
   timeRemaining: number
-  phase: 'preparation' | 'battle' | 'sudden_death'
+  phase: 'waiting' | 'active' | 'ended'
 }
 
-'warriorSpawned': {
-  warriorId: string
-  player: string
-  position: { x: number, y: number }
-  hp: number
-}
-
-'warriorMoved': {
+'visualUpdate': {        // Server sends visual updates
   warriorId: string
   position: { x: number, y: number }
-  timestamp: number
+  hp: number             // Fake HP for display
+  effect?: string        // Visual effect to play
 }
 
-'warriorDamaged': {
-  warriorId: string
-  damage: number
-  newHp: number
-  attackerId: string
+'powerUpOffers': {       // Marketplace for players
+  offers: Array<{
+    id: string
+    type: 'health' | 'rage' | 'chaos' | 'assassinate'
+    price: number        // in SOL
+    description: string
+    expiresIn: number
+  }>
 }
 
-'warriorEliminated': {
-  warriorId: string
-  killedBy: string
-  finalPosition: { x: number, y: number }
+'potUpdate': {           // Prize pool growth
+  currentPot: number     // in SOL
+  lastChange: number
+  source: 'join' | 'powerup' | 'alliance'
+  totalPlayers: number
 }
 
-'powerUpSpawned': {
-  powerUpId: string
-  type: 'health' | 'rage' | 'speed' | 'shield'
-  position: { x: number, y: number }
-}
-
-'powerUpCollected': {
-  powerUpId: string
-  warriorId: string
-}
-
-'gameEnded': {
-  winner: string
-  finalState: GameState
-  prize: number
+'powerUpPurchased': {    // Someone bought power-up
+  buyer: string
+  powerUpType: string
+  price: number
+  newPotSize: number
 }
 ```
 
-### **Client → Server Events**
+### **Client → Server Events (INPUT-DRIVEN)**
 ```typescript
-'joinGame': {
-  player: string
-  position: { x: number, y: number }
-  signature: string
+'connect': {
+  wallet: string        // Just wallet, no signature for MVP
 }
 
-'moveWarrior': {
-  direction: { x: number, y: number }
+'playerInput': {         // Strategic input
+  type: 'JOIN_GAME' | 'ACTIVATE_POWERUP' | 'FORM_ALLIANCE' | 'BETRAY_ALLIANCE'
+  data?: any
   timestamp: number
 }
 
-'requestGameState': {}
+// NO MOVEMENT COMMANDS - Visual feedback only!
 ```
 
 ### **On-Chain Data Structures**
@@ -147,71 +142,65 @@ interface GameResult {
 
 ## **📋 Complete Task Division**
 
-## **🚀 PHASE 1 - CORE DEVELOPMENT (Days 1-3)**
+## **🚀 PHASE 1 - INPUT-DRIVEN MVP (3 Days)**
 
-### **Partner A: Core Backend**
+### **Partner A: Backend & Input Processing**
 
-#### **Smart Contracts (Day 1)**
-- [ ] Initialize Anchor project structure
-- [ ] Create basic Player PDA
-- [ ] Basic Game Escrow (0.002 SOL entry)
-- [ ] join_game and end_game instructions
-- [ ] Manual buffer encoding setup
+#### **Day 1: Smart Contracts**
+- [ ] Initialize Anchor project
+- [ ] PlayerProfile PDA (wins/earnings only)
+- [ ] GameEscrow with pool tracking
+- [ ] create_player, join_game instructions
+- [ ] buy_power_up instruction (90% to pot!)
+- [ ] end_game instruction (winner takes all)
+- [ ] Deploy to devnet
 
-#### **Game Server (Day 2)**
-- [ ] Node.js + Socket.io setup
-- [ ] Redis game state management
-- [ ] Fixed damage combat (6 HP)
-- [ ] Movement validation
-- [ ] Platform-agnostic WebSocket protocol
+#### **Day 2: Input Processing Server**
+- [ ] Node.js + Express setup
+- [ ] InputProcessor.ts - Collect inputs:
+  - Track timing
+  - Validate actions
+  - Store sequences
+- [ ] WeightCalculator.ts - Convert to weights
+- [ ] VisualEngine.ts - Generate fake combat
+- [ ] ProofNetwork VRF for winner selection
+- [ ] 50ms visual update loop
+- [ ] Test with mock inputs
 
-#### **Shared Logic (Day 3)**
-- [ ] Create /shared folder structure
-- [ ] Implement battleLogic.ts
-- [ ] Define types.ts interfaces
-- [ ] Game constants
-- [ ] Test shared functions
+### **Partner B: Simple UI**
 
-### **Partner B: Foundation Setup**
+#### **Day 3: Both Platforms**
+- [ ] Web: Next.js + basic arena canvas
+  - [ ] Join button (0.002 SOL)
+  - [ ] Power-up marketplace UI
+  - [ ] Live pot counter
+  - [ ] Warriors display (watch-only)
+- [ ] Mobile: React Native + Skia
+  - [ ] Same simple UI as web
+  - [ ] Touch-friendly buttons
+- [ ] Connect both to server
+- [ ] Deploy web to Vercel
+- [ ] Build mobile APK
 
-#### **Project Setup (Day 1)**
-- [ ] Initialize web (Next.js) project
-- [ ] Initialize mobile (Expo) project
-- [ ] Setup shared folder structure
-- [ ] Configure build scripts
+## **📈 POST-MVP FEATURES**
 
-#### **Asset Creation (Day 2-3)**
-- [ ] Warrior sprites (web + mobile versions)
-- [ ] Power-up graphics
-- [ ] Arena backgrounds
-- [ ] UI mockups for both platforms
+### **Week 2: Enhanced Input System**
 
-## **🚀 PHASE 2 - DUAL PLATFORM MVP (Days 4-7)**
+#### **Partner A Tasks**
+- [ ] Advanced weight factors (combo bonuses)
+- [ ] More input types (taunt, defend, rally)
+- [ ] Alliance system implementation
+- [ ] Better VRF integration
+- [ ] Anti-cheat for input timing
+- [ ] Performance optimization
 
-### **Partner A: Backend Integration**
-- [ ] Deploy contracts to devnet
-- [ ] ProofNetwork basic setup
-- [ ] Server deployment (Railway)
-- [ ] Cross-platform testing support
-- [ ] Basic monitoring
-
-### **Partner B: Platform Implementation**
-
-#### **Web MVP (Days 4-5)**
-- [ ] Phaser arena implementation
-- [ ] Wallet adapter integration
-- [ ] WebSocket connection
-- [ ] Game UI (lobby, results)
-- [ ] Desktop controls (WASD)
-- [ ] Deploy to Vercel
-
-#### **Mobile MVP (Days 6-7)**
-- [ ] React Native Skia arena
-- [ ] Mobile wallet integration
-- [ ] Touch controls
-- [ ] Mobile UI adaptation
-- [ ] WebSocket reconnection handling
-- [ ] TestFlight build
+#### **Partner B Tasks**  
+- [ ] Better animations
+- [ ] Sound effects
+- [ ] Particle effects
+- [ ] Leaderboard UI
+- [ ] Power-up purchase effects
+- [ ] Mobile optimization
 
 ---
 
@@ -273,45 +262,46 @@ interface GameResult {
 
 ## **🏃 Daily Sync & Integration**
 
-### **Dual-Platform Integration Checkpoints**
-- **Day 1**: Smart contracts + Project setup complete
-- **Day 2**: Game server running + Assets ready
-- **Day 3**: Shared logic tested + Copy to platforms
-- **Day 4**: Web MVP playable on localhost
-- **Day 5**: Web deployed to Vercel
-- **Day 6**: Mobile MVP on simulator
-- **Day 7**: Both platforms live!
+### **3-Day Sprint Checkpoints**
+- **Day 1 AM**: Anchor project initialized
+- **Day 1 PM**: All contracts deployed to devnet
+- **Day 2 AM**: Input processor collecting data
+- **Day 2 PM**: Weight calculation working
+- **Day 3 AM**: Both UIs showing visual feedback
+- **Day 3 PM**: Full MVP live on both platforms!
 
 ---
 
 ## **🔄 Daily Sync Protocol**
 
-### **Daily Standup Format** (via Discord/Telegram)
+### **3-Day MVP Sprint Format**
 ```
-🌅 PARTNER A - [Date] [Time]
-✅ Completed:
-- Item 1
-- Item 2
+🏃 DAY 1 - Smart Contracts
+✅ Partner A:
+- [ ] All instructions working
+- [ ] Power-ups grow the pot
+- [ ] Deployed to devnet
 
-🚧 Working on:
-- Current task
+🏃 DAY 2 - Input Server
+✅ Partner A:
+- [ ] Inputs being collected
+- [ ] Weights calculated
+- [ ] Visual feedback generated
 
-❓ Blockers:
-- Any issues
-
-🔗 Links:
-- Relevant commits/PRs
+🏃 DAY 3 - Simple UI
+✅ Partner B:
+- [ ] Both UIs connect
+- [ ] Can make strategic inputs
+- [ ] Visual combat displayed
 ```
 
-### **Integration Checkpoints**
-1. **Wallet Connection Test** (Day 2)
-2. **Game Mode Selection** (Day 3)
-3. **Blitz Mode Entry Flow** (Day 4)
-4. **Siege Mode Entry Flow** (Day 5)
-5. **Movement & Combat Sync** (Day 6)
-6. **Special Events Test** (Day 7)
-7. **Full Game Loop Both Modes** (Day 8)
-8. **Production Test** (Day 9)
+### **MVP Integration Checkpoints**
+1. **Smart Contract Deploy** (Day 1 PM)
+2. **Input Server Running** (Day 2 PM)
+3. **Weight System Live** (Day 2 PM)
+4. **UI Connects to Server** (Day 3 AM)
+5. **Visual Feedback Works** (Day 3 PM)
+6. **Both Platforms Live** (Day 3 PM)
 
 ---
 
@@ -439,12 +429,13 @@ Aurelius/
 
 ## **📊 Success Metrics**
 
-### **MVP Completion**
+### **MVP Completion (INPUT-DRIVEN)**
 - [ ] Players can connect wallets
-- [ ] Players can join games
-- [ ] Warriors move and fight
-- [ ] Winners receive prizes
-- [ ] 2-minute game loop works
+- [ ] Players can join games (0.002 SOL)
+- [ ] Players make strategic inputs
+- [ ] Visual feedback shows fake combat
+- [ ] VRF selects winner by weight
+- [ ] 90-second input collection works
 
 ### **Quality Metrics**
 
@@ -467,40 +458,32 @@ Aurelius/
 
 ---
 
-## **🔄 Platform Coordination**
+## **🔄 Development Workflow**
 
-### **Shared Code Sync Process**
+### **Code Integration Process**
 ```bash
-# When updating shared logic
-1. Make changes in /shared
-2. Run tests on shared code
-3. Copy to both platforms:
-   npm run sync:shared
-4. Test on both platforms
-5. Commit all changes together
+# Daily workflow
+1. Partner A pushes contracts/server updates
+2. Partner B pulls and integrates with UI
+3. Test together via Discord/call
+4. Fix issues immediately
+5. Deploy when stable
 ```
 
-### **Platform Feature Parity**
-- **Core Gameplay**: Must be identical
-- **UI/UX**: Can be platform-optimized
-- **Controls**: Platform-specific
-- **Performance**: Tuned per platform
-- **Features**: Same blockchain integration
-
-### **Testing Matrix**
-| Feature | Web Chrome | Web Safari | Mobile iOS | Mobile Android |
-|---------|------------|------------|------------|----------------|
-| Wallet  | ✓          | ✓          | ✓          | ✓              |
-| Combat  | ✓          | ✓          | ✓          | ✓              |
-| Network | ✓          | ✓          | ✓          | ✓              |
-| Render  | 60 FPS     | 60 FPS     | 30 FPS     | 30 FPS         |
+### **Browser Testing Matrix**
+| Feature | Desktop Chrome | Desktop Safari | Mobile Chrome | Mobile Safari |
+|---------|----------------|----------------|---------------|---------------|
+| Wallet  | ✓              | ✓              | ✓             | ✓             |
+| Combat  | ✓              | ✓              | ✓             | ✓             |
+| Network | ✓              | ✓              | ✓             | ✓             |
+| FPS     | 60             | 60             | 30            | 30            |
 
 ---
 
 ## **🎯 Post-MVP Roadmap**
 
 ### **Week 2 Priorities**
-- Mobile optimization
+- Mobile browser optimization
 - Sound design
 - Particle effects
 - Leaderboards

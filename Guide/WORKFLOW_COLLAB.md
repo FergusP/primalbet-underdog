@@ -76,7 +76,7 @@ Key Integration Points:
 1. Wallet Connection - A provides endpoints, B connects UI
 2. Game Entry - A handles transaction, B shows feedback
 3. WebSocket Events - A sends events, B updates visuals
-4. Combat System - A calculates damage, B shows animations
+4. Input System - A processes inputs/weights, B shows visual feedback
 5. Game End - A determines winner, B displays results
 
 6. Daily Sync Pattern
@@ -220,11 +220,11 @@ Partner B blocked on API?
 9. Communication Templates
 
 Integration Ready:
-🟢 READY: WebSocket combat events
+🟢 READY: Polling API for input processing
 
-- Endpoint: ws://localhost:3001
-- Events: combatEvent, warriorDamaged
-- Test with: npm run test:combat
+- Endpoint: http://localhost:3001/api/game
+- Routes: /state, /input, /visual-update
+- Test with: npm run test:inputs
 - See INTERFACE_CONTRACT.md line 120
 
 Need Help:

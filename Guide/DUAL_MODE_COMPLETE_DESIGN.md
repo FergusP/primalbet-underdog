@@ -13,23 +13,23 @@ Aurelius features two distinct game modes that share core mechanics but create c
 - **Duration**: 60-90 seconds
 - **Players**: 15-20 warriors max
 - **Entry**: 0.002 SOL (~$0.50)
-- **Winner**: Last warrior standing takes 95%
+- **Winner**: Highest weight player takes 95%
 - **Games**: Start instantly, run continuously
 
 ### **Gameplay Feel**
 - Instant action, no prep phase
 - Power-ups every 10 seconds
-- Fast environmental damage (2 HP/3 sec)
+- Fast visual effects (fake HP loss)
 - Pure chaos and quick decisions
 - Perfect for mobile/quick sessions
 
 ### **Blitz-Specific Features**
 ```typescript
-INSTANT_COMBAT: true
+INSTANT_INPUT: true
 PREP_PHASE: 0 seconds
 POWER_UP_RATE: "FAST" // Every 10s
 ARENA_SHRINK_TIME: 45 seconds
-ENV_DAMAGE: 2 HP per 3 seconds
+VISUAL_EFFECTS: "Rapid HP drain animation"
 PRIZE_SPLIT: "WINNER_TAKE_ALL"
 ```
 
@@ -50,14 +50,14 @@ PRIZE_SPLIT: "WINNER_TAKE_ALL"
 - Multiple arena zones (outer/mid/center)
 - Power-ups can be saved/combined
 - Build armies and alliances
-- Epic battles with spectator value
+- Epic visual battles with spectator value
 
 ### **Siege-Specific Features**
 ```typescript
 STRATEGY_PHASE: 30 seconds
 ARENA_ZONES: ["outer", "mid", "center"]
 POWER_UP_EVOLUTION: true // Can combine
-ENV_DAMAGE: 1 HP per 5 seconds
+VISUAL_EFFECTS: "Slow HP drain animation"
 PRIZE_SPLIT: {1st: 60%, 2nd: 25%, 3rd: 10%}
 SCHEDULED_START: true // Every 10 min
 ```
@@ -67,21 +67,21 @@ SCHEDULED_START: true // Every 10 min
 ## **🔧 CRITICAL BALANCE FIXES**
 
 ### **The Late Entry Problem (SOLVED)**
-Original design heavily favored late entries with fresh HP. We fixed this:
+Original design heavily favored late entries with fresh weight. We fixed this:
 
 #### **Early Entry Benefits**
-- **Veteran Bonus**: +1% damage per 10 seconds survived
+- **Veteran Bonus**: +1% weight per 10 seconds survived
 - **Territory Points**: Control zones for passive bonuses
 - **Power-up Priority**: First access to spawns
-- **Kill Rewards**: +5 HP per elimination
+- **Action Rewards**: +5% weight per strategic action
 - **Lower Fees**: Base entry cost
 
 #### **Late Entry Penalties**
-- **Spawn Damage**: Start with 70 HP (not 100)
+- **Weight Penalty**: Start with 70% base weight
 - **Random Position**: No choice, spawn in danger zones
 - **Reduced Immunity**: 1 second (vs 5 for early)
 - **Fee Scaling**: Up to 3x base fee
-- **No Prep Time**: Instant combat on spawn
+- **No Prep Time**: Must input strategy immediately
 
 **Result**: Win rates balanced across all entry times (25-30% each)
 
@@ -93,7 +93,7 @@ Original design heavily favored late entries with fresh HP. We fixed this:
 ```typescript
 {
   spawn_chance: 0.5%, // Ultra rare
-  damage: 50, // One-shot potential
+  weight_bonus: 50, // Massive weight increase
   requirements: {
     pot_size: "> 1 SOL",
     player_warriors: "<= 3"
@@ -104,23 +104,23 @@ Original design heavily favored late entries with fresh HP. We fixed this:
 
 ### **2. Underdog Rage System**
 When outnumbered 5:1 or more:
-- +10% damage bonus
+- +10% weight bonus
 - +10% movement speed  
 - +20% dodge chance
 - "Lone Wolf" glowing aura
 
 ### **3. Chaos Equalizer Events** (0.5-2% chance)
-- **The Great Equalizer**: Lightning strikes top 3 HP warriors
-- **Berserker Plague**: All warriors drop to 50 HP
+- **The Great Equalizer**: Weight redistribution for top 3
+- **Berserker Plague**: All weights normalized to 50%
 - **Teleport Chaos**: All positions randomized
-- **Divine Shield**: Lowest HP warrior gets temporary immunity
+- **Divine Shield**: Lowest weight player gets bonus multiplier
 
 ### **4. Second Wind Miracle**
 ```typescript
 {
-  trigger: "HP < 10",
+  trigger: "weight < 10%",
   chance: 2%,
-  effect: "Instant heal to 30 HP",
+  effect: "Instant boost to 30% weight",
   limit: "First 2 warriors per wallet",
   visual: "Phoenix rebirth animation"
 }
@@ -139,27 +139,27 @@ When outnumbered 5:1 or more:
 
 Every game rolls 0-2 random modifiers:
 
-### **Combat Modifiers**
-- **Blood Moon**: 2x damage for all
-- **Pacifist's Curse**: -50% damage
-- **Berserker Mode**: Attack speed doubled
-- **Glass Cannon**: 2x damage given and taken
+### **Weight Modifiers**
+- **Blood Moon**: 2x weight multiplier for all
+- **Pacifist's Curse**: -50% weight penalty
+- **Berserker Mode**: Action efficiency doubled
+- **Glass Cannon**: 2x weight variance (risk/reward)
 
 ### **Arena Modifiers**
 - **Tiny Arena**: 50% size reduction
 - **Fog of War**: Limited vision range
-- **Lava Floor**: Constant 1 HP/sec damage
-- **Ice Rink**: 2x movement speed, less control
+- **Lava Floor**: Visual effect only (no real damage)
+- **Ice Rink**: Visual sliding effect only
 
 ### **Economy Modifiers**
 - **Gold Rush**: 3x entry fees and prizes
 - **Penny Arcade**: 0.0005 SOL entry
 - **High Stakes**: 10x everything
-- **Robin Hood**: Top player redistributes HP
+- **Robin Hood**: Top player redistributes weight
 
 ### **Special Modifiers**
 - **Freeze Tag**: Dead warriors block movement
-- **Regeneration**: All heal 1 HP/3 sec
+- **Momentum**: All gain +1% weight/3 sec
 - **Power Surge**: Power-ups spawn 3x rate
 - **Last Stand**: Final 2 get full heal
 
@@ -195,13 +195,13 @@ Players can enter multiple warriors with scaling costs:
 ## **🎮 SHARED SYSTEMS**
 
 ### **Power-Up Types**
-1. **Health Potion** (Green)
-   - Blitz: +25 HP instant
-   - Siege: +25 HP or save for +40 HP
+1. **Momentum Boost** (Green)
+   - Blitz: +25% weight instant
+   - Siege: +25% weight or save for +40%
 
 2. **Rage Mode** (Red)
-   - Blitz: 2x damage for 10s
-   - Siege: 1.5x damage for 20s
+   - Blitz: 2x weight multiplier for 10s
+   - Siege: 1.5x weight multiplier for 20s
 
 3. **Speed Boost** (Blue)
    - Blitz: 1.5x speed for 8s
@@ -269,7 +269,7 @@ Both modes support all arena skins:
 
 ### **MVP (Week 1)**
 - Launch Blitz mode only
-- Basic combat and movement
+- Basic input collection and visual feedback
 - Single arena theme
 - No modifiers yet
 
