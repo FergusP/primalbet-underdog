@@ -53,15 +53,17 @@ GameEscrow {
 ### **6. Dual-Platform UI**
 **Web (Days 4-5):**
 - Phaser arena (circular, no zones)
-- Desktop controls (WASD/Arrows)
+- Responsive design for mobile browsers
+- Desktop controls (WASD/Arrows) + Touch support
 - Wallet adapter integration
-- Full 60 FPS rendering
+- 60 FPS on desktop, adaptive on mobile
 
-**Mobile (Days 6-7):**
+**Native Mobile (Days 6-7):**
 - React Native Skia arena
-- Touch controls (tap to move)
-- Mobile wallet integration
+- Native touch controls
+- Solana Mobile wallet integration
 - Optimized 30 FPS rendering
+- Android-specific features (haptics)
 
 ---
 
@@ -208,9 +210,9 @@ cd ../shared && npm init -y
 cd ../web && npx create-next-app@latest . --typescript
 npm install phaser @solana/wallet-adapter-react
 
-# Mobile app  
-cd ../mobile && npx create-expo-app . --template blank-typescript
-npm install @shopify/react-native-skia @solana-mobile/mobile-wallet-adapter-protocol
+# Mobile app (using Solana Mobile Expo template)
+cd ../mobile && yarn create expo-app . --template @solana-mobile/solana-mobile-expo-template
+npm install @shopify/react-native-skia
 
 # Root package.json for scripts
 cd .. && npm init -y

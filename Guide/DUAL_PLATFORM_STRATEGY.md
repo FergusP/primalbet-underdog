@@ -2,21 +2,21 @@
 *One Game, Two Platforms, Two Hackathons*
 
 ## **🎯 Overview**
-Building Aurelius for **2 hackathons** with both web and mobile platforms, using a shared codebase architecture that allows rapid development without monorepo complexity.
+Building Aurelius for **2 hackathons** with a responsive web app that works on mobile browsers AND a native Android app, using a shared codebase architecture that allows rapid development without monorepo complexity.
 
 ## **🏆 Hackathon Strategy**
 
 ### **Hackathon 1: Solana Gaming**
-- **Focus**: Web version
-- **Highlight**: Blockchain integration, real-time battles
-- **Demo**: Live web gameplay
-- **Unique**: "First real-time PvP arena on Solana"
+- **Focus**: Responsive web version (desktop + mobile browsers)
+- **Highlight**: Blockchain integration, real-time battles, works everywhere
+- **Demo**: Live gameplay on desktop AND mobile browser
+- **Unique**: "Play on any device - desktop or phone browser"
 
-### **Hackathon 2: Mobile Gaming/Web3**
-- **Focus**: Mobile version (Solana Seeker)
-- **Highlight**: Mobile-first UX, touch controls
-- **Demo**: Phone gameplay
-- **Unique**: "Solana gaming in your pocket"
+### **Hackathon 2: Solana Mobile/Seeker**
+- **Focus**: Native Android app
+- **Highlight**: Native performance, Solana Mobile Stack integration
+- **Demo**: Native app on Solana Saga/Android
+- **Unique**: "Built for Solana Mobile with native features"
 
 ---
 
@@ -168,6 +168,17 @@ export class WebWallet implements WalletInterface {
     return await this.wallet.signTransaction!(tx);
   }
 }
+
+// Responsive touch controls for mobile browsers
+export function setupMobileControls(scene: Phaser.Scene) {
+  if ('ontouchstart' in window) {
+    scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      // Handle touch input for mobile browsers
+      const direction = calculateDirection(pointer.x, pointer.y);
+      scene.events.emit('moveWarrior', direction);
+    });
+  }
+}
 ```
 
 **Mobile Implementation (mobile/lib/mobileWallet.ts)**
@@ -309,21 +320,21 @@ Day 14: Launch
 
 ### **Web MVP (5 days)**
 - ✅ Wallet adapter (Phantom, Solflare, etc)
-- ✅ Canvas/WebGL battle arena
-- ✅ Keyboard controls (WASD/Arrows)
+- ✅ Canvas/WebGL battle arena (Phaser)
+- ✅ Keyboard controls (desktop) + Touch controls (mobile browser)
 - ✅ Real-time WebSocket
-- ✅ Responsive design
-- ✅ Social share buttons
-- ✅ Leaderboard display
+- ✅ Responsive design for all screen sizes
+- ✅ Mobile browser optimization
+- ✅ Works on iOS and Android browsers
 
-### **Mobile MVP (5 days)**
+### **Native Mobile MVP (5 days)**
 - ✅ Solana Mobile Stack integration
-- ✅ Touch-optimized controls
-- ✅ Gesture-based movement
-- ✅ Push notifications
-- ✅ Simplified graphics
-- ✅ Offline queue support
+- ✅ Native touch controls
+- ✅ React Native Skia rendering
+- ✅ Native wallet integration
 - ✅ Haptic feedback
+- ✅ Background/foreground handling
+- ✅ Android-optimized performance
 
 ### **Shared Features**
 - ✅ Same smart contracts

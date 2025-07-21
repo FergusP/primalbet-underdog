@@ -104,6 +104,17 @@ You are helping with Aurelius, a dual-mode real-time PvP battle arena on Solana 
 - **Cost Efficient**: ~0.003 SOL rent per account
 - **Quick Delivery**: MVP in 10-14 days
 
+### **Anti-Overengineering Principles**
+1. **Always choose the simplest solution** that meets the requirements
+2. **If considering a complex approach**, ask: "Is there a simpler way?"
+3. **Before adding abstractions**, ensure they're truly needed
+4. **Warn the user** if a solution seems overengineered by saying:
+   - "This might be overengineering. A simpler approach would be..."
+   - "Consider if you really need [complex feature]. You could just..."
+5. **MVP means MVP** - resist adding "nice to have" features
+6. **Prefer copy-paste over complex sharing** mechanisms
+7. **Avoid premature optimization** - make it work first
+
 ### **Tech Stack**
 - **Smart Contracts**: Anchor 0.30.0 (shared)
 - **Game Server**: Fastify + Socket.io + Redis (shared)
