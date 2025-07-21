@@ -1,12 +1,12 @@
-# **AURELIUS MINIMUM MVP**
-*Ship in 3-5 Days, Expand Forever*
+# **AURELIUS DUAL-PLATFORM MVP**
+*Ship Both Platforms in 5-7 Days, Win Two Hackathons*
 
 ## **🎯 MVP Philosophy**
-Build the smallest playable game that proves the concept, generates revenue, and creates FOMO. Everything else comes later.
+Build the smallest playable game on BOTH web and mobile platforms. Same core gameplay, platform-optimized UX. Prove the concept, generate revenue, win hackathons.
 
 ---
 
-## **✅ MVP FEATURES ONLY (3-5 Days)**
+## **✅ MVP FEATURES ONLY (5-7 Days)**
 
 ### **1. Single Game Mode**
 - **Arena Blitz ONLY** - 90 second battles
@@ -50,12 +50,18 @@ GameEscrow {
 - Basic movement validation
 - No anti-cheat initially
 
-### **6. Minimal UI**
-- Basic arena (circular, no zones)
-- Simple warrior sprites (1 type)
-- Health bars only
-- Basic kill feed
-- Desktop only (no mobile)
+### **6. Dual-Platform UI**
+**Web (Days 4-5):**
+- Phaser arena (circular, no zones)
+- Desktop controls (WASD/Arrows)
+- Wallet adapter integration
+- Full 60 FPS rendering
+
+**Mobile (Days 6-7):**
+- React Native Skia arena
+- Touch controls (tap to move)
+- Mobile wallet integration
+- Optimized 30 FPS rendering
 
 ---
 
@@ -73,7 +79,7 @@ GameEscrow {
 - ✅ Multi-warrior entry
 - ✅ Late entry penalties
 - ✅ Territory control
-- ✅ Mobile support
+- ✅ Platform feature parity
 
 ### **Phase 4 (Week 4)**
 - ✅ Underdog mechanics
@@ -88,84 +94,140 @@ GameEscrow {
 
 ```
 aurelius/
-├── contracts/          # Just 2 instructions
-│   └── programs/
-│       └── aurelius/
-│           └── src/
-│               ├── lib.rs
-│               └── state/
-│                   ├── player.rs    # Simple profile
-│                   └── game.rs      # Basic escrow
-├── server/            # Minimal server
+├── programs/           # Shared smart contracts
+│   └── aurelius/
+│       └── src/
+│           ├── lib.rs
+│           └── state/
+│               ├── player.rs
+│               └── game.rs
+├── server/            # Shared game server
 │   └── src/
 │       ├── index.ts
-│       ├── game.ts    # Core loop only
+│       ├── game.ts
 │       └── websocket.ts
-└── app/               # Basic UI
+├── shared/            # Copy-paste logic
+│   ├── battleLogic.ts
+│   ├── constants.ts
+│   └── types.ts
+├── web/               # Web frontend
+│   └── src/
+│       ├── pages/
+│       │   └── index.tsx
+│       └── game/
+│           └── Arena.ts
+└── mobile/            # Mobile app
     └── src/
-        ├── pages/
-        │   └── index.tsx  # Single page
-        └── game/
-            └── Arena.ts   # Phaser scene
+        ├── screens/
+        │   └── Game.tsx
+        └── components/
+            └── Arena.tsx
 ```
 
 ---
 
 ## **🚀 MVP Development Timeline**
 
-### **Day 1: Smart Contracts**
+### **Day 1: Smart Contracts & Shared Logic**
 Morning:
 - [ ] Basic Anchor setup
-- [ ] PlayerProfile PDA
-- [ ] Create player instruction
+- [ ] PlayerProfile & GameEscrow
+- [ ] Join/End game instructions
 
 Afternoon:
-- [ ] GameEscrow account
-- [ ] Join game instruction
-- [ ] End game instruction
+- [ ] Create /shared folder
+- [ ] Implement battleLogic.ts
+- [ ] Define types & constants
 
 ### **Day 2: Game Server**
 Morning:
 - [ ] Node.js + Socket.io setup
-- [ ] Basic game state
-- [ ] Movement handling
+- [ ] Platform-agnostic WebSocket
+- [ ] Mobile reconnection support
 
 Afternoon:
 - [ ] Combat calculations
 - [ ] Power-up spawning
 - [ ] Winner detection
 
-### **Day 3: Frontend Foundation**
+### **Day 3: Setup Both Platforms**
 Morning:
-- [ ] Next.js setup
-- [ ] Wallet connection
-- [ ] Join game flow
+- [ ] Initialize Next.js (web)
+- [ ] Initialize Expo (mobile)
+- [ ] Copy shared logic to both
 
 Afternoon:
-- [ ] Phaser arena scene
-- [ ] Warrior sprites
-- [ ] Basic movement
+- [ ] Create warrior sprites
+- [ ] Design UI mockups
+- [ ] Setup build scripts
 
-### **Day 4: Integration**
-Morning:
-- [ ] Connect frontend to server
-- [ ] Test full game flow
-- [ ] Fix critical bugs
+### **Day 4-5: Web MVP**
+Day 4:
+- [ ] Phaser arena implementation
+- [ ] Wallet adapter integration
+- [ ] Desktop controls
 
-Afternoon:
-- [ ] Basic UI polish
-- [ ] Deploy to devnet
-- [ ] Internal testing
+Day 5:
+- [ ] Connect to server
+- [ ] Test gameplay
+- [ ] Deploy to Vercel
 
-### **Day 5: Launch Prep**
-Morning:
-- [ ] Final bug fixes
-- [ ] Basic landing page
-- [ ] Deploy to mainnet
+### **Day 6-7: Mobile MVP**
+Day 6:
+- [ ] React Native Skia arena
+- [ ] Mobile wallet integration
+- [ ] Touch controls
 
-Afternoon:
-- [ ] Launch! 🎉
-- [ ] Monitor and hotfix
+Day 7:
+- [ ] Connect to server
+- [ ] Test on devices
+- [ ] TestFlight/Play Store build
+
+---
+
+## **🚀 Quick MVP Setup**
+
+```bash
+# Initial setup (30 minutes)
+mkdir aurelius && cd aurelius
+
+# Create all folders
+mkdir -p programs/aurelius server shared web mobile
+
+# Smart contracts
+cd programs/aurelius && anchor init .
+
+# Server
+cd ../../server && npm init -y
+npm install fastify socket.io redis
+
+# Shared logic
+cd ../shared && npm init -y
+
+# Web app
+cd ../web && npx create-next-app@latest . --typescript
+npm install phaser @solana/wallet-adapter-react
+
+# Mobile app  
+cd ../mobile && npx create-expo-app . --template blank-typescript
+npm install @shopify/react-native-skia @solana-mobile/mobile-wallet-adapter-protocol
+
+# Root package.json for scripts
+cd .. && npm init -y
+```
+
+### **Root Scripts (package.json)**
+```json
+{
+  "scripts": {
+    "dev:all": "concurrently \"npm run dev:server\" \"npm run dev:web\" \"npm run dev:mobile\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:web": "cd web && npm run dev",
+    "dev:mobile": "cd mobile && expo start",
+    "sync:shared": "cp -r shared/* web/lib/shared/ && cp -r shared/* mobile/lib/shared/"
+  }
+}
+```
 
 ---
 
@@ -251,16 +313,84 @@ pub fn join_game(ctx: Context<JoinGame>) -> Result<()> {
 
 ---
 
+## **📱 Platform-Specific MVP Code**
+
+### **Shared Battle Logic**
+```typescript
+// shared/battleLogic.ts - Works on both platforms
+export function calculateDamage(attacker: Warrior): number {
+  const baseDamage = 6; // Fixed for MVP
+  return attacker.hasRage ? baseDamage * 2 : baseDamage;
+}
+
+export function checkCollision(w1: Warrior, w2: Warrior): boolean {
+  return Math.abs(w1.pos.x - w2.pos.x) <= 1 && 
+         Math.abs(w1.pos.y - w2.pos.y) <= 1;
+}
+```
+
+### **Web Arena (Phaser)**
+```typescript
+// web/src/game/Arena.ts
+import { calculateDamage } from '../lib/shared/battleLogic';
+
+export class ArenaScene extends Phaser.Scene {
+  create() {
+    this.arena = this.add.circle(300, 300, 300, 0x1a1a2e);
+    this.warriors = this.add.group();
+  }
+  
+  handleKeyboard() {
+    const cursors = this.input.keyboard.createCursorKeys();
+    if (cursors.left.isDown) this.moveWarrior(-1, 0);
+    // ... other directions
+  }
+}
+```
+
+### **Mobile Arena (React Native)**
+```tsx
+// mobile/src/components/Arena.tsx
+import { Canvas, Circle } from '@shopify/react-native-skia';
+import { calculateDamage } from '../lib/shared/battleLogic';
+
+export function Arena({ gameState, onTouch }) {
+  return (
+    <Canvas style={{ width: 300, height: 300 }} onTouch={onTouch}>
+      <Circle cx={150} cy={150} r={150} color="#1a1a2e" />
+      {gameState.warriors.map(warrior => (
+        <Circle
+          key={warrior.id}
+          cx={warrior.pos.x * 15}
+          cy={warrior.pos.y * 15}
+          r={5}
+          color={warrior.hp > 0 ? "red" : "gray"}
+        />
+      ))}
+    </Canvas>
+  );
+}
+```
+
 ## **📊 Success Metrics for MVP**
 
-Week 1 Goals:
-- 100 unique players
+### **Combined Platform Goals (Week 1)**
+- 100 unique players (both platforms)
 - 500 games played
 - 1 SOL in daily volume
 - <100ms game latency
 - Zero fund loss bugs
 
-If you hit these, you've validated the concept and can start adding features!
+### **Platform-Specific Metrics**
+**Web:**
+- 60 FPS on desktop
+- All major browsers work
+- Wallet connects smoothly
+
+**Mobile:**
+- 30 FPS on mid-range phones
+- Touch controls responsive
+- <50MB app size
 
 ---
 

@@ -1,7 +1,7 @@
 # **AURELIUS INTERFACE CONTRACT**
 *Sacred Agreement Between Partners*
 
-**Version**: 1.0.0  
+**Version**: 3.0.0  
 **Last Updated**: [Current Date]  
 **Status**: ACTIVE
 
@@ -412,6 +412,118 @@ Skip for MVP: Siege mode, veteran bonuses, special modifiers, XP system, multi-w
 
 ---
 
+## **📱 Platform-Specific Interface**
+
+### **Mobile Connection Protocol**
+```typescript
+// Mobile → Server Connection
+{
+  type: 'connect',
+  data: {
+    wallet: string,
+    platform: 'mobile', // Required for mobile
+    clientId: string,   // Persistent client ID for reconnection
+    appVersion: string, // Mobile app version
+    osVersion: string   // iOS/Android version
+  }
+}
+
+// Server → Mobile Response
+{
+  type: 'connected',
+  data: {
+    sessionId: string,
+    gameState: GameState | null,
+    updateRate: number, // 100ms for mobile (10 FPS)
+    compressionEnabled: boolean // true for mobile
+  }
+}
+```
+
+### **Mobile-Specific Events**
+
+#### **App State Change** (Mobile → Server)
+```typescript
+{
+  type: 'appStateChange',
+  data: {
+    state: 'foreground' | 'background' | 'inactive',
+    timestamp: number
+  }
+}
+```
+
+#### **Touch Input** (Mobile → Server)
+```typescript
+{
+  type: 'touchInput',
+  data: {
+    action: 'tap' | 'swipe' | 'hold',
+    position?: { x: number, y: number }, // For tap
+    direction?: { x: number, y: number }, // For swipe
+    duration?: number // For hold
+  }
+}
+```
+
+#### **Batched Update** (Server → Mobile)
+```typescript
+{
+  type: 'batchUpdate',
+  data: {
+    timestamp: number,
+    warriors: Array<{
+      id: string,
+      p: [number, number], // Compressed position
+      h: number,           // HP
+      a: 0 | 1            // Alive (0/1)
+    }>,
+    powerUps: Array<{
+      id: string,
+      t: 'h' | 'r',       // Type (health/rage)
+      p: [number, number]  // Position
+    }>,
+    events: Array<any>     // Priority sorted events
+  }
+}
+```
+
+### **Platform Abstraction Interfaces**
+
+```typescript
+// Shared wallet interface
+interface WalletAdapter {
+  platform: 'web' | 'mobile';
+  connect(): Promise<PublicKey>;
+  signTransaction(tx: Transaction): Promise<Transaction>;
+  disconnect(): Promise<void>;
+}
+
+// Web implementation
+class WebWalletAdapter implements WalletAdapter {
+  platform = 'web' as const;
+  // Uses @solana/wallet-adapter-react
+}
+
+// Mobile implementation  
+class MobileWalletAdapter implements WalletAdapter {
+  platform = 'mobile' as const;
+  // Uses @solana-mobile/mobile-wallet-adapter-protocol
+}
+
+// Game renderer interface
+interface GameRenderer {
+  platform: 'web' | 'mobile';
+  initialize(container: any): void;
+  renderWarrior(warrior: Warrior): void;
+  renderPowerUp(powerUp: PowerUp): void;
+  handleInput(input: InputEvent): void;
+  cleanup(): void;
+}
+```
+
+---
+
 ## **📡 HTTP API Endpoints**
 
 ### **Game Info**
@@ -699,6 +811,7 @@ enum ErrorCode {
 | 1.0.0 | [Date] | Initial interface contract | Partner A & B |
 | 2.0.0 | [Current Date] | Added dual-mode system (Blitz/Siege), underdog mechanics, special events | Partner A |
 | 2.1.0 | [Current Date] | Added XP & Progression system, level tracking, XP events | Partner A |
+| 3.0.0 | [Current Date] | Added platform-specific interfaces for web/mobile dual deployment | Partner A |
 
 ---
 

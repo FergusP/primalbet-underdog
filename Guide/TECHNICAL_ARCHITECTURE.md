@@ -14,17 +14,29 @@
 
 ## **🏗️ System Architecture Overview**
 
+### **Dual-Platform Architecture**
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   Frontend      │────▶│   Game Server    │────▶│  Solana Chain   │
-│  (Next + Phaser)│◀────│  (Node + Redis)  │◀────│   (Anchor)      │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
-         │                       │                         │
-         │                       ▼                         │
-         │              ┌──────────────────┐              │
-         └─────────────▶│  ProofNetwork    │◀─────────────┘
-                        │   (VRF + Keys)    │
-                        └──────────────────┘
+┌─────────────────┐     ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│   Web Frontend  │────▶│                 │────▶│   Game Server    │────▶│  Solana Chain   │
+│  (Next + Phaser)│     │                 │◀────│  (Node + Redis)  │◀────│   (Anchor)      │
+└─────────────────┘     │  Shared Logic   │     └──────────────────┘     └─────────────────┘
+                        │                 │              │                         │
+┌─────────────────┐     │                 │              ▼                         │
+│ Mobile Frontend │────▶│                 │     ┌──────────────────┐              │
+│   (RN + Skia)   │     │                 │     │  ProofNetwork    │◀─────────────┘
+└─────────────────┘     └─────────────────┘     │   (VRF + Keys)   │
+                                                 └──────────────────┘
+```
+
+### **Project Structure**
+```
+/Aurelius
+├── /web                    # Next.js web app
+├── /mobile                 # React Native mobile app
+├── /shared                 # Shared game logic (copy-paste)
+├── /programs               # Anchor smart contracts
+├── /server                 # Shared game server
+└── /Guide                  # Documentation
 ```
 
 ---
@@ -474,7 +486,7 @@ solana-program = "1.18.0"
 }
 ```
 
-### **Frontend**
+### **Web Frontend**
 ```json
 {
   "dependencies": {
@@ -482,18 +494,96 @@ solana-program = "1.18.0"
     "phaser": "^3.90.0",
     "zustand": "^4.5.0",
     "@solana/wallet-adapter-react": "^0.15.0",
-    "framer-motion": "^11.0.0"
+    "framer-motion": "^11.0.0",
+    "socket.io-client": "^4.7.0"
   }
 }
 ```
 
+### **Mobile Frontend**
+```json
+{
+  "dependencies": {
+    "expo": "~51.0.0",
+    "react-native": "0.74.0",
+    "@shopify/react-native-skia": "^1.2.0",
+    "zustand": "^4.5.0",
+    "@solana-mobile/mobile-wallet-adapter-protocol": "^2.0.0",
+    "socket.io-client": "^4.7.0"
+  }
+}
+```
+
+### **Shared Code**
+```typescript
+// No package.json - just TypeScript files to copy
+// - battleLogic.ts
+// - gameConstants.ts
+// - types.ts
+// - solanaClient.ts
+```
+
 ### **Infrastructure**
-- **Hosting**: Vercel (Frontend) + Railway (Backend)
+- **Web Hosting**: Vercel (Next.js)
+- **Mobile Distribution**: Expo EAS + TestFlight/Play Store
+- **Backend**: Railway (Game Server)
 - **Database**: Supabase PostgreSQL
 - **Cache**: Upstash Redis
 - **RPC**: Helius Pro plan
 - **Monitoring**: Datadog
 - **CDN**: Cloudflare
+
+---
+
+## **📱 Dual-Platform Architecture**
+
+### **Code Sharing Strategy**
+```typescript
+// shared/battleLogic.ts - Platform agnostic game logic
+export function calculateDamage(attacker: Warrior, defender: Warrior): number {
+  const baseDamage = Math.floor(Math.random() * 4) + 5; // 5-8
+  return attacker.effects.includes('rage') ? baseDamage * 2 : baseDamage;
+}
+
+// web/lib/gameEngine.ts - Web-specific implementation
+import { calculateDamage } from './shared/battleLogic';
+import * as Phaser from 'phaser';
+
+// mobile/lib/gameEngine.ts - Mobile-specific implementation  
+import { calculateDamage } from './shared/battleLogic';
+import { Canvas } from '@shopify/react-native-skia';
+```
+
+### **Platform Abstractions**
+```typescript
+// shared/types.ts
+export interface GameRenderer {
+  initialize(container: any): void;
+  renderWarrior(warrior: Warrior): void;
+  renderPowerUp(powerUp: PowerUp): void;
+  cleanup(): void;
+}
+
+export interface WalletAdapter {
+  connect(): Promise<PublicKey>;
+  signTransaction(tx: Transaction): Promise<Transaction>;
+  disconnect(): Promise<void>;
+}
+```
+
+### **Mobile-Specific Optimizations**
+- **Reduced particle effects** for battery life
+- **Touch gesture controls** instead of keyboard
+- **Background/foreground handling** for reconnection
+- **Offline queue** for unstable connections
+- **Haptic feedback** for combat events
+
+### **Web-Specific Features**
+- **Full particle effects** and animations
+- **Keyboard shortcuts** for power users
+- **Multi-tab detection** to prevent cheating
+- **Desktop notifications** for game events
+- **Social sharing** integration
 
 ---
 
@@ -521,6 +611,13 @@ solana-program = "1.18.0"
 - Timeout mechanism prevents server lockup
 - VRF proofs ensure fairness
 - Open-source verification possible
+
+### **5. Why Dual-Platform Strategy?**
+- **Two hackathon submissions** from one codebase
+- **Wider audience reach** (desktop + mobile users)
+- **Shared game logic** reduces bugs
+- **Independent deployment** allows platform-specific optimization
+- **Copy-paste sharing** avoids monorepo complexity
 
 ---
 

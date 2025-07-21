@@ -1,13 +1,14 @@
-Here's a practical workflow for seamless collaboration between you and your partner:
+# **AURELIUS DUAL-PLATFORM COLLABORATION WORKFLOW**
+*Vibecoding for Web + Mobile Development*
 
-🔄 Collaboration Workflow
+## **🔄 Collaboration Workflow**
 
 1. Initial Setup (Both Partners)
 
 1. Fork/clone the repository
 1. Create your feature branches:
    - Partner A: `feat/backend-foundation`
-   - Partner B: `feat/frontend-foundation`
+   - Partner B: `feat/web-foundation` + `feat/mobile-foundation`
 1. Set up your local development environment
 1. Review INTERFACE_CONTRACT.md together
 
@@ -43,8 +44,12 @@ Morning:
 
 1. Pull latest from main
 2. Check for Partner A updates
-3. Work on current task (e.g., Phaser scenes)
-4. Commit with prefix: [B] ui: Description
+3. Sync shared code: `npm run sync:shared`
+4. Work on platform tasks (web/mobile)
+5. Commit with prefix: 
+   - [B-Web] for web-specific
+   - [B-Mobile] for mobile-specific
+   - [B-Shared] for shared logic
 
 When needing backend:
 
@@ -101,29 +106,51 @@ Partner A Can Work Independently On:
 
 Partner B Can Work Independently On:
 
-- All visual assets
-- Scene layouts
-- UI components
-- Animations
+**Web Platform:**
+- Phaser game scenes
+- Desktop UI components
+- Keyboard controls
+- Browser optimizations
+
+**Mobile Platform:**
+- React Native Skia rendering
+- Touch controls
+- Mobile UI adaptation
+- Battery optimization
+
+**Both Platforms:**
+- Visual assets (different resolutions)
 - Sound effects
+- Shared game logic
 
-Use Mocks Until Integration:
+Use Platform-Specific Mocks:
 
-// Partner B mock example
-const mockGameState = {
-warriors: [
-{ id: '1', position: {x: 5, y: 5}, hp: 100 },
-{ id: '2', position: {x: 15, y: 15}, hp: 80 }
-],
-phase: 'battle'
+```typescript
+// shared/mockData.ts
+export const mockGameState = {
+  warriors: [
+    { id: '1', position: {x: 5, y: 5}, hp: 100 },
+    { id: '2', position: {x: 15, y: 15}, hp: 80 }
+  ],
+  phase: 'battle'
 };
 
-// Replace with real WebSocket later
-const mockSocket = {
-on: (event, callback) => {
-setTimeout(() => callback(mockGameState), 1000);
-}
+// web/lib/mockSocket.ts
+import { mockGameState } from './shared/mockData';
+export const mockSocket = {
+  on: (event, callback) => {
+    setTimeout(() => callback(mockGameState), 16); // 60 FPS
+  }
 };
+
+// mobile/lib/mockSocket.ts
+import { mockGameState } from './shared/mockData';
+export const mockSocket = {
+  on: (event, callback) => {
+    setTimeout(() => callback(mockGameState), 100); // 10 FPS
+  }
+};
+```
 
 6. Git Workflow
 
@@ -228,9 +255,10 @@ Daily EOD Update:
 
 Track daily:
 
-- Tasks completed
-- Integration points tested
-- Blockers resolved
+- Tasks completed (per platform)
+- Shared code synced
+- Platform integration tested
+- Cross-platform compatibility
 - Code merged to main
 
 Weekly:
@@ -240,5 +268,37 @@ Weekly:
 - Code review session
 - Plan next features
 
-This workflow ensures you both can work independently while staying synchronized at key integration points. The key is good communication
-and sticking to the interface contract!
+## **📱 Platform-Specific Workflow**
+
+### **Shared Code Workflow**
+```bash
+# When updating shared logic
+1. cd shared && make changes
+2. npm test # Test shared logic
+3. npm run sync:shared # Copy to both platforms
+4. cd web && npm test # Test web
+5. cd mobile && npm test # Test mobile
+6. git commit -m "[B-Shared] feat: Update battle logic"
+```
+
+### **Platform Testing Matrix**
+| Task | Web | Mobile | Server |
+|------|-----|---------|--------|
+| Wallet Connect | Phantom | Solflare Mobile | ✓ |
+| Game Render | 60 FPS | 30 FPS | N/A |
+| Controls | Keyboard | Touch | ✓ |
+| Network | Stable | Reconnect | ✓ |
+
+### **Daily Platform Sync**
+```
+🌅 Platform Status - [Date]
+✅ Web: Arena rendering at 60 FPS
+✅ Mobile: Touch controls working
+🔄 Shared: Battle logic v1.2 synced
+⚠️ Issue: Mobile wallet connection
+🎯 Next: Test cross-platform play
+```
+
+---
+
+*This workflow ensures smooth development across both platforms while maintaining code quality and synchronization!*

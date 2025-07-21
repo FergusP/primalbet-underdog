@@ -4,16 +4,19 @@
 ## **📋 Project Overview**
 
 **Project**: Aurelius - Dual-Mode PvP Battle Arena on Solana  
-**MVP Duration**: 3-5 days (Arena Blitz only, 10 players)  
-**Full Duration**: 10-14 days (Both modes, all features)  
+**Platforms**: Web (Next.js) + Mobile (React Native)  
+**MVP Duration**: 5-7 days (Both platforms, Arena Blitz only)  
+**Full Duration**: 14-21 days (Both platforms, all features)  
 **Team Size**: 2 developers  
 **Methodology**: Vibecoding (Domain-based collaboration)  
+**Target**: 2 Hackathon submissions  
 
 ### **Development Phases**
-- **Phase 1 - MVP (Days 1-5)**: Arena Blitz only, basic features, 10 players max
-- **Phase 2 (Week 2)**: Add VRF, XP system, more power-ups, 20 players
-- **Phase 3 (Week 3)**: Glory Siege mode, multi-warrior, late entry
-- **Phase 4 (Week 4+)**: Special events, underdog mechanics, polish
+- **Phase 1 - Core (Days 1-3)**: Shared logic, smart contracts, game server
+- **Phase 2 - MVP (Days 4-7)**: Web MVP + Mobile MVP (Arena Blitz only)
+- **Phase 3 (Week 2)**: Add VRF, XP system, platform polish
+- **Phase 4 (Week 3)**: Glory Siege mode, advanced features
+- **Phase 5 (Week 4+)**: Hackathon submissions and demos
 
 ---
 
@@ -35,19 +38,17 @@
 - Infrastructure & DevOps: 7 tasks
 
 ### **Partner B: Frontend & Game Experience**
-**Primary Domain**: UI/UX, Phaser Game Engine, Visual Design
+**Primary Domain**: Web UI/UX, Mobile UI/UX, Game Engines, Visual Design
 
-**MVP Tasks (Days 1-5)**: ~18 tasks
-- Basic Phaser arena (circular, no zones)
-- Simple warrior sprites (1 type)
-- Wallet connection
-- 2 power-ups (health, rage)
-- Desktop only
+**MVP Tasks (Days 1-7)**: ~25 tasks
+- Web: Phaser arena, wallet adapter, desktop UI
+- Mobile: React Native Skia arena, mobile wallet, touch controls
+- Shared: Warrior sprites, power-ups, game states
 
-**Full Project Tasks**: ~45 major tasks
-- Phaser Game Development: 22 tasks
-- React/Next.js Frontend: 15 tasks
-- State Management: 10 tasks
+**Full Project Tasks**: ~60 major tasks
+- Web Frontend (Next.js + Phaser): 25 tasks
+- Mobile Frontend (React Native): 25 tasks
+- Shared Components: 10 tasks
 - Visual & Audio Design: 15 tasks
 
 ---
@@ -146,54 +147,71 @@ interface GameResult {
 
 ## **📋 Complete Task Division**
 
-## **🚀 PHASE 1 - MVP (Days 1-5)**
+## **🚀 PHASE 1 - CORE DEVELOPMENT (Days 1-3)**
 
-### **Partner A: MVP Backend Tasks**
+### **Partner A: Core Backend**
 
-#### **Smart Contract Development (Day 1-2)**
+#### **Smart Contracts (Day 1)**
 - [ ] Initialize Anchor project structure
 - [ ] Create basic Player PDA
-  - [ ] Simple PlayerProfile (wins, earnings only)
-  - [ ] create_player_profile instruction
-- [ ] Basic Game Escrow
-  - [ ] Fixed entry fee (0.002 SOL)
-  - [ ] Single winner payout
-  - [ ] 10 player max
-- [ ] Simple game flow
-  - [ ] join_game instruction (single warrior)
-  - [ ] end_game instruction (one winner)
-  - [ ] Basic treasury fee (3%)
+- [ ] Basic Game Escrow (0.002 SOL entry)
+- [ ] join_game and end_game instructions
+- [ ] Manual buffer encoding setup
 
-#### **Game Server (Day 2-3)**
-- [ ] Basic Node.js + Socket.io setup
-- [ ] Simple game state in Redis
+#### **Game Server (Day 2)**
+- [ ] Node.js + Socket.io setup
+- [ ] Redis game state management
 - [ ] Fixed damage combat (6 HP)
-- [ ] Basic movement validation
-- [ ] 2 power-up types only
+- [ ] Movement validation
+- [ ] Platform-agnostic WebSocket protocol
 
-### **Partner B: MVP Frontend Tasks**
+#### **Shared Logic (Day 3)**
+- [ ] Create /shared folder structure
+- [ ] Implement battleLogic.ts
+- [ ] Define types.ts interfaces
+- [ ] Game constants
+- [ ] Test shared functions
 
-#### **Phaser Game (Day 1-3)**
-- [ ] Basic arena setup (circular, 600px)
-- [ ] Simple warrior sprite (1 type)
-- [ ] Movement controls
-- [ ] Health bars
-- [ ] 2 power-ups (health, rage)
-- [ ] Basic combat animations
+### **Partner B: Foundation Setup**
 
-#### **React Frontend (Day 2-3)**
-- [ ] Wallet connection
-- [ ] Join game button
-- [ ] Basic game lobby
-- [ ] Winner announcement
-- [ ] Desktop layout only
+#### **Project Setup (Day 1)**
+- [ ] Initialize web (Next.js) project
+- [ ] Initialize mobile (Expo) project
+- [ ] Setup shared folder structure
+- [ ] Configure build scripts
 
-#### **Integration (Day 4-5)**
-- [ ] Connect frontend to server
-- [ ] Test full game flow
-- [ ] Fix critical bugs
-- [ ] Deploy to devnet
-- [ ] Basic landing page
+#### **Asset Creation (Day 2-3)**
+- [ ] Warrior sprites (web + mobile versions)
+- [ ] Power-up graphics
+- [ ] Arena backgrounds
+- [ ] UI mockups for both platforms
+
+## **🚀 PHASE 2 - DUAL PLATFORM MVP (Days 4-7)**
+
+### **Partner A: Backend Integration**
+- [ ] Deploy contracts to devnet
+- [ ] ProofNetwork basic setup
+- [ ] Server deployment (Railway)
+- [ ] Cross-platform testing support
+- [ ] Basic monitoring
+
+### **Partner B: Platform Implementation**
+
+#### **Web MVP (Days 4-5)**
+- [ ] Phaser arena implementation
+- [ ] Wallet adapter integration
+- [ ] WebSocket connection
+- [ ] Game UI (lobby, results)
+- [ ] Desktop controls (WASD)
+- [ ] Deploy to Vercel
+
+#### **Mobile MVP (Days 6-7)**
+- [ ] React Native Skia arena
+- [ ] Mobile wallet integration
+- [ ] Touch controls
+- [ ] Mobile UI adaptation
+- [ ] WebSocket reconnection handling
+- [ ] TestFlight build
 
 ---
 
@@ -255,12 +273,14 @@ interface GameResult {
 
 ## **🏃 Daily Sync & Integration**
 
-### **MVP Integration Checkpoints (Days 1-5)**
-- **Day 1**: Smart contract setup, basic Phaser arena
-- **Day 2**: Join game flow working end-to-end
-- **Day 3**: Combat and power-ups functional
-- **Day 4**: Full game loop testing
-- **Day 5**: Deploy and launch!
+### **Dual-Platform Integration Checkpoints**
+- **Day 1**: Smart contracts + Project setup complete
+- **Day 2**: Game server running + Assets ready
+- **Day 3**: Shared logic tested + Copy to platforms
+- **Day 4**: Web MVP playable on localhost
+- **Day 5**: Web deployed to Vercel
+- **Day 6**: Mobile MVP on simulator
+- **Day 7**: Both platforms live!
 
 ---
 
@@ -300,21 +320,25 @@ interface GameResult {
 ### **Code Organization**
 ```
 Aurelius/
-├── contracts/          # Partner A primary
-│   ├── programs/
-│   ├── tests/
-│   └── migrations/
+├── programs/           # Partner A primary
+│   └── aurelius/      # Anchor smart contracts
 ├── server/            # Partner A primary
 │   ├── websocket/
 │   ├── game-logic/
 │   └── proofnetwork/
-├── app/               # Partner B primary
+├── web/               # Partner B primary
 │   ├── components/
-│   ├── game/
-│   └── styles/
-└── shared/            # Both partners
-    ├── types/
-    └── constants/
+│   ├── pages/
+│   └── lib/
+├── mobile/            # Partner B primary
+│   ├── components/
+│   ├── screens/
+│   └── lib/
+├── shared/            # Both partners (copy-paste)
+│   ├── battleLogic.ts
+│   ├── types.ts
+│   └── constants.ts
+└── Guide/             # Documentation
 ```
 
 ### **Branch Strategy**
@@ -322,7 +346,9 @@ Aurelius/
 - `dev` - Integration branch
 - `feat/partner-a-*` - Partner A features
 - `feat/partner-b-*` - Partner B features
-- `design/*` - Game design changes
+- `platform/web-*` - Web-specific features
+- `platform/mobile-*` - Mobile-specific features
+- `shared/*` - Shared logic updates
 - `mode/blitz-*` - Blitz mode specific
 - `mode/siege-*` - Siege mode specific
 
@@ -345,11 +371,20 @@ Aurelius/
 - [ ] WebSocket stress test
 
 ### **Partner B Tests**
+
+#### **Web Tests**
 - [ ] Phaser scene loading
-- [ ] Sprite collision detection
-- [ ] UI responsiveness
-- [ ] Mobile compatibility
-- [ ] Performance (60 FPS)
+- [ ] Browser compatibility (Chrome, Firefox, Safari)
+- [ ] Wallet adapter integration
+- [ ] Desktop performance (60 FPS)
+- [ ] Responsive design
+
+#### **Mobile Tests**
+- [ ] React Native Skia rendering
+- [ ] Touch gesture accuracy
+- [ ] Mobile wallet connection
+- [ ] Device compatibility (iOS/Android)
+- [ ] Mobile performance (30+ FPS)
 
 ### **Integration Tests**
 - [ ] Wallet connection flow
@@ -412,11 +447,53 @@ Aurelius/
 - [ ] 2-minute game loop works
 
 ### **Quality Metrics**
+
+#### **Both Platforms**
 - [ ] No fund loss bugs
-- [ ] <100ms latency
-- [ ] 60 FPS on desktop
-- [ ] Mobile playable
+- [ ] <100ms server latency
 - [ ] 10+ concurrent games
+- [ ] Cross-platform multiplayer works
+
+#### **Web Specific**
+- [ ] 60 FPS on desktop
+- [ ] Works on all major browsers
+- [ ] Wallet adapter connects smoothly
+
+#### **Mobile Specific**
+- [ ] 30+ FPS on mid-range phones
+- [ ] Touch controls responsive
+- [ ] Background/foreground handling
+- [ ] <50MB app size
+
+---
+
+## **🔄 Platform Coordination**
+
+### **Shared Code Sync Process**
+```bash
+# When updating shared logic
+1. Make changes in /shared
+2. Run tests on shared code
+3. Copy to both platforms:
+   npm run sync:shared
+4. Test on both platforms
+5. Commit all changes together
+```
+
+### **Platform Feature Parity**
+- **Core Gameplay**: Must be identical
+- **UI/UX**: Can be platform-optimized
+- **Controls**: Platform-specific
+- **Performance**: Tuned per platform
+- **Features**: Same blockchain integration
+
+### **Testing Matrix**
+| Feature | Web Chrome | Web Safari | Mobile iOS | Mobile Android |
+|---------|------------|------------|------------|----------------|
+| Wallet  | ✓          | ✓          | ✓          | ✓              |
+| Combat  | ✓          | ✓          | ✓          | ✓              |
+| Network | ✓          | ✓          | ✓          | ✓              |
+| Render  | 60 FPS     | 60 FPS     | 30 FPS     | 30 FPS         |
 
 ---
 

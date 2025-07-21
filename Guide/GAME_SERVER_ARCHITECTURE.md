@@ -17,25 +17,37 @@ Skip for MVP: Siege mode, XP system, ProofNetwork VRF, Redis cluster, anti-cheat
 ## **🏗️ Server Architecture Overview**
 
 ```
-┌─────────────────────┐
-│   Load Balancer     │
-│    (Cloudflare)     │
-└──────────┬──────────┘
+┌─────────────────────┐     ┌─────────────────────┐
+│   Web Clients       │     │   Mobile Clients    │
+│  (Next.js/Phaser)   │     │  (React Native)     │
+└──────────┬──────────┘     └──────────┬──────────┘
+           │                           │
+           └───────────┬───────────────┘
+                       │
+┌──────────────────────▼──────────────────────────┐
+│               Load Balancer                      │
+│               (Cloudflare)                       │
+└──────────────────────┬──────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────┐
+│               Game Server                        │
+│          (Node.js/Fastify/Socket.io)            │
+│                                                  │
+│  Features:                                       │
+│  - Platform-agnostic WebSocket                  │
+│  - Mobile reconnection handling                 │
+│  - Optimized message batching                   │
+└──────────┬─────────────────────┬────────────────┘
+           │                     │
+┌──────────▼──────────┐ ┌───────▼─────────┐
+│   Redis Cluster     │ │   PostgreSQL    │
+│   (Game State)      │ │  (Historical)   │
+└─────────────────────┘ └─────────────────┘
            │
-┌──────────▼──────────┐     ┌─────────────────┐
-│   Game Server 1     │────▶│   Redis Cluster │
-│  (Node.js/Fastify)  │◀────│  (Game State)   │
-└─────────────────────┘     └─────────────────┘
-           │                         │
-┌──────────▼──────────┐     ┌───────▼─────────┐
-│   WebSocket Layer   │     │   PostgreSQL    │
-│    (Socket.io)      │     │  (Historical)   │
-└─────────────────────┘     └─────────────────┘
-           │
-┌──────────▼──────────┐     ┌─────────────────┐
-│  ProofNetwork API   │────▶│  Solana RPC     │
-│   (VRF/Blackbox)    │     │   (Helius)      │
-└─────────────────────┘     └─────────────────┘
+┌──────────▼──────────┐ ┌─────────────────┐
+│  ProofNetwork API   │ │  Solana RPC     │
+│   (VRF/Blackbox)    │ │   (Helius)      │
+└─────────────────────┘ └─────────────────┘
 ```
 
 ---
@@ -1582,6 +1594,220 @@ class RPCPool {
     return conn;
   }
 }
+```
+
+---
+
+## **📱 Mobile Client Considerations**
+
+### **1. Mobile-Specific Connection Handling**
+
+```typescript
+// src/websocket/MobileConnectionManager.ts
+export class MobileConnectionManager {
+  private reconnectAttempts: Map<string, number> = new Map();
+  private sessionCache: Map<string, GameSession> = new Map();
+  
+  handleMobileConnection(socket: Socket): void {
+    const clientId = socket.handshake.query.clientId as string;
+    const platform = socket.handshake.query.platform as string;
+    
+    if (platform === 'mobile') {
+      // Enable aggressive reconnection for mobile
+      socket.conn.pingInterval = 10000; // 10s
+      socket.conn.pingTimeout = 30000;  // 30s
+      
+      // Check for existing session
+      const cachedSession = this.sessionCache.get(clientId);
+      if (cachedSession) {
+        this.restoreSession(socket, cachedSession);
+      }
+    }
+  }
+  
+  handleMobileDisconnect(clientId: string): void {
+    // Keep session alive for 5 minutes for mobile
+    setTimeout(() => {
+      if (!this.isClientConnected(clientId)) {
+        this.sessionCache.delete(clientId);
+      }
+    }, 300000); // 5 minutes
+  }
+  
+  private restoreSession(socket: Socket, session: GameSession): void {
+    // Restore game state
+    socket.join(`game:${session.gameId}`);
+    socket.emit('sessionRestored', {
+      gameId: session.gameId,
+      warriorId: session.warriorId,
+      gameState: session.lastKnownState
+    });
+  }
+}
+```
+
+### **2. Mobile-Optimized Message Batching**
+
+```typescript
+// src/websocket/MobileBroadcaster.ts
+export class MobileBroadcaster {
+  private mobileUpdateQueue: Map<string, any[]> = new Map();
+  private updateInterval: number = 100; // 10 FPS for mobile
+  
+  constructor() {
+    // Batch updates for mobile clients
+    setInterval(() => this.flushMobileUpdates(), this.updateInterval);
+  }
+  
+  queueMobileUpdate(clientId: string, update: any): void {
+    if (!this.mobileUpdateQueue.has(clientId)) {
+      this.mobileUpdateQueue.set(clientId, []);
+    }
+    
+    const queue = this.mobileUpdateQueue.get(clientId)!;
+    
+    // Limit queue size to prevent memory issues
+    if (queue.length < 50) {
+      queue.push(update);
+    }
+  }
+  
+  private flushMobileUpdates(): void {
+    for (const [clientId, updates] of this.mobileUpdateQueue) {
+      if (updates.length === 0) continue;
+      
+      // Compress updates
+      const compressed = this.compressUpdates(updates);
+      
+      // Send batched update
+      this.sendToClient(clientId, 'batchUpdate', compressed);
+      
+      // Clear queue
+      updates.length = 0;
+    }
+  }
+  
+  private compressUpdates(updates: any[]): any {
+    // Merge similar updates
+    const merged = {
+      warriors: new Map(),
+      powerUps: new Map(),
+      events: []
+    };
+    
+    for (const update of updates) {
+      if (update.type === 'warriorMove') {
+        // Keep only latest position
+        merged.warriors.set(update.warriorId, update);
+      } else if (update.type === 'powerUpSpawn') {
+        merged.powerUps.set(update.powerUpId, update);
+      } else {
+        merged.events.push(update);
+      }
+    }
+    
+    return {
+      warriors: Array.from(merged.warriors.values()),
+      powerUps: Array.from(merged.powerUps.values()),
+      events: merged.events
+    };
+  }
+}
+```
+
+### **3. Mobile Network Optimization**
+
+```typescript
+// src/utils/MobileOptimization.ts
+export class MobileOptimization {
+  // Reduce payload size for mobile
+  static optimizeGameState(state: GameState, isMobile: boolean): any {
+    if (!isMobile) return state;
+    
+    return {
+      // Essential data only
+      id: state.id,
+      phase: state.phase,
+      timeRemaining: Math.floor(state.timeRemaining / 1000), // seconds
+      warriors: state.warriors.map(w => ({
+        id: w.id,
+        p: [w.position.x, w.position.y], // Compress position
+        h: w.hp,
+        a: w.isAlive ? 1 : 0
+      })),
+      powerUps: state.powerUps.map(p => ({
+        id: p.id,
+        t: p.type[0], // 'h' for health, 'r' for rage
+        p: [p.position.x, p.position.y]
+      }))
+    };
+  }
+  
+  // Priority message queue for mobile
+  static prioritizeMessages(messages: any[]): any[] {
+    return messages.sort((a, b) => {
+      const priority = {
+        'gameEnd': 1,
+        'warriorEliminated': 2,
+        'combatEvent': 3,
+        'powerUpCollected': 4,
+        'warriorMove': 5
+      };
+      
+      return (priority[a.type] || 99) - (priority[b.type] || 99);
+    });
+  }
+}
+```
+
+### **4. Mobile-Specific Features**
+
+```typescript
+// Platform detection and adaptation
+io.on('connection', (socket) => {
+  const userAgent = socket.handshake.headers['user-agent'] || '';
+  const isMobile = /Mobile|Android|iPhone/i.test(userAgent);
+  
+  if (isMobile) {
+    // Apply mobile optimizations
+    socket.data.platform = 'mobile';
+    socket.data.updateRate = 100; // 10 FPS
+    socket.data.compressionEnabled = true;
+    
+    // Join mobile room for targeted broadcasts
+    socket.join('mobile-clients');
+  } else {
+    socket.data.platform = 'web';
+    socket.data.updateRate = 16; // 60 FPS
+    socket.data.compressionEnabled = false;
+  }
+});
+```
+
+### **5. Background/Foreground Handling**
+
+```typescript
+// Handle mobile app lifecycle
+socket.on('appStateChange', (data) => {
+  const { state, clientId } = data;
+  
+  if (state === 'background') {
+    // Reduce update frequency
+    this.setClientUpdateRate(clientId, 1000); // 1 FPS
+    
+    // Mark as inactive but don't disconnect
+    this.markClientInactive(clientId);
+  } else if (state === 'foreground') {
+    // Restore normal update rate
+    this.setClientUpdateRate(clientId, 100); // 10 FPS
+    
+    // Send full state refresh
+    this.sendStateRefresh(clientId);
+    
+    // Mark as active
+    this.markClientActive(clientId);
+  }
+});
 ```
 
 ---
