@@ -34,7 +34,9 @@ Skip for MVP: Real combat, AI logic, databases
 │                     │
 │  Features:          │
 │  - In-memory state  │
-│  - AI game logic    │
+│  - Input processing │
+│  - Weight calculation│
+│  - Visual theater   │
 │  - Power-up market  │
 └──────────┬──────────┘
            │
@@ -58,12 +60,13 @@ backend/
 │   ├── index.ts                 # Server entry point
 │   ├── config.ts               # Simple config
 │   ├── game/
-│   │   ├── GameManager.ts      # Game state & inputs
-│   │   ├── InputProcessor.ts   # Convert inputs to weights
-│   │   ├── VisualEngine.ts     # Generate fake combat
-│   │   ├── WeightCalculator.ts # Calculate final weights
-│   │   ├── PowerUpMarket.ts    # Dynamic offers
-│   │   └── constants.ts        # Weight factors
+│   │   ├── GameManager.ts      # Game state & input tracking
+│   │   ├── WeightCalculator.ts # Core weight calculation system
+│   │   ├── InputProcessor.ts   # Process strategic inputs
+│   │   ├── VisualTheater.ts    # Fake combat animations
+│   │   ├── PowerUpMarket.ts    # Strategic purchase system
+│   │   ├── VRFWinner.ts        # Weight-based winner selection
+│   │   └── WeightConstants.ts  # Fair weight formulas
 │   ├── api/
 │   │   ├── routes.ts           # API endpoints
 │   │   └── handlers.ts         # Input handlers

@@ -504,69 +504,112 @@ solana-program = "1.18.0"
 }
 ```
 
-### **Mobile Frontend**
+### **Web-Only Dependencies (No Mobile)**
 ```json
 {
-  "dependencies": {
-    "expo": "~51.0.0",
-    "react-native": "0.74.0",
-    "@shopify/react-native-skia": "^1.2.0",
-    "zustand": "^4.5.0",
-    "@solana-mobile/mobile-wallet-adapter-protocol": "^2.0.0",
-    "socket.io-client": "^4.7.0"
+  "note": "Mobile development removed - web-only responsive design",
+  "webOptimizations": {
+    "mobileViewport": "responsive design handles mobile browsers",
+    "touchControls": "touch-friendly buttons for mobile browsers",
+    "performance": "adaptive FPS based on device capabilities"
   }
 }
 ```
 
-### **Shared Code**
+### **Shared Types & Constants**
 ```typescript
-// No package.json - just TypeScript files to copy
-// - battleLogic.ts
+// No cross-platform sharing needed - web-only
+// All code lives in web project:
+// - inputProcessor.ts
+// - weightCalculator.ts  
 // - gameConstants.ts
 // - types.ts
 // - solanaClient.ts
 ```
 
-### **Infrastructure**
-- **Web Hosting**: Vercel (Next.js)
-- **Mobile Distribution**: Expo EAS + TestFlight/Play Store
-- **Backend**: Railway (Game Server)
-- **Database**: Supabase PostgreSQL
-- **Cache**: Upstash Redis
+### **Infrastructure (Simplified)**
+- **Web Hosting**: Vercel (Next.js + API routes)
+- **Backend**: Railway (Node.js game server)
+- **Database**: In-memory state (MVP) → PostgreSQL (future)
+- **Cache**: No external cache needed (in-memory)
 - **RPC**: Helius Pro plan
-- **Monitoring**: Datadog
-- **CDN**: Cloudflare
+- **Monitoring**: Simple logging (MVP) → Datadog (future)
+- **CDN**: Vercel edge network
 
 ---
 
 ## **🌐 Web-Optimized Architecture**
 
-### **Auto-Battle AI Logic**
+### **Input-Driven Weight Processing**
 ```typescript
-// server/src/ai.ts - Server-side AI control
-export function calculateAIMove(warrior: Warrior, gameState: GameState): AIDecision {
-  const enemies = gameState.warriors.filter(w => w.player !== warrior.player && w.hp > 0);
-  const nearest = findNearestEnemy(warrior, enemies);
+// server/src/weightProcessor.ts - Strategic input processing
+export function processPlayerInput(playerId: string, input: StrategyInput): WeightEffect {
+  const timestamp = Date.now();
+  const player = getPlayer(playerId);
   
-  if (!nearest) return { type: 'idle' };
-  
-  const distance = getDistance(warrior.position, nearest.position);
-  if (distance <= 1) {
-    return { type: 'attack', target: nearest.id };
+  switch (input.type) {
+    case 'JOIN_GAME':
+      const entryBonus = calculateEntryTimingBonus(timestamp, input.gameStartTime);
+      return {
+        weightBonus: entryBonus,
+        multiplier: 1.0,
+        message: getEntryMessage(entryBonus)
+      };
+      
+    case 'ACTIVATE_POWERUP':
+      const powerupEffect = calculatePowerupWeight(input.powerupType, player, timestamp);
+      return {
+        weightBonus: powerupEffect.baseWeight,
+        multiplier: powerupEffect.multiplier,
+        perfectTiming: checkPerfectTiming(input, player),
+        message: getPowerupMessage(powerupEffect)
+      };
+      
+    case 'FORM_ALLIANCE':
+      return {
+        weightBonus: 75,
+        multiplier: 1.0,
+        socialEffect: 'cooperation',
+        message: "🤝 Alliance formed! +75 weight"
+      };
+      
+    case 'BETRAY_ALLIANCE':
+      return {
+        weightBonus: 50,
+        penalty: -100, // If betrayal fails
+        multiplier: 1.0,
+        socialEffect: 'betrayal',
+        message: "⚔️ Betrayal attempted! High risk, high reward!"
+      };
   }
-  
-  return { 
-    type: 'move', 
-    position: calculatePath(warrior.position, nearest.position)
-  };
 }
 
-// Power-up marketplace
-export function generatePowerUpOffers(): PowerUpOffer[] {
+// Strategic power-up marketplace
+export function generateStrategicOffers(gameState: GameState): PowerUpOffer[] {
+  const dynamicPricing = calculateDynamicPricing(gameState.purchaseHistory);
+  
   return [
-    { id: uuid(), type: 'health', price: 0.001, expiresIn: 20 },
-    { id: uuid(), type: 'rage', price: 0.002, expiresIn: 20 },
-    { id: uuid(), type: 'chaos', price: 0.01, expiresIn: 20 }
+    { 
+      id: uuid(), 
+      type: 'MOMENTUM_BOOST', 
+      price: 0.001 * dynamicPricing.momentum, 
+      weightEffect: '+100 base weight',
+      expiresIn: 15 
+    },
+    { 
+      id: uuid(), 
+      type: 'RAGE_MODE', 
+      price: 0.002 * dynamicPricing.rage, 
+      weightEffect: '1.5x multiplier',
+      expiresIn: 20 
+    },
+    { 
+      id: uuid(), 
+      type: 'TACTICAL_EDGE', 
+      price: 0.0015 * dynamicPricing.tactical, 
+      weightEffect: '1.3x efficiency',
+      expiresIn: 18 
+    }
   ];
 }
 ```

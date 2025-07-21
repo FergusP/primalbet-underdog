@@ -5,9 +5,9 @@
 
 ### **Core Concept**
 <!-- MVP:START -->
-Aurelius is an auto-battle PvP arena on Solana where players send AI-controlled warriors into the colosseum and buy power-ups to help them win. The last survivor claims the growing prize pool funded by all player actions.
+Aurelius is an **input-driven PvP arena** on Solana where players make strategic decisions while watching visual combat theater. There is NO real combat - warriors fighting is pure animation. Players win through strategic input timing, and the winner is determined by a weight-based VRF system.
 
-**MVP Mode**: Arena Blitz - 90-second auto-battles with strategic power-up purchases
+**MVP Mode**: Arena Blitz - 90-second strategic input collection with visual feedback
 <!-- MVP:END -->
 
 <!-- POST-MVP:PHASE3 -->
@@ -17,15 +17,15 @@ Aurelius is an auto-battle PvP arena on Solana where players send AI-controlled 
 <!-- POST-MVP:END -->
 
 ### **Target Audience**
-- Primary: Crypto gamers seeking both quick thrills and strategic depth
-- Secondary: DeFi users looking for gamified yield opportunities
-- Tertiary: Mobile gamers wanting bite-sized or epic sessions
-- Quaternary: Streamers/content creators seeking viral moments
+- Primary: Strategy gamers who prefer thinking over reflexes
+- Secondary: Crypto users seeking fair, transparent gaming
+- Tertiary: Mobile users wanting quick strategic sessions
+- Quaternary: Psychology enthusiasts who enjoy reading other players
 
 ### **Platform**
-- Web-based (MVP)
-- Mobile responsive
-- Native mobile apps (future)
+- Web-based only (responsive design)
+- Mobile browser optimized
+- Desktop and mobile browser support
 - Streaming-optimized spectator mode
 
 ---
@@ -53,13 +53,13 @@ DISCOVER → ENTER → BATTLE → SURVIVE → WIN/LOSE → COLLECT
    - Connect wallet
    - Pay entry fee (0.002 SOL)
    - Random spawn position
-   - Instant combat begins
+   - Input collection begins
 
-3. **BATTLE** (60-90 seconds)
-   - No prep phase - immediate action
-   - Fast power-up spawns (every 10s)
-   - High environmental damage (2 HP/3s)
-   - Arena shrinks at 45 seconds
+3. **INPUT PHASE** (60-90 seconds)
+   - No prep phase - immediate strategic decisions
+   - Fast power-up offers (every 10s)
+   - Visual effects escalate
+   - Arena appears to "shrink" (visual only)
 
 4. **WIN/LOSE** (5 seconds)
    - Single winner takes 95%
@@ -84,15 +84,15 @@ DISCOVER → ENTER → BATTLE → SURVIVE → WIN/LOSE → COLLECT
 
 3. **PREPARATION** (30 seconds)
    - Position warriors strategically
-   - No damage during this phase
+   - Pure strategy phase
    - Study opponent placements
    - Plan power-up routes
 
-4. **BATTLE** (3-4 minutes)
-   - Zone-based combat
-   - Power-ups can be saved/combined
-   - Slower environmental damage (1 HP/5s)
-   - Multiple shrinking phases
+4. **INPUT COLLECTION** (3-4 minutes)
+   - Zone-based strategic positioning
+   - Power-ups can be timed/combined
+   - Visual effects intensify
+   - Multiple visual escalation phases
 
 5. **WIN/LOSE** (10 seconds)
    - Top 3 split prizes (60%/25%/10%)
@@ -312,7 +312,7 @@ BLITZ MODE:
 - Single zone arena
 - Center spawns most power-ups
 - Edges relatively safe early
-- Rapid shrinking at 45s
+- Visual shrinking effects at 45s
 
 SIEGE MODE:
 - Three distinct zones:
@@ -320,28 +320,28 @@ SIEGE MODE:
   - Mid Ring: Balanced risk/reward
   - Center: High risk, best rewards
 - Territory control points
-- Gradual multi-phase shrinking
+- Visual multi-phase effects
 ```
 
 **Environmental Mechanics:**
 
-#### **Arena Blitz Environmental**
+#### **Arena Blitz Visual Effects**
 ```
-FAST PRESSURE:
-- Environmental damage: 2 HP/3 seconds
-- Shrink begins: 45 seconds (50% reduction)
-- Outside damage: 5 HP/second
-- Final phase: 3 HP/2 seconds
+FAST ESCALATION:
+- Visual intensity increases rapidly
+- Shrinking animation: 45 seconds
+- Edge warning effects
+- Final phase: Maximum visual chaos
 ```
 
-#### **Glory Siege Environmental**
+#### **Glory Siege Visual Effects**
 ```
-STRATEGIC PRESSURE:
-- Environmental damage: 1 HP/5 seconds
-- Phase 1 shrink: 2 minutes (20% reduction)
-- Phase 2 shrink: 3.5 minutes (40% total)
-- Phase 3 shrink: 4.5 minutes (60% total)
-- Outside damage: 3 HP/second
+STRATEGIC ESCALATION:
+- Visual effects build gradually
+- Phase 1: 2 minutes (first escalation)
+- Phase 2: 3.5 minutes (mid intensity)
+- Phase 3: 4.5 minutes (high intensity)
+- Edge warnings for players
 ```
 
 ### **6.2 POWER-UPS**
@@ -349,110 +349,121 @@ STRATEGIC PRESSURE:
 <!-- MVP:START -->
 #### **MVP Power-Ups (Blitz Only)**
 ```
-1. HEALTH POTION (Green orb)
-   - Spawn rate: Every 15 seconds
-   - Effect: +25 HP instant heal
-   - Location: Random positions
-   - Visual: Simple green circle
+1. MOMENTUM BOOST (Green orb)
+   - Cost: 0.001 SOL
+   - Weight Effect: +25% base weight
+   - Timing: Instant application
+   - Visual: Green energy surge
 
 2. RAGE MODE (Red orb)
-   - Spawn rate: Every 30 seconds
-   - Effect: 2x damage for 10 seconds
-   - Location: Center bias
-   - Visual: Simple red circle
+   - Cost: 0.002 SOL  
+   - Weight Effect: 2x weight multiplier for 10 seconds
+   - Timing: Strategic activation crucial
+   - Visual: Red aura effect
 ```
 <!-- MVP:END -->
 
 <!-- POST-MVP:PHASE2 -->
 #### **Additional Blitz Power-Ups**
 ```
-3. SPEED BOOST (Blue orb)
-   - Spawn rate: Every 15 seconds
-   - Effect: 1.5x movement speed for 8 seconds
-   - Location: Random positions
-   - Visual: Blue trail effect
+3. TACTICAL EDGE (Blue orb)
+   - Cost: 0.0015 SOL
+   - Weight Effect: +1.5x action efficiency for 8 seconds
+   - Timing: Best during input sequences
+   - Visual: Blue energy trails
 
-4. SHIELD (Yellow orb)
-   - Spawn rate: Once at 30 seconds
-   - Effect: Block next 2 hits
-   - Location: Exact center
-   - Visual: Golden barrier
+4. GUARDIAN SHIELD (Yellow orb)
+   - Cost: 0.003 SOL
+   - Weight Effect: +30% weight + immunity to betrayal penalty
+   - Duration: One-time protection
+   - Visual: Golden protective barrier
 ```
 <!-- POST-MVP:END -->
 
 #### **Glory Siege Power-Ups**
 ```
-1. HEALTH POTION (Green orb)
-   - Spawn rate: Every 20 seconds
-   - Effect: +25 HP instant (or save for +40 HP)
-   - Location: All zones
-   - Can combine: 2 potions = full heal
+1. MOMENTUM BOOST (Green orb)
+   - Cost: 0.001 SOL
+   - Weight Effect: +25% instant (or save for +40%)
+   - Strategic Use: Can stack 2 for mega-boost
+   - Timing: Best during alliance formation
 
-2. RAGE MODE (Red orb)
-   - Spawn rate: Every 40 seconds
-   - Effect: 1.5x damage for 20 seconds
-   - Location: Mid/Center zones only
-   - Can stack duration (max 40s)
+2. EXTENDED RAGE (Red orb)
+   - Cost: 0.002 SOL
+   - Weight Effect: 1.5x weight multiplier for 20 seconds
+   - Strategic Use: Can stack duration (max 40s)
+   - Timing: Best during betrayal sequences
 
-3. SPEED BOOST (Blue orb)
-   - Spawn rate: Every 30 seconds
-   - Effect: 1.3x movement speed for 15 seconds
-   - Location: Outer/Mid zones
-   - Can share with allies
+3. TACTICAL MASTERY (Blue orb)
+   - Cost: 0.0015 SOL
+   - Weight Effect: 1.3x action efficiency for 15 seconds
+   - Strategic Use: Can share bonus with allies
+   - Timing: Best during complex input chains
 
-4. SHIELD (Yellow orb)
-   - Spawn rate: Every 60 seconds
-   - Effect: Block next 3 hits
-   - Location: Center zone only
-   - Can transfer to ally
+4. FORTRESS SHIELD (Yellow orb)
+   - Cost: 0.003 SOL
+   - Weight Effect: +35% weight + betrayal immunity
+   - Strategic Use: Can transfer to ally
+   - Timing: Best when vulnerable
 
-5. GODSLAYER ORB (Divine gold) - Siege Only
-   - Spawn rate: 0.5% chance when pot > 1 SOL
-   - Effect: 50 damage projectile
-   - Requirements: ≤3 warriors from same wallet
-   - Visual: Divine golden explosion
+5. GODSLAYER WEIGHT (Divine gold) - Siege Only
+   - Cost: 0.01 SOL
+   - Weight Effect: Massive +100% weight bonus
+   - Requirements: Must have <50% current weight
+   - Visual: Divine golden aura (underdog power!)
 ```
 
-### **6.3 COMBAT SYSTEM**
+### **6.3 INPUT-DRIVEN SYSTEM (CORE CONCEPT)**
 
 <!-- MVP:START -->
-#### **MVP Combat System**
+#### **NO REAL COMBAT - VISUAL THEATER ONLY**
 ```
-DAMAGE CALCULATION:
-- Base warrior HP: 100
-- Fixed damage: 6 HP per hit
-- Attack speed: 1 hit/second
-- Range: Adjacent grid squares only
+CRITICAL UNDERSTANDING:
+- NO actual warriors fighting each other
+- NO real HP - HP bars are fake visual elements
+- NO real damage - damage numbers are decorative
+- NO real movement - warriors moving is just animation
+- Victory determined by INPUT WEIGHTS + VRF randomness
 
-MOVEMENT (AI-CONTROLLED):
-- Base speed: 2 squares/second
-- Diagonal movement allowed
-- Simple collision detection
-- AI pathfinding to nearest enemy
+INPUT COLLECTION (What Actually Matters):
+- JOIN_GAME: When you enter affects your weight
+- ACTIVATE_POWERUP: Strategic timing crucial for weight
+- FORM_ALLIANCE: Cooperation adds weight bonus
+- BETRAY_ALLIANCE: Risk/reward decision affecting weight
 
-TARGETING PRIORITY:
-1. Closest enemy in range
-2. Random if tie
+WEIGHT SYSTEM (Hidden Calculation):
+- Entry timing: +50-200 weight (early bird bonus)
+- Power-up timing: 1.5x-2x multiplier (perfect timing)
+- Alliance success: +50 weight (cooperation)
+- Betrayal penalty: -100 weight (trust broken)
+- Final weight = better odds (but NOT guaranteed win)
+
+VISUAL FEEDBACK THEATER:
+- Warriors "fighting" (pure animation for engagement)
+- HP bars decreasing (fake - just visual drama)
+- Damage numbers (decorative - no real calculation)
+- Power-up effects (visual flair - actual effect is weight)
 ```
 <!-- MVP:END -->
 
 <!-- POST-MVP:PHASE2 -->
-#### **Full Combat System**
+#### **Advanced Input System**
 ```
-DAMAGE CALCULATION:
-- Base warrior HP: 100
-- Variable damage: 5-8 (ProofNetwork VRF)
-- Attack speed: 1 hit/second
-- Range: Adjacent grid squares only
+ADDITIONAL INPUTS:
+- TAUNT_ENEMY: Psychological pressure
+- DEFENSIVE_STANCE: Risk mitigation
+- RALLY_ALLIES: Group coordination
 
-MOVEMENT:
-- Client-side prediction + server reconciliation
-- Advanced pathfinding
+WEIGHT MODIFIERS:
+- Combo bonuses for input sequences
+- Precision timing rewards
+- Social dynamics tracking
+- Underdog multipliers
 
-TARGETING PRIORITY:
-1. Lowest HP enemy in range
-2. Closest enemy if tie
-3. ProofNetwork VRF random if still tied
+VRF WINNER SELECTION:
+- Weights converted to probabilities
+- ProofNetwork VRF selects winner
+- Proof stored for transparency
 ```
 <!-- POST-MVP:END -->
 
@@ -460,69 +471,69 @@ TARGETING PRIORITY:
 #### **Entry Timing Balance**
 ```
 EARLY ENTRY BONUSES:
-- Veteran Damage: +1% per 10 seconds survived
-- Territory Control: +2 HP/10s in controlled zones
-- Kill Reward: +5 HP per elimination
-- Power-up Priority: 5s early access window
+- Weight bonus: +10% per 10 seconds early
+- Position choice available
+- Power-up priority access
+- Lower entry fees
 
 LATE ENTRY PENALTIES:
-- Spawn HP: 70 (not 100)
-- Random spawn in danger zones
-- Spawn immunity: 1 second (vs 5 for early)
-- Entry fee scaling: up to 3x base fee
+- Weight penalty: Start at 70% base
+- Random positioning only
+- Higher entry fees (up to 3x)
+- No preparation time
 ```
 
 #### **Underdog Mechanics**
 ```
 WHEN OUTNUMBERED 5:1:
-- Underdog Rage: +10% damage
-- Survivor Speed: +10% movement
-- Evasion Chance: 20% dodge
-- Visual: "Lone Wolf" glowing aura
+- Underdog weight bonus: +20%
+- Visual "Lone Wolf" aura
+- Special victory animations
 
-SECOND WIND MIRACLE:
-- Trigger: HP < 10
-- Chance: 2% (ProofNetwork VRF)
-- Effect: Instant heal to 30 HP
-- Limit: First 2 warriors per wallet
-- Visual: Phoenix rebirth animation
+MIRACLE COMEBACK:
+- Trigger: Weight < 10% of average
+- Chance: 2% for weight boost to 30%
+- Limit: Once per player per game
+- Visual: Phoenix revival effect
 ```
 <!-- POST-MVP:END -->
 
 ### **6.3.5 INPUT-DRIVEN BATTLE SYSTEM**
 
-#### **Player Input System**
+#### **Input-Driven Strategy System**
 ```
-STRATEGIC INPUTS:
-- Join Timing: Early bird bonus vs late entry risk
-- Position Choice: Center (risky) vs edges (safe)
-- Power-Up Timing: When to activate for max weight
-- Alliance Decisions: Form, maintain, or betray
-- Resource Management: Save or spend power-ups
+PLAYER STRATEGIC DECISIONS:
+- Join Timing: Early entry = +50-200 weight bonus
+- Power-Up Purchases: Cost SOL but add weight multipliers
+- Alliance Formation: Temporary cooperation for +50 weight
+- Betrayal Decisions: Break alliance for potential gain (-100 penalty if caught)
+- Resource Management: When to spend SOL on power-ups
 
-VISUAL FEEDBACK (Not Real Combat):
-- See warriors "fighting" (animation only)
-- Watch HP bars decrease (fake damage)
-- Power-up effects trigger (visual only)
-- Momentum bar fills (psychological)
+NO REAL COMBAT - VISUAL THEATER:
+- Warriors "move" around (scripted animation)
+- HP bars "decrease" (fake countdown for drama)
+- Damage "effects" trigger (visual spectacle only)
+- Power-up "activation" shows (weight change is invisible)
 ```
 
-#### **Backend Processing**
+#### **Backend Weight Processing**
 ```
-WEIGHT CALCULATION FACTORS:
-1. Entry timing score (earlier = better)
-2. Action efficiency (quality over quantity)
-3. Power-up timing (strategic usage)
-4. Alliance behavior (cooperation bonus)
-5. Risk-taking score (bold moves rewarded)
-6. Combo multiplier (chained actions)
-7. Hidden luck factor (0.8-1.2x)
+HIDDEN WEIGHT CALCULATION:
+1. Base weight: 1000 (everyone starts equal)
+2. Entry timing bonus: +50-200 (early bird advantage)
+3. Power-up multipliers: 1.5x-2.0x (strategic purchases)
+4. Action timing: Perfect timing = bonus weight
+5. Alliance cooperation: +50 weight per successful alliance
+6. Betrayal consequences: -100 weight penalty
+7. Combo effects: Chained actions = multiplier bonuses
+8. Luck factor: 0.8x-1.2x random (keeps it interesting)
 
-VRF WINNER SELECTION:
-- Sum all warrior weights
-- VRF picks random number
-- Winner = warrior whose weight range contains number
-- Higher weight = better odds (but not guaranteed)
+VRF WINNER DETERMINATION:
+- Calculate final weight for each player
+- Sum all weights (e.g., total = 15,000)
+- VRF picks number 0-15,000
+- Winner = player whose weight range contains the number
+- Example: Player A (0-3000), Player B (3001-8000), etc.
 ```
 
 ### **6.4 POWER-UP MARKETPLACE**
@@ -542,24 +553,139 @@ WEIGHT IMPACT:
 - Strategic usage = higher weight
 ```
 
-#### **Power-Up Effects**
+#### **Strategic Power-Up System**
+
 ```
-VISUAL EFFECTS (What You See):
-1. Health Boost: +25 HP animation (fake)
-2. Rage Mode: Red aura, 2x damage text
-3. Speed Boost: Blue trails, faster movement
-4. Shield: Golden bubble effect
+POWER-UP STRATEGIC UI:
 
-WEIGHT MODIFIERS (Hidden):
-1. Health Boost: +Defensive score
-2. Rage Mode: +Aggressive score
-3. Speed Boost: +Tactical score
-4. Shield: +Survival score
+1. MOMENTUM BOOST (Green) - 0.001 SOL
+   ┌─ Base Effect: +25% weight
+   ├─ PERFECT TIMING (UI shows green glow):
+   │  • During Alliance Formation: +50% bonus
+   │  • UI: "ALLIANCE SYNERGY!" text + particles
+   └─ Strategic Window: 3 seconds before/after alliance input
 
-PRICING:
-- Basic (0.001-0.002 SOL): Small weight boost
-- Advanced (0.003-0.005 SOL): Medium weight boost
-- Ultimate (0.008-0.01 SOL): Large weight boost
+2. RAGE MODE (Red) - 0.002 SOL  
+   ┌─ Base Effect: 2x weight multiplier (10 seconds)
+   ├─ PERFECT TIMING (UI shows red pulse):
+   │  • During Betrayal Action: +100% bonus 
+   │  • UI: "BETRAYAL FURY!" text + screen shake
+   └─ Strategic Window: Must activate BEFORE betrayal input
+
+3. TACTICAL EDGE (Blue) - 0.0015 SOL
+   ┌─ Base Effect: 1.5x next 3 actions
+   ├─ PERFECT TIMING (UI shows blue highlight):
+   │  • During Input Chains: +75% bonus
+   │  • UI: "COMBO MASTER!" text + chain animation
+   └─ Strategic Window: When 2+ inputs planned
+
+4. GUARDIAN SHIELD (Yellow) - 0.003 SOL
+   ┌─ Base Effect: +30% weight + betrayal immunity
+   ├─ PERFECT TIMING (UI shows golden crown):
+   │  • When alliance target: +50% bonus
+   │  • UI: "FORTRESS MIND!" text + protective aura
+   └─ Strategic Window: After forming alliance
+
+STRATEGIC UI ELEMENTS:
+┌─ Power-Up Timing Bar: Shows optimal activation windows
+├─ Combo Counter: Tracks sequential power-up usage  
+├─ Weight Meter: Visual representation of your advantage
+├─ Alliance Status: Shows cooperation/betrayal opportunities
+└─ Perfect Timing Alerts: Golden borders on optimal moments
+```
+
+#### **Power-Up Combo System (Easy Weight Calculation)**
+
+```
+COMBO MECHANICS (Stack Effects):
+
+🔗 TIER 1 COMBOS (2 Power-Ups):
+├─ "MOMENTUM RAGE" (Green + Red):
+│  • Effect: 3x weight multiplier instead of 2x
+│  • UI: Purple energy explosion
+│  • Calculation: (base_weight + 25%) × 3.0
+│
+├─ "TACTICAL SHIELD" (Blue + Yellow):
+│  • Effect: 1.5x efficiency + immunity + 50% weight
+│  • UI: Cyan protective barrier
+│  • Calculation: base_weight × 1.5 × 1.5 + betrayal_immunity
+│
+└─ "SHIELD MOMENTUM" (Yellow + Green):
+   • Effect: 55% weight + betrayal immunity + alliance bonus
+   • UI: Golden-green aura
+   • Calculation: base_weight × 1.55 + alliance_double_bonus
+
+🔗 TIER 2 COMBOS (3 Power-Ups):
+├─ "TRIPLE THREAT" (Green + Red + Blue):
+│  • Effect: 4x weight multiplier for all actions
+│  • UI: Rainbow energy storm
+│  • Calculation: base_weight × 4.0 (all bonuses stack)
+│
+└─ "PERFECT DEFENSE" (Green + Yellow + Blue):
+   • Effect: 2x weight + immunity + perfect timing on everything
+   • UI: Prismatic shield effect
+   • Calculation: base_weight × 2.0 + all_perfect_timing_bonuses
+
+🔗 LEGENDARY COMBO (All 4 Power-Ups):
+"GLADIATOR ASCENSION":
+├─ Effect: 5x weight + all bonuses + guaranteed perfect timing
+├─ UI: Epic golden explosion with screen effects
+├─ Calculation: base_weight × 5.0 + all_perfect_bonuses
+└─ Achievement: "Master Strategist" badge
+
+COMBO TIMING RULES:
+├─ Window: Must activate within 5 seconds of each other
+├─ Order Matters: Specific sequences give bonus multipliers
+├─ UI Feedback: Combo counter shows progress
+└─ Strategy: Expensive but game-changing
+
+OPTIMAL COMBO SEQUENCES:
+1. Early Game: Shield → Momentum (safe growth)
+2. Mid Game: Tactical → Rage (aggressive push) 
+3. Late Game: All 4 → "Ascension" (ultimate play)
+4. Betrayal Setup: Rage → Tactical (maximum betrayal weight)
+```
+
+#### **Strategic UI Implementation**
+
+```
+POWER-UP INTERFACE DESIGN:
+
+┌─ Power-Up Store (Always Visible):
+│  ┌─ [🟢 MOMENTUM] 0.001 SOL - Ready
+│  ├─ [🔴 RAGE] 0.002 SOL - Ready  
+│  ├─ [🔵 TACTICAL] 0.0015 SOL - Ready
+│  └─ [🟡 SHIELD] 0.003 SOL - Ready
+│
+├─ Strategy Timing Panel:
+│  ┌─ Alliance Opportunity: 🟢 OPTIMAL (green glow)
+│  ├─ Betrayal Window: 🔴 AVAILABLE (red pulse)
+│  ├─ Input Chain Ready: 🔵 ACTIVE (blue highlight)
+│  └─ Vulnerability Status: 🟡 PROTECTED (shield icon)
+│
+├─ Combo Tracker:
+│  ┌─ Current Combo: 0/4 
+│  ├─ Combo Timer: [████████] 5s remaining
+│  ├─ Next Bonus: "Momentum Rage" (+1x multiplier)
+│  └─ Combo Value: +125% total weight bonus
+│
+└─ Weight Advantage Display:
+   ┌─ Your Weight: ████████░░ 80%
+   ├─ Average Weight: ████░░░░░░ 40%  
+   ├─ Win Probability: 65% chance
+   └─ Power-Up Impact: +25% from bonuses
+
+STRATEGIC DECISION PROMPTS:
+├─ "Alliance forming - Momentum optimal!" (green notification)
+├─ "Betrayal opportunity - Rage recommended!" (red alert) 
+├─ "Input chain detected - Tactical advantage!" (blue suggestion)
+└─ "Under threat - Shield protection!" (yellow warning)
+
+FEEDBACK SYSTEMS:
+├─ Perfect Timing: Screen flash + bonus text + sound
+├─ Combo Achieved: Celebration animation + weight boost
+├─ Missed Opportunity: Subtle red border + "Try Again!"
+└─ Strategic Advantage: Confidence meter + probability update
 ```
 
 ### **6.5 WINNER DETERMINATION SYSTEM**

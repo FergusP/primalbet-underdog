@@ -2,14 +2,14 @@
 *This file is automatically loaded by Claude when working in this directory*
 
 ## **Project Context**
-You are helping with Aurelius, an auto-battle PvP arena on Solana where AI controls warrior movement and players buy power-ups to influence battles. Features Arena Blitz (90s quick battles) and Glory Siege (5min strategic wars). The game is being developed as a WEB-ONLY application with responsive design for mobile browsers.
+You are helping with Aurelius, an **input-driven PvP arena** on Solana where players make strategic decisions while watching visual combat theater. **NO REAL COMBAT** - all warrior fighting is fake animation. Winner determined by **weight calculation + VRF system** based on strategic input quality. Features Arena Blitz (90s input collection) and Glory Siege (5min strategic wars). WEB-ONLY application with responsive design.
 
 ## **Guide Documents Overview**
 
 ### **Core Design Documents**
 1. **AURELIUS_GAME_DESIGN.md** - Complete game design with dual modes
 2. **DUAL_MODE_COMPLETE_DESIGN.md** - Detailed dual-mode mechanics and balance
-3. **INTERFACE_CONTRACT.md v4.0** - Sacred data structures and protocols (AUTO-BATTLE)
+3. **INTERFACE_CONTRACT.md v4.0** - Sacred data structures and protocols (INPUT-DRIVEN)
 4. **ARCHIVED_DUAL_PLATFORM_STRATEGY.md** - (No longer used - web-only now)
 5. **MINIMUM_MVP.md** - Web-only MVP guide (2 days)
 
@@ -75,7 +75,7 @@ You are helping with Aurelius, an auto-battle PvP arena on Solana where AI contr
 2. Verify task ownership in PROJECT_MANAGEMENT.md
 3. Follow the 2-day MVP implementation roadmap
 4. Use TypeScript/Rust types exactly as defined
-5. Remember: AI controls movement, players only join/buy power-ups
+5. Remember: **NO REAL COMBAT** - visual theater only, players make strategic inputs for weight
 
 ### **When I make design changes:**
 1. Follow DESIGN_CHANGE_PROTOCOL.md strictly
@@ -84,26 +84,26 @@ You are helping with Aurelius, an auto-battle PvP arena on Solana where AI contr
 4. Increment INTERFACE_CONTRACT.md version if breaking
 
 ### **When writing code:**
-- Partner A: Smart contracts (Anchor), backend service (Node.js), AI logic
-- Partner B: Web Frontend (Next.js/Phaser) with polling
+- Partner A: Smart contracts (Anchor), backend service (Node.js), weight calculation system
+- Partner B: Web Frontend (Next.js/Phaser) with visual theater
 - Always use exact types from INTERFACE_CONTRACT.md v5.0 (Polling API)
 - Follow simplified architecture (no WebSockets)
-- Remember: NO player movement controls, only join/power-up buttons
+- Remember: NO real combat - only strategic input buttons (join/power-up/alliance/betrayal)
 
 ### **When working with web development:**
 1. **Responsive design**: Ensure UI works on all screen sizes
 2. **Mobile browsers**: Test on Chrome/Safari mobile
 3. **Performance**: Desktop targets 60 FPS, mobile browsers 30 FPS
 4. **Touch controls**: Buttons must be touch-friendly (44x44px minimum)
-5. **Auto-battle**: All warrior movement is AI-controlled
+5. **Input-driven**: All combat is fake - strategic decisions determine weight/winner
 
 ### **When committing:**
 ```bash
 [A] feat: Implement game escrow with power-up purchases
-[B] ui: Add Phaser arena scene with auto-battle display
-[A] feat: Implement AI warrior logic
-[B] ui: Add power-up marketplace UI
-[AB] fix: Sync AI movement with frontend display
+[B] ui: Add Phaser arena scene with visual theater display
+[A] feat: Implement weight calculation system
+[B] ui: Add strategic input interface (join/power-up buttons)
+[AB] fix: Sync weight feedback with visual animations
 ```
 
 ## **Key Technical Decisions**
@@ -141,7 +141,7 @@ You are helping with Aurelius, an auto-battle PvP arena on Solana where AI contr
 - Next: Core Development (Day 1-2)
 - Timeline: 2 days for web MVP
 - Branch: main
-- Key Feature: AUTO-BATTLE with power-up marketplace
+- Key Feature: INPUT-DRIVEN with weight-based VRF winner selection
 
 ## **Critical Constants**
 ```typescript
@@ -149,11 +149,21 @@ You are helping with Aurelius, an auto-battle PvP arena on Solana where AI contr
 BLITZ: { duration: 90s, fee: 0.002 SOL, max: 20 }
 SIEGE: { duration: 300s, fee: 0.01 SOL, max: 100 }
 
-// Visual Combat (NOT REAL)
-VISUAL_HP: 100 (fake HP bar)
-VISUAL_DAMAGE: 5-8 (shown only)
-EFFECT_DURATION: varies
-VISUAL_UPDATE_RATE: 50ms
+// Visual Theater System (NO REAL COMBAT)
+FAKE_HP: 100 (visual countdown only)
+FAKE_DAMAGE: 5-8 (pure animation)
+FAKE_EFFECTS: All power-up visuals
+THEATER_UPDATE_RATE: 50ms (visual only)
+
+// Weight System (Hidden from Players)
+BASE_WEIGHT: 1000 (everyone starts equal)
+ENTRY_TIMING_BONUS: 50-300 (early bird advantage)
+POWERUP_MULTIPLIERS: 1.3x-2.0x (strategic purchases)
+PERFECT_TIMING_BONUS: +25-50% (optimal usage)
+ALLIANCE_BONUS: +75 (cooperation)
+BETRAYAL_PENALTY: -100 (trust broken)
+UNDERDOG_MULTIPLIER: 2x (comeback protection)
+LUCK_FACTOR: 0.85x-1.15x (prevents deterministic)
 
 // Input Types
 JOIN_GAME: Entry with position choice
@@ -161,12 +171,6 @@ ACTIVATE_POWERUP: Use at strategic moment
 FORM_ALLIANCE: Cooperate for bonus
 BETRAY_ALLIANCE: Risk for reward
 
-// Weight Factors (Hidden from players)
-ENTRY_TIMING: +50-200 (early bird bonus)
-ACTION_EFFICIENCY: x1.0-2.0 multiplier
-POWER_UP_TIMING: +20-100 per use
-ALLIANCE_BONUS: +50 (cooperation)
-BETRAYAL_PENALTY: -100 (trust broken)
 
 // Victory XP
 BLITZ_WINNER: 100 XP
@@ -189,8 +193,11 @@ Before any implementation:
 - [ ] Consider on-chain vs off-chain placement
 - [ ] Ensure security measures are in place
 - [ ] Is the UI responsive for mobile browsers?
-- [ ] Are inputs being collected with timestamps?
-- [ ] Is visual feedback immediate and engaging?
+- [ ] Are strategic inputs being collected with timestamps?
+- [ ] Is weight calculation working correctly?
+- [ ] Are perfect timing bonuses being applied?
+- [ ] Is visual theater engaging but clearly fake?
+- [ ] Is VRF winner selection transparent?
 
 ## **Quick Command Reference**
 ```bash
@@ -222,9 +229,10 @@ cd web && vercel
 ### **Web Development Rules**
 - **Desktop**: 60 FPS, full effects, keyboard shortcuts
 - **Mobile Browsers**: 30 FPS, touch-friendly UI, simplified effects
-- **Input System**: Collect strategic decisions with timestamps
-- **Visual Feedback**: Show fake combat to maintain engagement
-- **Power-Ups**: Strategic purchases affect weight calculation!
+- **Input System**: Collect strategic decisions (JOIN_GAME, ACTIVATE_POWERUP, FORM_ALLIANCE, BETRAY_ALLIANCE)
+- **Visual Theater**: Show fake combat animations to maintain engagement
+- **Weight System**: All inputs affect final weight → VRF winner selection
+- **Perfect Timing**: Power-ups get bonus effects when used optimally
 
 ## **📚 Complete Documentation Index**
 
@@ -242,7 +250,7 @@ All 15 guide documents are now synchronized:
 - SMART_CONTRACT_IMPLEMENTATION.md - Blockchain
 - GAME_SERVER_ARCHITECTURE.md - Backend service
 - INTERFACE_CONTRACT.md v5.0 - Data contracts (POLLING API)
-- SHARED_CODE_PATTERNS.md - (Archived)
+- ARCHIVED_SHARED_CODE_PATTERNS.md - (Mobile removed)
 
 **Process & Collaboration (3)**
 - PROJECT_MANAGEMENT.md - Task tracking
@@ -254,4 +262,4 @@ All 15 guide documents are now synchronized:
 - CLAUDE.md - This file (auto-loaded)
 
 ---
-*Updated for web-only auto-battle architecture. The game now features AI-controlled warriors with a power-up marketplace where every purchase grows the prize pool!*
+*Updated for web-only input-driven architecture. The game features **strategic decision-making** with **visual combat theater** where every action affects your weight/odds and grows the prize pool!*

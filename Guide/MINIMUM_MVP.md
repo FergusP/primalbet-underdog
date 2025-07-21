@@ -1,32 +1,32 @@
-# **AURELIUS AUTO-BATTLE MVP**
-*Ship Auto-Battle Arena in 2 Days with Simplified Architecture*
+# **AURELIUS INPUT-DRIVEN MVP**
+*Ship Input-Driven Arena in 2 Days with Visual Theater*
 
 ## **🎯 MVP Philosophy**
-Build the simplest auto-battle game where players send warriors and buy power-ups. AI controls all movement. Every action grows the prize pool. Ship fast, iterate later.
+Build the simplest input-driven game where players make strategic decisions while watching visual combat theater. NO real combat - all visual. Winner determined by weight calculation + VRF. Ship fast, iterate later.
 
 ---
 
 ## **✅ MVP FEATURES ONLY (2 Days - Simplified)**
 
-### **1. Auto-Battle Arena**
-- **Arena Blitz ONLY** - 90 second battles
-- AI-controlled warriors (no player movement)
-- Max 10 warriors initially
-- Entry: 0.002 SOL per warrior
-- Winner takes entire pot (minus fees)
+### **1. Input-Driven Arena**
+- **Arena Blitz ONLY** - 90 second input collection
+- Visual theater only (no real combat)
+- Max 10 players initially
+- Entry: 0.002 SOL per player
+- Winner determined by weight + VRF
 
-### **2. Power-Up Marketplace**
-Players can buy:
-- **Health Potion**: 0.001 SOL (+25 HP to your warriors)
-- **Rage Mode**: 0.002 SOL (2x damage for 10s)
-- **Chaos Storm**: 0.01 SOL (20 damage to ALL)
-- All purchases add to prize pool!
+### **2. Strategic Input Marketplace**
+Players can buy weight bonuses:
+- **Momentum Boost**: 0.001 SOL (+30% weight)
+- **Rage Mode**: 0.002 SOL (2x weight multiplier)
+- **Tactical Edge**: 0.0015 SOL (1.5x efficiency)
+- All purchases add to prize pool and affect weight!
 
-### **3. Simple AI Logic**
-- Find nearest enemy
-- Move toward them
-- Attack when adjacent
-- Use VRF for fair decisions
+### **3. Visual Theater System**
+- Show fake warriors "fighting" (animation only)
+- Display fake HP bars decreasing
+- Show fake damage numbers
+- All visual - no real calculations
 
 ### **4. Minimal Smart Contracts**
 ```rust
@@ -55,26 +55,27 @@ GameEscrow {
 - end_game
 ```
 
-### **5. Simple Backend Service**
-- Auto-battle game loop (50ms tick)
-- AI warrior control
+### **5. Input Weight Processing Service**
+- Input collection system (timestamps all actions)
+- Weight calculation engine
 - Power-up marketplace
 - Prize pool tracking
-- Simple VRF for randomness
+- VRF for winner selection
 - In-memory state (no database)
 
-### **6. Simple UI (Both Platforms)**
+### **6. Simple UI (Web Only)**
 **What Players See:**
-- Join button (send warriors)
-- Power-up marketplace with prices
+- Join button (strategic entry timing)
+- Power-up marketplace with weight effects
 - Live prize pool counter
-- Warriors fighting (watch-only)
+- Visual combat theater (fake fighting)
 - Winner announcement
 
-**No Complex Controls:**
-- No movement controls
-- No joysticks
-- Just buttons to join/buy
+**Strategic Input Controls:**
+- Join Game button (timing matters)
+- Power-up purchase buttons
+- Alliance/Betrayal buttons (future)
+- No movement or combat controls
 
 ---
 
@@ -129,7 +130,6 @@ aurelius/
 │       │   └── index.tsx
 │       └── game/
 │           └── Arena.ts
-└── mobile/            # Mobile app
     └── src/
         ├── screens/
         │   └── Game.tsx
@@ -186,7 +186,7 @@ Evening (2 hours):
 mkdir aurelius && cd aurelius
 
 # Create all folders
-mkdir -p programs/aurelius server shared web mobile
+mkdir -p programs/aurelius server shared web
 
 # Smart contracts
 cd programs/aurelius && anchor init .
@@ -203,9 +203,6 @@ cd ../web && npx create-next-app@latest . --typescript
 npm install phaser @solana/wallet-adapter-react
 
 # Mobile app (using Solana Mobile Expo template)
-cd ../mobile && yarn create expo-app . --template @solana-mobile/solana-mobile-expo-template
-npm install @shopify/react-native-skia
-
 # Root package.json for scripts
 cd .. && npm init -y
 ```
@@ -214,10 +211,9 @@ cd .. && npm init -y
 ```json
 {
   "scripts": {
-    "dev:all": "concurrently \"npm run dev:server\" \"npm run dev:web\" \"npm run dev:mobile\"",
+    "dev:all": "concurrently \"npm run dev:server\" \"npm run dev:web\"",
     "dev:server": "cd server && npm run dev",
     "dev:web": "cd web && npm run dev",
-    "dev:mobile": "cd mobile && expo start",
     "build:contracts": "cd programs/aurelius && anchor build",
     "test:contracts": "cd programs/aurelius && anchor test",
     "deploy:devnet": "cd programs/aurelius && anchor deploy --provider.cluster devnet"
@@ -229,25 +225,25 @@ cd .. && npm init -y
 
 ## **💻 MVP Code Examples**
 
-### **Auto-Battle Game Loop with AI**
+### **Input-Driven Game Loop**
 ```typescript
-// server/src/game.ts - AI-controlled warriors
+// server/src/game.ts - Input collection and weight processing
 class GameServer {
   games: Map<string, Game> = new Map();
-  warriorAI: WarriorAI;
-  powerUpMarket: PowerUpMarket;
+  weightCalculator: WeightCalculator;
+  visualTheater: VisualTheater;
   
   constructor() {
-    this.warriorAI = new WarriorAI();
-    this.powerUpMarket = new PowerUpMarket();
+    this.weightCalculator = new WeightCalculator();
+    this.visualTheater = new VisualTheater();
   }
   
   createGame() {
     const game = {
       id: uuid(),
       players: [],
-      warriors: [],
-      powerUps: [],
+      playerWeights: new Map(), // Track weight per player
+      inputHistory: [], // All strategic inputs
       marketplace: [],
       startTime: null,
       pot: 0,
@@ -270,15 +266,19 @@ class GameServer {
     game.pot += joinFee;
     game.joinContributions += joinFee;
     
-    // Spawn AI warrior
-    const warrior = {
-      id: player,
-      hp: 100,
-      position: this.randomPosition(),
-      target: null,
-      effects: []
+    // Record strategic input with timing
+    const joinInput = {
+      type: 'JOIN_GAME',
+      player,
+      timestamp: Date.now(),
+      gameTime: game.startTime ? Date.now() - game.startTime : 0,
+      position: this.randomPosition() // For visual theater
     };
-    game.warriors.push(warrior);
+    game.inputHistory.push(joinInput);
+    
+    // Calculate entry timing weight
+    const entryWeight = this.weightCalculator.calculateEntryWeight(joinInput);
+    game.playerWeights.set(player, { base: 1000, bonuses: entryWeight });
     
     // Emit pot update
     this.io.emit('potUpdate', {
@@ -299,8 +299,24 @@ class GameServer {
     game.pot += poolContribution;
     game.powerupContributions += poolContribution;
     
-    // Apply power-up effect
-    this.applyPowerUp(game, player, offer.type);
+    // Record strategic input
+    const powerupInput = {
+      type: 'ACTIVATE_POWERUP',
+      player,
+      powerupType: offer.type,
+      timestamp: Date.now(),
+      gameTime: Date.now() - game.startTime,
+      cost: offer.price
+    };
+    game.inputHistory.push(powerupInput);
+    
+    // Update player weight
+    const weightBonus = this.weightCalculator.calculatePowerupWeight(powerupInput);
+    const currentWeight = game.playerWeights.get(player);
+    game.playerWeights.set(player, {
+      ...currentWeight,
+      powerupMultipliers: (currentWeight.powerupMultipliers || 1) * weightBonus
+    });
     
     // Emit pot update
     this.io.emit('potUpdate', {
@@ -314,123 +330,129 @@ class GameServer {
     this.powerUpMarket.replaceOffer(game, offerId);
   }
   
-  // Run every 50ms - AI controls everything!
+  // Run every 50ms - Visual theater and weight updates!
   async updateGame(gameId: string) {
     const game = this.games.get(gameId);
     if (!game.startTime || game.ended) return;
     
-    // AI movement for all warriors
-    for (const warrior of game.warriors) {
-      if (warrior.hp <= 0) continue;
-      
-      // AI decides target and movement
-      const decision = await this.warriorAI.makeDecision(warrior, game);
-      
-      if (decision.type === 'move') {
-        warrior.position = decision.position;
-        this.io.emit('warriorMoved', {
-          warriorId: warrior.id,
-          position: warrior.position
-        });
-      } else if (decision.type === 'attack') {
-        this.performAttack(warrior, decision.target);
-      }
-    }
+    // Update visual theater (fake combat animations)
+    this.visualTheater.updateAnimations(game);
     
-    // Check winner
-    const alive = game.warriors.filter(w => w.hp > 0);
-    if (alive.length === 1) {
-      await this.endGame(gameId, alive[0].id);
-    }
+    // Process any pending weight calculations
+    this.weightCalculator.processInputs(game);
     
     // Time limit (90 seconds)
     if (Date.now() - game.startTime > 90000) {
-      const winner = alive.sort((a, b) => b.hp - a.hp)[0];
-      await this.endGame(gameId, winner.id);
+      await this.endGameWithVRF(gameId);
     }
+  }
+  
+  // VRF-based winner selection using weights
+  async endGameWithVRF(gameId: string) {
+    const game = this.games.get(gameId);
+    
+    // Calculate final weights for all players
+    const finalWeights = new Map();
+    for (const player of game.players) {
+      const weight = this.weightCalculator.calculateFinalWeight(
+        game.playerWeights.get(player),
+        game.inputHistory.filter(input => input.player === player)
+      );
+      finalWeights.set(player, weight);
+    }
+    
+    // Use VRF to select winner based on weight distribution
+    const winner = await this.selectWinnerWithVRF(finalWeights);
+    await this.endGame(gameId, winner);
   }
 }
 ```
 
-### **Auto-Battle AI Logic**
+### **Weight Calculation System**
 ```typescript
-// server/src/WarriorAI.ts - Simple but fair AI
-import { ProofNetworkClient } from '@proofnetwork/sdk';
+// server/src/WeightCalculator.ts - Input-driven weight system
+export class WeightCalculator {
+  
+  constructor() {}
+  
+  // Calculate weight bonus for entry timing
+  calculateEntryWeight(joinInput: JoinInput): number {
+    const gameTime = joinInput.gameTime;
+    // Early entry bonus: +50-200 points
+    if (gameTime < 10000) return 200; // First 10 seconds
+    if (gameTime < 30000) return 150; // First 30 seconds
+    if (gameTime < 60000) return 100; // First minute
+    return 50; // Late entry
+  }
+  
+  // Calculate weight bonus for power-up timing
+  calculatePowerupWeight(powerupInput: PowerupInput): number {
+    const { powerupType, timestamp, gameTime } = powerupInput;
+    
+    switch (powerupType) {
+      case 'MOMENTUM_BOOST':
+        return 1.3; // +30% weight multiplier
+      case 'RAGE_MODE':
+        // Better multiplier if used strategically (mid-game)
+        return gameTime > 30000 && gameTime < 60000 ? 2.0 : 1.5;
+      case 'TACTICAL_EDGE':
+        return 1.5; // +50% efficiency for next inputs
+      default:
+        return 1.0;
+    }
+  }
+  
+  // Calculate final weight combining all factors
+  calculateFinalWeight(playerWeight: PlayerWeight, inputs: Input[]): number {
+    let finalWeight = playerWeight.base + (playerWeight.bonuses || 0);
+    
+    // Apply all multipliers from power-ups
+    finalWeight *= (playerWeight.powerupMultipliers || 1);
+    
+    // Add random luck factor (0.8x - 1.2x)
+    finalWeight *= (0.8 + Math.random() * 0.4);
+    
+    return Math.max(100, Math.floor(finalWeight)); // Minimum 100 weight
+  }
+  
+  processInputs(game: Game) {
+    // Process any timing-based bonuses
+    // Update alliance/betrayal weights
+    // Handle combo bonuses
+  }
+  
+}
 
-export class WarriorAI {
-  private proofNetwork: ProofNetworkClient;
+### **Visual Theater System**
+```typescript
+// server/src/VisualTheater.ts - Fake combat animations
+export class VisualTheater {
   
-  constructor() {
-    this.proofNetwork = new ProofNetworkClient({
-      apiKey: process.env.PROOF_NETWORK_KEY
-    });
+  updateAnimations(game: Game) {
+    // Generate fake warrior movements
+    this.updateFakePositions(game);
+    
+    // Generate fake combat events
+    this.generateFakeCombat(game);
+    
+    // Update fake HP bars
+    this.updateFakeHP(game);
   }
   
-  async makeDecision(warrior: Warrior, game: Game) {
-    // Find all enemies
-    const enemies = game.warriors.filter(w => 
-      w.id !== warrior.id && w.hp > 0
-    );
-    
-    if (enemies.length === 0) return { type: 'wait' };
-    
-    // Calculate distances
-    const enemiesWithDistance = enemies.map(enemy => ({
-      enemy,
-      distance: this.getDistance(warrior.position, enemy.position)
-    }));
-    
-    // Find closest enemies
-    const minDistance = Math.min(...enemiesWithDistance.map(e => e.distance));
-    const closestEnemies = enemiesWithDistance
-      .filter(e => e.distance === minDistance)
-      .map(e => e.enemy);
-    
-    // If multiple enemies at same distance, use VRF for fairness
-    let target: Warrior;
-    if (closestEnemies.length > 1) {
-      const result = await this.proofNetwork.selectFromArray(
-        closestEnemies.map(e => e.id),
-        1
-      );
-      target = closestEnemies.find(e => e.id === result.result[0]);
-    } else {
-      target = closestEnemies[0];
-    }
-    
-    // If adjacent, attack
-    if (minDistance <= 1) {
-      return { type: 'attack', target };
-    }
-    
-    // Otherwise, move toward target
-    const nextPosition = this.getNextPosition(
-      warrior.position,
-      target.position
-    );
-    
-    return { type: 'move', position: nextPosition };
+  private updateFakePositions(game: Game) {
+    // Move warriors around for visual effect
+    // No real pathfinding - just visual movement
   }
   
-  private getDistance(pos1: Position, pos2: Position): number {
-    return Math.abs(pos1.x - pos2.x) + Math.abs(pos1.y - pos2.y);
+  private generateFakeCombat(game: Game) {
+    // Show fake damage numbers
+    // Display fake power-up effects
+    // Create engaging visual spectacle
   }
   
-  private getNextPosition(from: Position, to: Position): Position {
-    const dx = Math.sign(to.x - from.x);
-    const dy = Math.sign(to.y - from.y);
-    
-    // Move diagonally if possible, otherwise horizontal/vertical
-    if (dx !== 0 && dy !== 0) {
-      // Use VRF to fairly choose between horizontal or vertical
-      // This prevents predictable movement patterns
-      return { 
-        x: from.x + (Math.random() > 0.5 ? dx : 0),
-        y: from.y + (Math.random() > 0.5 ? 0 : dy)
-      };
-    }
-    
-    return {
+  private updateFakeHP(game: Game) {
+    // Gradually decrease HP bars for drama
+    // All visual - no actual HP calculation
       x: from.x + dx,
       y: from.y + dy
     };
