@@ -19,8 +19,8 @@ export class CombatScene extends Scene {
   
   // Combat
   private spears!: Phaser.GameObjects.Group;
-  private maxSpears: number = 5;
-  private currentSpears: number = 5;
+  private maxSpears: number = 2;
+  private currentSpears: number = 2;
   private spearText!: Phaser.GameObjects.Text;
   
   // Game state
@@ -32,8 +32,8 @@ export class CombatScene extends Scene {
   private lastMeleeTime: number = 0;
   private lastSpearTime: number = 0;
   private meleeCooldown: number = 500; // 0.5 seconds
-  private spearCooldown: number = 300; // 0.3 seconds
-  private spearRegenTime: number = 2000; // 2 seconds per spear
+  private spearCooldown: number = 500; // 0.5 seconds
+  private spearRegenTime: number = 4000; // 4 seconds per spear
   private lastSpearRegen: number = 0;
   private isGameOver: boolean = false;
   
@@ -48,6 +48,12 @@ export class CombatScene extends Scene {
   private debugGraphics!: Phaser.GameObjects.Graphics;
   private debugMode: boolean = true; // Toggle for debug visualization
   private attackRangeIndicator!: Phaser.GameObjects.Graphics; // Shows where player can attack
+  
+  // Movement penalty system
+  private isSlowed: boolean = false;
+  private slowedUntil: number = 0;
+  private normalSpeed: number = 150;
+  private slowedSpeed: number = 60;
   
   constructor() {
     super({ key: 'CombatScene' });
@@ -72,6 +78,15 @@ export class CombatScene extends Scene {
     this.isGameOver = false;
     this.lastMeleeTime = 0;
     this.lastMonsterAttackTime = 0;
+    
+    // Reset spear state
+    this.currentSpears = this.maxSpears;
+    this.lastSpearTime = 0;
+    this.lastSpearRegen = 0;
+    
+    // Reset movement penalty state
+    this.isSlowed = false;
+    this.slowedUntil = 0;
   }
 
   create() {
@@ -164,7 +179,7 @@ export class CombatScene extends Scene {
     console.log('🎮 ACTION COMBAT STARTED!');
     console.log('🕹️  WASD or Arrow Keys to move');
     console.log('⚔️  SPACE/Left Click for melee attack');
-    console.log('🏹  E/Right Click to throw spears');
+    console.log('🏹  E/Right Click to throw spears (Limited: 2 max, slows movement)');
     console.log('🏛️  Defeat monster to access vault!');
   }
 
@@ -189,19 +204,19 @@ export class CombatScene extends Scene {
     const { width, height } = this.cameras.main;
     
     // Instructions
-    this.add.text(width/2, height - 50, 'WASD: Move • SPACE/Click: Attack • Defeat monster to access vault!', {
+    this.add.text(width/2, height - 50, 'WASD: Move • SPACE/Click: Melee • E/Right-Click: Spear (Limited) • Defeat monster!', {
       fontSize: '14px',
       color: '#ffffff',
       backgroundColor: '#000000',
       padding: { x: 10, y: 5 }
     }).setOrigin(0.5);
 
-    // Spear counter - DISABLED
-    // this.spearText = this.add.text(50, 100, `Spears: ${this.currentSpears}/${this.maxSpears}`, {
-    //   fontSize: '16px',
-    //   color: '#ffaa00',
-    //   fontStyle: 'bold'
-    // });
+    // Spear counter - RE-ENABLED
+    this.spearText = this.add.text(50, 100, `Spears: ${this.currentSpears}/${this.maxSpears}`, {
+      fontSize: '16px',
+      color: '#ffaa00',
+      fontStyle: 'bold'
+    });
     
     // Debug info
     if (this.debugMode) {
@@ -235,9 +250,9 @@ export class CombatScene extends Scene {
     this.handlePlayerMovement();
     this.handleMonsterAI();
     this.handleInputAttacks(time);
-    // this.regenerateSpears(time); // DISABLED: Spear system
+    this.regenerateSpears(time); // RE-ENABLED: Limited spear system
     this.updateRangeIndicator();
-    // this.checkSpearCollisions(); // DISABLED: Spear collision
+    this.checkSpearCollisions(); // RE-ENABLED: Fixed spear collision
     this.checkGameOver();
   }
 
@@ -310,7 +325,16 @@ export class CombatScene extends Scene {
 
   handlePlayerMovement() {
     const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
-    const speed = 150;
+    
+    // Check if slowdown period has ended
+    const currentTime = this.time.now;
+    if (this.isSlowed && currentTime > this.slowedUntil) {
+      this.isSlowed = false;
+      this.player.setTint(0x4444ff); // Reset to normal blue tint
+    }
+    
+    // Determine current speed based on slowdown status
+    const speed = this.isSlowed ? this.slowedSpeed : this.normalSpeed;
 
     // Reset velocity
     playerBody.setVelocity(0);
@@ -370,11 +394,14 @@ export class CombatScene extends Scene {
       this.attemptMeleeAttack();
     }
     
-    // DISABLED: Spear throwing
-    // if (Phaser.Input.Keyboard.JustDown(this.eKey)) {
-    //   const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, this.monster.x, this.monster.y);
-    //   this.throwSpearAtAngle(angle);
-    // }
+    // Spear throwing with E key
+    if (Phaser.Input.Keyboard.JustDown(this.eKey)) {
+      // Safety check: ensure monster exists before calculating angle
+      if (this.monster && this.monster.active && this.monsterHealth > 0) {
+        const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, this.monster.x, this.monster.y);
+        this.throwSpearAtAngle(angle);
+      }
+    }
   }
 
   attemptMeleeAttack() {
@@ -563,33 +590,110 @@ export class CombatScene extends Scene {
 
   throwSpearAtAngle(angle: number) {
     const time = this.time.now;
-    if (time < this.lastSpearTime + this.spearCooldown || this.currentSpears <= 0) return;
+    
+    // Check cooldown and spear availability
+    if (time < this.lastSpearTime + this.spearCooldown) {
+      return;
+    }
+    
+    if (this.currentSpears <= 0) {
+      // Show "No spears!" feedback
+      const text = this.add.text(this.player.x, this.player.y - 50, 'No spears!', {
+        fontSize: '14px',
+        color: '#ff6666'
+      }).setOrigin(0.5);
+      
+      this.tweens.add({
+        targets: text,
+        y: text.y - 20,
+        alpha: 0,
+        duration: 500,
+        onComplete: () => text.destroy()
+      });
+      return;
+    }
 
-    // Create a simple spear sprite
-    const spear = this.spears.create(this.player.x, this.player.y, 'spear-texture');
-    spear.rotation = angle;
+    // Safety check: ensure spear group exists
+    if (!this.spears) {
+      console.error('Spear group not initialized!');
+      return;
+    }
 
-    // Set spear velocity
-    const speed = 400;
-    spear.setVelocity(
-      Math.cos(angle) * speed,
-      Math.sin(angle) * speed
-    );
-
-    // Update spear count
-    this.currentSpears--;
-    this.updateSpearUI();
-    this.lastSpearTime = time;
-
-    // Auto-destroy spear after 2 seconds
-    this.time.delayedCall(2000, () => {
-      if (spear.active) {
-        spear.destroy();
+    try {
+      // Check if spear texture exists
+      if (!this.textures.exists('spear-texture')) {
+        console.error('Spear texture does not exist! Creating fallback...');
+        this.createSpearTexture();
       }
+      
+      // Create a simple spear sprite
+      const spear = this.spears.create(this.player.x, this.player.y, 'spear-texture');
+      
+      if (!spear) {
+        console.error('Failed to create spear sprite!');
+        return;
+      }
+      
+      spear.rotation = angle;
+
+      // Set spear velocity
+      const speed = 400;
+      spear.setVelocity(
+        Math.cos(angle) * speed,
+        Math.sin(angle) * speed
+      );
+
+      // Update spear count
+      this.currentSpears--;
+      this.updateSpearUI();
+      this.lastSpearTime = time;
+
+      console.log('Spear thrown! Remaining:', this.currentSpears);
+
+      // Apply movement slowdown penalty
+      this.applySpearSlowdown();
+
+      // Auto-destroy spear after 2 seconds
+      this.time.delayedCall(2000, () => {
+        if (spear && spear.active) {
+          spear.destroy();
+        }
+      });
+    } catch (error) {
+      console.error('Error throwing spear:', error);
+    }
+  }
+
+  applySpearSlowdown() {
+    // Apply 800ms movement slowdown after throwing spear
+    this.isSlowed = true;
+    this.slowedUntil = this.time.now + 800;
+    
+    // Visual feedback: tint player orange to show slowdown
+    this.player.setTint(0xffa500);
+    
+    // Show slowdown feedback text
+    const slowText = this.add.text(this.player.x, this.player.y - 60, 'Slowed!', {
+      fontSize: '12px',
+      color: '#ff6666',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    
+    this.tweens.add({
+      targets: slowText,
+      y: slowText.y - 20,
+      alpha: 0,
+      duration: 800,
+      onComplete: () => slowText.destroy()
     });
   }
 
   checkSpearCollisions() {
+    // Safety check: ensure monster exists and has not been destroyed
+    if (!this.monster || !this.monster.active || !this.monster.body) {
+      return;
+    }
+    
     // Clear debug graphics
     if (this.debugMode) {
       this.debugGraphics.clear();
@@ -620,38 +724,57 @@ export class CombatScene extends Scene {
           this.monster.x, this.monster.y
         ));
         
-        // Show distance
-        this.debugGraphics.fillStyle(0xffffff, 1);
-        this.debugGraphics.fillText(`${Math.floor(distance)}`, spear.x, spear.y - 10, '12px monospace');
+        // Show distance (create temporary text object)
+        const distText = this.add.text(spear.x, spear.y - 10, `${Math.floor(distance)}`, {
+          fontSize: '12px',
+          color: '#ffffff',
+          fontFamily: 'monospace'
+        }).setOrigin(0.5);
+        
+        // Remove text after this frame
+        this.time.delayedCall(16, () => distText.destroy());
       }
       
       // Check if collision occurred (within 40 pixels)
       if (distance < 40) {
         console.log('COLLISION! Distance:', distance, 'Monster HP:', this.monsterHealth);
         
-        // Only damage if monster is alive
-        if (this.monsterHealth > 0) {
-          // Deal damage
-          const damage = Math.floor(Math.random() * 15) + 10;
+        // Only damage if monster is alive and still exists
+        if (this.monsterHealth > 0 && this.monster && this.monster.active) {
+          // Deal significantly reduced damage for ranged attack (8-12 instead of 15-40 for melee)
+          const damage = Math.floor(Math.random() * 5) + 8; // 8-12 damage
           this.monsterHealth = Math.max(0, this.monsterHealth - damage);
           
-          console.log('Damage dealt:', damage, 'New HP:', this.monsterHealth);
+          console.log('Spear damage dealt:', damage, 'New HP:', this.monsterHealth);
           
-          // Show damage number
+          // Show damage number with spear color
           this.showDamageNumber(this.monster.x, this.monster.y - 40, damage, 0xffaa00);
           
           // Update health bar
           this.updateMonsterHealthBar();
           
-          // Flash effect on monster
-          this.monster.setTint(0xffffaa);
-          this.time.delayedCall(100, () => {
-            this.monster.setTint(this.monsterHealth > 0 ? 0xff4444 : 0x666666);
-          });
+          // Flash effect on monster (ensure monster still exists)
+          if (this.monster && this.monster.active) {
+            this.monster.setTint(0xffffaa);
+            this.time.delayedCall(100, () => {
+              if (this.monster && this.monster.active) {
+                this.monster.setTint(this.monsterHealth > 0 ? 0xff4444 : 0x666666);
+              }
+            });
+          }
+          
+          // If monster just died, stop it immediately
+          if (this.monsterHealth <= 0 && this.monster.body) {
+            const monsterBody = this.monster.body as Phaser.Physics.Arcade.Body;
+            monsterBody.setVelocity(0, 0);
+            monsterBody.enable = false;
+          }
         }
         
-        // Destroy the spear regardless
-        spear.destroy();
+        // Safely destroy the spear after processing
+        if (spear && spear.active) {
+          spear.destroy();
+        }
       }
     });
   }
@@ -665,8 +788,18 @@ export class CombatScene extends Scene {
   }
 
   updateSpearUI() {
-    // DISABLED: Spear UI
-    // this.spearText.setText(`Spears: ${this.currentSpears}/${this.maxSpears}`);
+    if (this.spearText) {
+      this.spearText.setText(`Spears: ${this.currentSpears}/${this.maxSpears}`);
+      
+      // Color coding: red when empty, yellow when low, green when full
+      if (this.currentSpears === 0) {
+        this.spearText.setColor('#ff4444');
+      } else if (this.currentSpears === 1) {
+        this.spearText.setColor('#ffaa00');
+      } else {
+        this.spearText.setColor('#44ff44');
+      }
+    }
   }
 
   showDamageNumber(x: number, y: number, damage: number, color: number) {
@@ -748,99 +881,336 @@ export class CombatScene extends Scene {
     this.isGameOver = true;
     const { width, height } = this.cameras.main;
 
+    if (victory) {
+      this.createVictoryAnimation(width, height);
+    } else {
+      this.createDefeatScreen(width, height);
+    }
+  }
+
+  createVictoryAnimation(width: number, height: number) {
+    // Phase 1: Darken entire arena (0-500ms)
+    const backgroundOverlay = this.add.rectangle(width/2, height/2, width, height, 0x000000, 0);
+    backgroundOverlay.setDepth(10); // Above arena elements but below UI
+    
+    this.tweens.add({
+      targets: backgroundOverlay,
+      alpha: 0.85,
+      duration: 500,
+      ease: 'Power2.easeOut',
+      onComplete: () => {
+        // Phase 2: Animate vault to center (500-1500ms)
+        this.animateVaultToCenter(width, height, backgroundOverlay);
+      }
+    });
+    
+    // Hide/dim UI elements during victory
+    this.hideUIElements();
+    
+    // Stop all movement immediately
+    if (this.player.body) {
+      (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
+    }
+    if (this.monster.body) {
+      (this.monster.body as Phaser.Physics.Arcade.Body).setVelocity(0);
+    }
+    
+    // Dim the player and monster sprites
+    this.player.setAlpha(0.3);
+    this.monster.setAlpha(0.2);
+    
+    // Hide range indicators
+    if (this.meleeRangeIndicator) {
+      this.meleeRangeIndicator.setVisible(false);
+    }
+    if (this.debugGraphics) {
+      this.debugGraphics.setVisible(false);
+    }
+  }
+
+  animateVaultToCenter(width: number, height: number, backgroundOverlay: Phaser.GameObjects.Rectangle) {
+    const centerX = width / 2;
+    const centerY = height / 2;
+    
+    // Create golden glow background that appears during movement
+    const goldenGlow = this.add.graphics();
+    goldenGlow.setDepth(20); // Above background overlay but below vault
+    goldenGlow.fillGradientStyle(0xffd700, 0xffd700, 0xffaa00, 0xffaa00, 0.3);
+    goldenGlow.fillCircle(centerX, centerY, 0);
+    
+    // Ensure vault is above everything else
+    this.vault.setDepth(100);
+    
+    // Animate vault movement and scaling
+    this.tweens.add({
+      targets: this.vault,
+      x: centerX,
+      y: centerY,
+      scaleX: 2.2,
+      scaleY: 2.2,
+      duration: 1000,
+      ease: 'Back.easeOut',
+      onUpdate: () => {
+        // Update golden glow size during animation
+        const progress = this.tweens.getTweensOf(this.vault)[0].progress;
+        goldenGlow.clear();
+        goldenGlow.fillGradientStyle(0xffd700, 0xffd700, 0xffaa00, 0xffaa00, 0.2);
+        goldenGlow.fillCircle(centerX, centerY, progress * 200);
+      },
+      onComplete: () => {
+        // Phase 3: Add particle explosion (1500-2000ms)
+        this.createParticleExplosion(centerX, centerY);
+        // Phase 4: Show victory text (2000ms+)
+        this.showVictoryText(centerX, centerY);
+      }
+    });
+    
+    // Add golden tint to vault
+    this.vault.setTint(0xffffff);
+    this.vault.setAlpha(1); // Ensure vault is fully visible
+    this.tweens.add({
+      targets: this.vault,
+      duration: 1000,
+      onComplete: () => {
+        this.vault.setTint(0xffd700);
+      }
+    });
+  }
+
+  createParticleExplosion(centerX: number, centerY: number) {
+    // Create multiple sparkle effects
+    for (let i = 0; i < 15; i++) {
+      const angle = (i / 15) * Math.PI * 2;
+      const distance = 80 + Math.random() * 60;
+      const sparkle = this.add.graphics();
+      sparkle.setPosition(centerX, centerY);
+      sparkle.fillStyle(0xffd700);
+      
+      // Create a simple diamond/star shape manually
+      sparkle.beginPath();
+      sparkle.moveTo(0, -8);  // Top point
+      sparkle.lineTo(6, 0);   // Right point
+      sparkle.lineTo(0, 8);   // Bottom point
+      sparkle.lineTo(-6, 0);  // Left point
+      sparkle.closePath();
+      sparkle.fillPath();
+      
+      // Add a smaller inner diamond for sparkle effect
+      sparkle.fillStyle(0xffff00);
+      sparkle.beginPath();
+      sparkle.moveTo(0, -4);
+      sparkle.lineTo(3, 0);
+      sparkle.lineTo(0, 4);
+      sparkle.lineTo(-3, 0);
+      sparkle.closePath();
+      sparkle.fillPath();
+      
+      sparkle.setDepth(50);
+      
+      const targetX = centerX + Math.cos(angle) * distance;
+      const targetY = centerY + Math.sin(angle) * distance;
+      
+      this.tweens.add({
+        targets: sparkle,
+        x: targetX,
+        y: targetY,
+        alpha: 0,
+        scale: 0.3,
+        rotation: Math.random() * Math.PI * 2,
+        duration: 800 + Math.random() * 400,
+        delay: Math.random() * 200,
+        ease: 'Power2.easeOut',
+        onComplete: () => sparkle.destroy()
+      });
+    }
+    
+    // Screen flash effect
+    const flashOverlay = this.add.rectangle(centerX, centerY, this.cameras.main.width, this.cameras.main.height, 0xffd700, 0);
+    flashOverlay.setDepth(100);
+    
+    this.tweens.add({
+      targets: flashOverlay,
+      alpha: 0.4,
+      duration: 100,
+      yoyo: true,
+      onComplete: () => flashOverlay.destroy()
+    });
+  }
+
+  showVictoryText(centerX: number, centerY: number) {
+    // Victory title above vault
+    const victoryText = this.add.text(centerX, centerY - 150, '🎉 VICTORY! 🎉', {
+      fontSize: '52px',
+      color: '#ffd700',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5).setAlpha(0);
+    victoryText.setDepth(200);
+    
+    // Animate victory text entrance
+    this.tweens.add({
+      targets: victoryText,
+      alpha: 1,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      duration: 600,
+      ease: 'Back.easeOut',
+      yoyo: true,
+      onComplete: () => {
+        // Continuous pulse
+        this.tweens.add({
+          targets: victoryText,
+          scale: 1.05,
+          duration: 1000,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+      }
+    });
+    
+    // Subtitle text
+    const subtitleText = this.add.text(centerX, centerY - 100, 'Treasure Chest Unlocked!', {
+      fontSize: '24px',
+      color: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setAlpha(0);
+    subtitleText.setDepth(200);
+    
+    this.tweens.add({
+      targets: subtitleText,
+      alpha: 1,
+      y: centerY - 110,
+      duration: 400,
+      delay: 300,
+      ease: 'Power2.easeOut'
+    });
+    
+    // Instructions below vault
+    const instructionText = this.add.text(centerX, centerY + 120, 'CLICK TO OPEN TREASURE CHEST', {
+      fontSize: '22px',
+      color: '#ffd700',
+      fontStyle: 'bold',
+      backgroundColor: '#000000',
+      padding: { x: 15, y: 8 }
+    }).setOrigin(0.5).setAlpha(0);
+    instructionText.setDepth(200);
+    
+    this.tweens.add({
+      targets: instructionText,
+      alpha: 1,
+      duration: 400,
+      delay: 600,
+      ease: 'Power2.easeOut',
+      onComplete: () => {
+        // Make instruction text pulse
+        this.tweens.add({
+          targets: instructionText,
+          scale: 1.05,
+          duration: 800,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+      }
+    });
+    
+    // Phase 5: Enable enhanced interaction
+    this.enableVaultInteraction(centerX, centerY);
+  }
+
+  enableVaultInteraction(centerX: number, centerY: number) {
+    // Create larger interactive area around vault
+    const interactiveArea = this.add.rectangle(centerX, centerY, 200, 200, 0x000000, 0);
+    interactiveArea.setInteractive();
+    interactiveArea.setDepth(150);
+    
+    // Add continuous glow pulse to vault
+    this.tweens.add({
+      targets: this.vault,
+      alpha: 0.9,
+      duration: 1000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+    
+    interactiveArea.on('pointerdown', () => {
+      // Add opening animation before transitioning
+      this.tweens.add({
+        targets: this.vault,
+        scaleX: 2.5,
+        scaleY: 2.5,
+        alpha: 1,
+        duration: 300,
+        ease: 'Back.easeOut',
+        onComplete: () => {
+          this.scene.start('VaultScene', {
+            victory: true,
+            walletAddress: 'test-wallet',
+            monsterDefeated: this.monsterData.type
+          });
+        }
+      });
+    });
+
+    // Add hover effect
+    interactiveArea.on('pointerover', () => {
+      this.vault.setTint(0xffff00);
+    });
+    
+    interactiveArea.on('pointerout', () => {
+      this.vault.setTint(0xffd700);
+    });
+  }
+
+  hideUIElements() {
+    // Dim health bars and spear counter
+    if (this.playerHealthBar) {
+      this.playerHealthBar.setAlpha(0.3);
+    }
+    if (this.monsterHealthBar) {
+      this.monsterHealthBar.setAlpha(0.3);
+    }
+    if (this.playerHealthText) {
+      this.playerHealthText.setAlpha(0.3);
+    }
+    if (this.monsterHealthText) {
+      this.monsterHealthText.setAlpha(0.3);
+    }
+    if (this.spearText) {
+      this.spearText.setAlpha(0.3);
+    }
+  }
+
+  createDefeatScreen(width: number, height: number) {
     // Dim the screen
     this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.7);
 
-    if (victory) {
-      // Victory - show vault access
-      this.add.text(width/2, height/2 - 50, '🎉 VICTORY! 🎉', {
-        fontSize: '48px',
-        color: '#00ff00',
-        fontStyle: 'bold'
-      }).setOrigin(0.5);
-      
-      this.add.text(width/2, height/2, 'Monster defeated! You can now approach the vault!', {
-        fontSize: '24px',
-        color: '#ffffff'
-      }).setOrigin(0.5);
+    // Defeat
+    this.add.text(width/2, height/2 - 50, '💀 DEFEATED! 💀', {
+      fontSize: '48px',
+      color: '#ff0000',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    
+    this.add.text(width/2, height/2, 'The monster has defeated you!', {
+      fontSize: '24px',
+      color: '#ffffff'
+    }).setOrigin(0.5);
 
-      // Make vault interactive
-      this.vault.setInteractive();
-      this.vault.on('pointerdown', () => {
-        this.scene.start('VaultScene', {
-          victory: true,
-          walletAddress: 'test-wallet',
-          monsterDefeated: this.monsterData.type
-        });
+    this.add.text(width/2, height/2 + 50, 'Click to return to Colosseum', {
+      fontSize: '18px',
+      color: '#ffaa00',
+      backgroundColor: '#000000',
+      padding: { x: 10, y: 5 }
+    }).setOrigin(0.5);
+
+    this.input.once('pointerdown', () => {
+      this.scene.start('ColosseumScene', {
+        walletAddress: 'test-wallet'
       });
-
-      this.add.text(width/2, height/2 + 100, 'Click the glowing vault to claim your reward! 🏛️', {
-        fontSize: '18px',
-        color: '#ffd700',
-        backgroundColor: '#000000',
-        padding: { x: 10, y: 5 }
-      }).setOrigin(0.5);
-
-      // Add glowing effect to vault
-      this.tweens.add({
-        targets: this.vault,
-        scaleX: 1.6,
-        scaleY: 1.6,
-        alpha: 0.8,
-        duration: 800,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
-      });
-
-      // Add golden glow effect
-      this.vault.setTint(0xffff00);
-      
-      // Add floating text above vault
-      const vaultText = this.add.text(this.vault.x, this.vault.y - 60, 'CLICK TO OPEN VAULT', {
-        fontSize: '20px',
-        color: '#ffff00',
-        fontStyle: 'bold',
-        backgroundColor: '#000000',
-        padding: { x: 8, y: 4 }
-      }).setOrigin(0.5);
-
-      // Make vault text pulse
-      this.tweens.add({
-        targets: vaultText,
-        scale: 1.1,
-        duration: 600,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
-      });
-
-    } else {
-      // Defeat
-      this.add.text(width/2, height/2 - 50, '💀 DEFEATED! 💀', {
-        fontSize: '48px',
-        color: '#ff0000',
-        fontStyle: 'bold'
-      }).setOrigin(0.5);
-      
-      this.add.text(width/2, height/2, 'The monster has defeated you!', {
-        fontSize: '24px',
-        color: '#ffffff'
-      }).setOrigin(0.5);
-
-      this.add.text(width/2, height/2 + 50, 'Click to return to Colosseum', {
-        fontSize: '18px',
-        color: '#ffaa00',
-        backgroundColor: '#000000',
-        padding: { x: 10, y: 5 }
-      }).setOrigin(0.5);
-
-      this.input.once('pointerdown', () => {
-        // Pass wallet address back to maintain state
-        this.scene.start('ColosseumScene', {
-          walletAddress: 'test-wallet'
-        });
-      });
-    }
+    });
   }
 }
