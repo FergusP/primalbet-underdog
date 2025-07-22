@@ -1,52 +1,49 @@
-# **AURELIUS GAME SERVER ARCHITECTURE**
-*High-Performance Real-Time Backend Implementation*
+# **AURELIUS COLOSSEUM SERVER ARCHITECTURE**
+*Backend for Monster Combat Jackpot System*
 
 <!-- MVP:SUMMARY -->
-## **🚀 MVP Server Features (INPUT-DRIVEN SYSTEM)**
-For the 2-day MVP, only implement:
-- **Basic Node.js + Express**: Simple HTTP API
-- **In-Memory State**: Player inputs & visual state
-- **Input Processing**: Convert actions to weights
-- **Visual Feedback Engine**: Fake combat animations
-- **Weight Calculator**: Process all inputs
-- **VRF Integration**: For weighted winner selection
+## **🚀 MVP Server Features (MONSTER COMBAT)**
+For the 2-3 day MVP, implement:
+- **Node.js + Express**: REST API for game actions
+- **Monster Management**: Spawn based on jackpot size
+- **Combat Resolution**: ProofNetwork VRF integration
+- **Vault Crack System**: Chance-based jackpot wins
+- **Real-time Updates**: Combat events and jackpot tracking
+- **Solana Integration**: Verify entries and payouts
 
-Skip for MVP: Real combat, AI logic, databases
+Skip for MVP: Databases, XP system, achievements
 <!-- MVP:END -->
 
-## **🏗️ Simplified Polling Architecture**
+## **🏗️ Monster Combat Architecture**
 
 ```
 ┌─────────────────────┐
 │   Web Frontend      │
 │  (Next.js/Phaser)   │
 └──────────┬──────────┘
-           │ Polling (500ms)
-           ▼
-┌─────────────────────┐
-│  Next.js API Routes │ (Proxy)
-└──────────┬──────────┘
-           │
+           │ HTTP Requests
            ▼
 ┌─────────────────────┐
 │   Backend Service   │
 │   (Node.js/Express) │
 │                     │
 │  Features:          │
-│  - In-memory state  │
-│  - Input processing │
-│  - Weight calculation│
-│  - Visual theater   │
-│  - Power-up market  │
+│  - Monster spawning │
+│  - Combat VRF       │
+│  - Vault crack logic│
+│  - Jackpot tracking │
+│  - ProofNetwork API │
 └──────────┬──────────┘
            │
 ┌──────────▼──────────┐
 │  Solana Blockchain  │
-│     (Anchor)        │
+│  - Entry payments   │
+│  - Combat results   │
+│  - Jackpot payouts  │
 └─────────────────────┘
 
-No WebSockets, No Redis, No Database
-Just simple HTTP polling every 500ms
+Simple REST API with ProofNetwork VRF
+No complex state management needed
 ```
 
 ---
@@ -58,20 +55,21 @@ Just simple HTTP polling every 500ms
 backend/
 ├── src/
 │   ├── index.ts                 # Server entry point
-│   ├── config.ts               # Simple config
-│   ├── game/
-│   │   ├── GameManager.ts      # Game state & input tracking
-│   │   ├── WeightCalculator.ts # Core weight calculation system
-│   │   ├── InputProcessor.ts   # Process strategic inputs
-│   │   ├── VisualTheater.ts    # Fake combat animations
-│   │   ├── PowerUpMarket.ts    # Strategic purchase system
-│   │   ├── VRFWinner.ts        # Weight-based winner selection
-│   │   └── WeightConstants.ts  # Fair weight formulas
+│   ├── config.ts               # Environment config
+│   ├── combat/
+│   │   ├── MonsterManager.ts   # Monster spawning logic
+│   │   ├── CombatResolver.ts   # VRF combat resolution
+│   │   ├── VaultCracker.ts     # Jackpot attempt logic
+│   │   └── CombatHandler.ts    # Combat flow orchestration
 │   ├── api/
-│   │   ├── routes.ts           # API endpoints
-│   │   └── handlers.ts         # Input handlers
+│   │   ├── routes.ts           # REST endpoints
+│   │   ├── combatHandler.ts    # Combat request handler
+│   │   └── stateHandler.ts     # Game state queries
+│   ├── services/
+│   │   ├── ProofNetworkVRF.ts  # VRF integration
+│   │   └── SolanaService.ts    # Blockchain verification
 │   └── utils/
-│       └── vrf.ts              # VRF winner selection
+│       └── constants.ts        # Monster tiers, chances
 ├── package.json
 └── .env
 ```
@@ -111,10 +109,13 @@ Additional files for full version:
 ### **1. Server Entry Point**
 
 ```typescript
-// src/index.ts - INPUT-DRIVEN VERSION
+// src/index.ts - MONSTER COMBAT VERSION
 import express from 'express';
 import cors from 'cors';
-import { GameManager } from './game/GameManager';
+import { MonsterManager } from './combat/MonsterManager';
+import { CombatHandler } from './combat/CombatHandler';
+import { ProofNetworkVRF } from './services/ProofNetworkVRF';
+import { SolanaService } from './services/SolanaService';
 import { setupRoutes } from './api/routes';
 
 const app = express();
@@ -123,22 +124,26 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Initialize managers
-const gameManager = new GameManager();
+// Initialize services
+const vrfService = new ProofNetworkVRF();
+const solanaService = new SolanaService();
+const monsterManager = new MonsterManager();
+const combatHandler = new CombatHandler(
+  monsterManager,
+  vrfService,
+  solanaService
+);
 
 // Setup API routes
-setupRoutes(app, gameManager);
+setupRoutes(app, combatHandler, monsterManager);
 
 // Start server
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
-  console.log(`Input-driven backend running on port ${PORT}`);
+  console.log(`Aurelius Colosseum backend running on port ${PORT}`);
   
-  // Start visual update loop (for animations)
-  gameManager.startVisualLoop();
-  
-  // Start game end checker
-  gameManager.startGameEndChecker();
+  // Initialize current monster based on jackpot
+  monsterManager.initializeMonster();
 });
 ```
 <!-- MVP:END -->
@@ -207,103 +212,76 @@ start();
 <!-- POST-MVP:END -->
 
 <!-- MVP:START -->
-### **2. Input-Driven Game Manager**
+### **2. Monster Manager**
 
 ```typescript
-// src/game/GameManager.ts - INPUT COLLECTION VERSION
-import { v4 as uuidv4 } from 'uuid';
-import { InputProcessor } from './InputProcessor';
-import { VisualEngine } from './VisualEngine';
-import { WeightCalculator } from './WeightCalculator';
+// src/combat/MonsterManager.ts - MONSTER SPAWNING
+import { Monster, MonsterTier, MONSTER_TIERS } from '../utils/constants';
 
-export class GameManager {
-  private games: Map<string, GameState> = new Map();
-  private playerInputs: Map<string, PlayerInput[]> = new Map();
-  private inputProcessor: InputProcessor;
-  private visualEngine: VisualEngine;
-  private weightCalculator: WeightCalculator;
+export class MonsterManager {
+  private currentMonster: Monster | null = null;
+  private monsterHistory: Monster[] = [];
   
-  constructor() {
-    this.inputProcessor = new InputProcessor();
-    this.visualEngine = new VisualEngine();
-    this.weightCalculator = new WeightCalculator();
+  async initializeMonster(): Promise<void> {
+    // Get current jackpot from blockchain
+    const jackpotAmount = await this.getJackpotAmount();
+    this.spawnMonster(jackpotAmount);
   }
   
-  createGame(): GameState {
-    const gameId = uuidv4();
-    const game: GameState = {
-      id: gameId,
-      phase: 'waiting',
-      startTime: null,
-      warriors: [],
-      visualEffects: [],
-      pot: 0,
-      playerInputs: new Map(),
-      processedWeights: null
+  spawnMonster(jackpotAmount: number): Monster {
+    const tier = this.getMonsterTier(jackpotAmount);
+    
+    const monster: Monster = {
+      id: Date.now().toString(),
+      type: tier.name,
+      tier: tier,
+      baseHealth: tier.baseHealth,
+      currentHealth: tier.baseHealth,
+      spawnedAt: Date.now(),
+      defeatedBy: null,
+      totalCombats: 0,
+      victories: 0
     };
     
-    this.games.set(gameId, game);
-    return game;
+    this.currentMonster = monster;
+    this.monsterHistory.push(monster);
+    
+    console.log(`Spawned ${tier.name} for ${jackpotAmount} SOL jackpot`);
+    return monster;
   }
   
-  async joinGame(
-    gameId: string,
-    playerId: string
-  ): Promise<JoinResult> {
-    const game = this.activeGames.get(gameId);
-    if (!game) throw new Error('Game not found');
+  private getMonsterTier(poolAmount: number): MonsterTier {
+    // Find appropriate tier based on pool size (in SOL)
+    const poolInSol = poolAmount / 1e9;
     
-    // Verify on-chain payment
-    const txSignature = await this.solanaService.verifyGameEntry(
-      gameId,
-      playerId
-    );
-    
-    // Add single warrior
-    const warrior = game.addWarrior(playerId);
-    
-    // Update Redis
-    await this.updateGameState(gameId, game);
-    
-    return { warrior, txSignature };
-  }
-  
-  startGameLoops(): void {
-    // Game update loop - 20 FPS for MVP
-    setInterval(() => this.updateAllGames(), 50);
-    
-    // Cleanup finished games
-    setInterval(() => this.cleanupGames(), 30000);
-  }
-  
-  private async updateAllGames(): Promise<void> {
-    for (const [gameId, game] of this.activeGames) {
-      if (game.isActive()) {
-        game.update(Date.now());
-        await this.updateGameState(gameId, game);
+    for (const tier of MONSTER_TIERS) {
+      if (poolInSol >= tier.poolRange[0] && poolInSol < tier.poolRange[1]) {
+        return tier;
       }
+    }
+    
+    // Return highest tier if pool exceeds all ranges
+    return MONSTER_TIERS[MONSTER_TIERS.length - 1];
+  }
+  
+  getCurrentMonster(): Monster | null {
+    return this.currentMonster;
+  }
+  
+  recordCombat(gladiator: string, victory: boolean): void {
+    if (!this.currentMonster) return;
+    
+    this.currentMonster.totalCombats++;
+    if (!victory) {
+      this.currentMonster.victories++;
+    } else {
+      this.currentMonster.defeatedBy = gladiator;
     }
   }
   
-  private async updateGameState(
-    gameId: string, 
-    game: GameInstance
-  ): Promise<void> {
-    const state = game.getState();
-    
-    // Update Redis
-    await this.redis.setex(
-      `game:${gameId}`,
-      300, // 5 min expiry
-      JSON.stringify(state)
-    );
-    
-    // Broadcast to connected clients
-    this.emit('gameStateUpdate', { gameId, state });
-  }
-  
-  getActiveGameCount(): number {
-    return this.activeGames.size;
+  private async getJackpotAmount(): Promise<number> {
+    // TODO: Get from blockchain
+    return 0;
   }
 }
 ```
@@ -479,164 +457,77 @@ export class InputProcessor {
     }
   }
 }
+
+
+interface CombatResult {
+  combatId: string;
+  gladiator: string;
+  monster: string;
+  gladiatorPower: number;
+  gladiatorScore: number;
+  monsterScore: number;
+  victory: boolean;
+  vrfProof: string;
+  timestamp: number;
+}
+```
+
+### **3. Combat Resolver**
+
+```typescript
+// src/combat/CombatResolver.ts - VRF COMBAT RESOLUTION
+import { ProofNetworkVRF } from '../services/ProofNetworkVRF';
+import { Monster } from '../utils/constants';
+
+export class CombatResolver {
+  constructor(private vrfService: ProofNetworkVRF) {}
   
-  constructor(
-    public readonly id: string,
-    public readonly escrowAddress: string
-  ) {
-    this.arena = new Arena();
-    this.vrf = new ProofNetworkVRF();
-    this.warriorAI = new WarriorAI(this.vrf);
-    this.powerUpMarket = new PowerUpMarket(this.poolTracker);
-    this.poolTracker = new PrizePoolTracker();
-  }
-  
-  async update(currentTime: number): Promise<void> {
-    if (!this.startTime) {
-      if (this.warriors.size >= 2) {
-        this.startTime = currentTime;
-        this.phase = GamePhase.Active;
-        this.powerUpMarket.startOffering(); // Start power-up sales
-      }
-      return;
-    }
+  async resolveCombat(
+    gladiator: string,
+    entryAmount: number,
+    monster: Monster,
+    combatId: string
+  ): Promise<CombatResult> {
+    // 1. Calculate gladiator power (linear scaling)
+    const gladiatorPower = this.calculateGladiatorPower(entryAmount);
     
-    const elapsed = currentTime - this.startTime;
-    
-    // End game after 90 seconds
-    if (elapsed >= 90000) {
-      await this.endGame();
-      return;
-    }
-    
-    // Update all AI warriors
-    await this.updateAllWarriorAI();
-    
-    // Update power-up market
-    this.powerUpMarket.update(currentTime);
-    
-    // Check for winner
-    const alive = this.getAliveWarriors();
-    if (alive.length === 1) {
-      await this.endGame();
-    }
-  }
-  
-  async addWarrior(playerId: string): Promise<Warrior> {
-    // Use VRF for random spawn position
-    const availablePositions = this.arena.getAvailableSpawnPositions();
-    const spawnResult = await this.vrf.selectSpawnPosition(availablePositions);
-    
-    const warrior = new Warrior({
-      id: `${playerId}-${Date.now()}`,
-      playerId,
-      position: spawnResult.position,
-      hp: 100,
-      maxHp: 100
+    // 2. Get VRF random values
+    const vrfResult = await this.vrfService.requestRandomness({
+      seed: `combat_${combatId}`,
+      numValues: 2 // One for gladiator, one for monster
     });
     
-    this.warriors.set(warrior.id, warrior);
+    // 3. Calculate combat scores
+    const gladiatorRoll = vrfResult.values[0] % 100; // 0-99
+    const monsterRoll = vrfResult.values[1] % 100;   // 0-99
     
-    // Update prize pool
-    this.poolTracker.addJoinContribution(0.002);
+    const gladiatorScore = gladiatorPower * (50 + gladiatorRoll) / 100;
+    const monsterScore = monster.baseHealth * 
+                        monster.tier.defenseMultiplier * 
+                        (50 + monsterRoll) / 100;
     
-    this.emit('warriorSpawned', {
-      warriorId: warrior.id,
-      position: spawnResult.position,
-      proof: spawnResult.proof
-    });
+    // 4. Determine outcome
+    const victory = gladiatorScore > monsterScore;
     
-    return warrior;
-  }
-  
-  async buyPowerUp(playerId: string, offerId: string): Promise<void> {
-    const offer = this.powerUpMarket.getOffer(offerId);
-    if (!offer) throw new Error('Invalid offer');
+    console.log(`Combat: G(${gladiatorScore.toFixed(0)}) vs M(${monsterScore.toFixed(0)}) = ${victory ? 'WIN' : 'LOSE'}`);
     
-    // Apply power-up to player's warriors
-    const playerWarriors = Array.from(this.warriors.values())
-      .filter(w => w.playerId === playerId && w.isAlive());
-    
-    for (const warrior of playerWarriors) {
-      this.applyPowerUp(warrior, offer.type);
-    }
-    
-    // Update prize pool
-    this.poolTracker.addPowerUpContribution(offer.price);
-    
-    this.emit('powerUpPurchased', {
-      buyer: playerId,
-      powerUpType: offer.type,
-      price: offer.price,
-      newPotSize: this.poolTracker.getCurrentPot()
-    });
-  }
-  
-  private async updateAllWarriorAI(): Promise<void> {
-    for (const warrior of this.warriors.values()) {
-      if (!warrior.isAlive()) continue;
-      
-      // AI makes decisions for each warrior
-      const decision = await this.warriorAI.makeDecision(
-        warrior,
-        Array.from(this.warriors.values()),
-        this.arena
-      );
-      
-      switch (decision.action) {
-        case 'move':
-          this.moveWarrior(warrior, decision.target);
-          break;
-        case 'attack':
-          await this.performAttack(warrior, decision.target);
-          break;
-        case 'usePowerUp':
-          this.usePowerUp(warrior, decision.powerUp);
-          break;
-      }
-    }
-  }
-  
-  private moveWarrior(warrior: Warrior, targetPosition: Position): void {
-    warrior.moveTo(targetPosition);
-    
-    this.emit('warriorMoved', {
-      warriorId: warrior.id,
-      position: targetPosition
-    });
-  }
-  
-  private async performAttack(attacker: Warrior, target: Warrior): Promise<void> {
-    // Use VRF for damage calculation
-    const damageResult = await this.vrf.calculateDamage();
-    
-    target.takeDamage(damageResult.damage);
-    attacker.setAttackCooldown();
-    
-    this.emit('combatEvent', {
-      attackerId: attacker.id,
-      targetId: target.id,
-      damage: damageResult.damage,
-      newHp: target.hp,
-      proof: damageResult.proof
-    });
-    
-    if (!target.isAlive()) {
-      this.handleElimination(attacker, target);
-    }
-  }
-  
-  getState(): GameState {
     return {
-      id: this.id,
-      phase: this.phase,
-      warriors: Array.from(this.warriors.values()).map(w => w.serialize()),
-      powerUpOffers: this.powerUpMarket.getCurrentOffers(),
-      currentPot: this.poolTracker.getCurrentPot(),
-      potBreakdown: this.poolTracker.getBreakdown(),
-      startTime: this.startTime,
-      timeRemaining: this.startTime ? 90 - ((Date.now() - this.startTime) / 1000) : 90
+      combatId,
+      gladiator,
+      monster: monster.type,
+      gladiatorPower,
+      gladiatorScore: Math.floor(gladiatorScore),
+      monsterScore: Math.floor(monsterScore),
+      victory,
+      vrfProof: vrfResult.proof,
+      timestamp: Date.now()
     };
+  }
+  
+  private calculateGladiatorPower(entryAmount: number): number {
+    // Linear scaling - no whale advantage
+    const BASE_POWER_MULTIPLIER = 1000;
+    return entryAmount * BASE_POWER_MULTIPLIER;
   }
 }
 ```
@@ -901,266 +792,55 @@ export class BlitzGame extends GameInstance {
 <!-- POST-MVP:END -->
 
 <!-- MVP:START -->
-### **4. Visual Engine System**
+### **4. Vault Cracker**
 
 ```typescript
-// src/game/VisualEngine.ts - FAKE COMBAT ANIMATIONS
-export class VisualEngine {
-  private visualHP: Map<string, number> = new Map();
-  private animations: VisualEffect[] = [];
+// src/combat/VaultCracker.ts - JACKPOT ATTEMPT SYSTEM
+import { ProofNetworkVRF } from '../services/ProofNetworkVRF';
+import { Monster } from '../utils/constants';
+
+export class VaultCracker {
+  constructor(private vrfService: ProofNetworkVRF) {}
   
-  // Generate visual state (not real combat)
-  generateVisualState(game: GameState): VisualState {
-    const warriors = [];
+  async attemptVaultCrack(
+    gladiator: string,
+    monster: Monster,
+    combatId: string
+  ): Promise<VaultCrackResult> {
+    // Get crack chance from monster tier
+    const crackChance = monster.tier.vaultCrackChance;
     
-    for (const [id, warrior] of game.warriors) {
-      // Update visual positions (random movement)
-      const visualPos = this.updateVisualPosition(warrior);
-      
-      // Update fake HP (decreases over time)
-      const hp = this.updateVisualHP(id, game.startTime);
-      
-      warriors.push({
-        id,
-        position: visualPos,
-        visualHp: hp,
-        effects: this.getActiveEffects(id)
-      });
-    }
+    // Request VRF for vault crack
+    const vrfResult = await this.vrfService.requestRandomness({
+      seed: `vault_${combatId}`,
+      numValues: 1
+    });
+    
+    const roll = vrfResult.values[0] % 100; // 0-99
+    const success = roll < crackChance;
+    
+    console.log(`Vault crack attempt: ${roll} < ${crackChance} = ${success}`);
     
     return {
-      warriors,
-      effects: this.animations,
-      momentum: this.calculateVisualMomentum(game)
+      gladiator,
+      monster: monster.type,
+      crackChance,
+      roll,
+      success,
+      vrfProof: vrfResult.proof,
+      timestamp: Date.now()
     };
   }
-  
-  // Create visual feedback for inputs
-  createInputFeedback(input: ProcessedInput): VisualEffect {
-    switch (input.inputType) {
-      case 'ACTIVATE_POWERUP':
-        return {
-          id: uuid(),
-          type: 'powerup',
-          position: this.getWarriorPosition(input.playerId),
-          animation: 'rage_aura',
-          duration: 2000,
-          message: '+15 Power!'
-        };
-        
-      case 'FORM_ALLIANCE':
-        return {
-          id: uuid(),
-          type: 'alliance',
-          position: { x: 400, y: 300 },
-          animation: 'handshake',
-          duration: 1500,
-          message: 'Alliance Formed!'
-        };
-    }
-  }
-    // Find all enemies
-    const enemies = allWarriors.filter(w => 
-      w.playerId !== warrior.playerId && w.isAlive()
-    );
-    
-    if (enemies.length === 0) {
-      return { action: 'wait' };
-    }
-    
-    // Check if we can attack
-    const adjacentEnemies = enemies.filter(e => 
-      this.isAdjacent(warrior.position, e.position)
-    );
-    
-    if (adjacentEnemies.length > 0) {
-      // Multiple targets? Use VRF to choose
-      let target: Warrior;
-      if (adjacentEnemies.length > 1) {
-        const decision = await this.vrf.selectAITarget(warrior, adjacentEnemies);
-        target = decision.target;
-      } else {
-        target = adjacentEnemies[0];
-      }
-      
-      return { action: 'attack', target };
-    }
-    
-    // Find closest enemy
-    const closestEnemy = this.findClosestEnemy(warrior, enemies);
-    
-    // Calculate path
-    const validPaths = this.calculateValidPaths(
-      warrior.position,
-      closestEnemy.position,
-      arena
-    );
-    
-    // Multiple paths? Use VRF to choose
-    let chosenPath: Position;
-    if (validPaths.length > 1) {
-      const pathDecision = await this.vrf.selectMovementPath(warrior, validPaths);
-      chosenPath = pathDecision.path;
-    } else {
-      chosenPath = validPaths[0];
-    }
-    
-    return { action: 'move', target: chosenPath };
-  }
-  
-  private isAdjacent(pos1: Position, pos2: Position): boolean {
-    const dx = Math.abs(pos1.x - pos2.x);
-    const dy = Math.abs(pos1.y - pos2.y);
-    return dx <= 1 && dy <= 1;
-  }
-  
-  private findClosestEnemy(warrior: Warrior, enemies: Warrior[]): Warrior {
-    return enemies.reduce((closest, enemy) => {
-      const distToCurrent = this.getDistance(warrior.position, enemy.position);
-      const distToClosest = this.getDistance(warrior.position, closest.position);
-      return distToCurrent < distToClosest ? enemy : closest;
-    });
-  }
-  
-  private getDistance(pos1: Position, pos2: Position): number {
-    return Math.abs(pos1.x - pos2.x) + Math.abs(pos1.y - pos2.y);
-  }
 }
 
-interface AIDecision {
-  action: 'move' | 'attack' | 'usePowerUp' | 'wait';
-  target?: Position | Warrior;
-  powerUp?: PowerUpType;
-}
-```
-
-### **5. Weight Calculator System**
-
-```typescript
-// src/game/WeightCalculator.ts - PROCESS ALL INPUTS INTO WEIGHTS
-export class WeightCalculator {
-  calculateFinalWeights(
-    game: GameState,
-    allInputs: Map<string, ProcessedInput[]>
-  ): Map<string, number> {
-    const weights = new Map<string, number>();
-    
-    for (const [playerId, inputs] of allInputs) {
-      const factors = this.calculateAllFactors(inputs, game);
-      const finalWeight = this.computeFinalWeight(factors);
-      weights.set(playerId, finalWeight);
-    }
-    
-    return weights;
-  }
-  
-  private createNewOffers(): void {
-    const potSize = this.poolTracker.getCurrentPot();
-    
-    // Dynamic pricing based on pot size
-    const priceMultiplier = Math.max(1, potSize / 10); // Scale with pot
-    
-    const offers: PowerUpOffer[] = [
-      {
-        id: uuidv4(),
-        type: 'health',
-        price: 0.001 * priceMultiplier,
-        description: 'Heal all your warriors +25 HP',
-        target: 'self',
-        expiresIn: 20
-      },
-      {
-        id: uuidv4(),
-        type: 'rage',
-        price: 0.002 * priceMultiplier,
-        description: 'Double damage for 10 seconds',
-        target: 'self',
-        expiresIn: 15
-      },
-      {
-        id: uuidv4(),
-        type: 'chaos',
-        price: 0.01 * priceMultiplier,
-        description: 'Deal 20 damage to ALL warriors',
-        target: 'all',
-        expiresIn: 10
-      }
-    ];
-    
-    // Clear old offers
-    this.currentOffers.clear();
-    
-    // Add new offers
-    offers.forEach(offer => {
-      this.currentOffers.set(offer.id, offer);
-      
-      // Auto-expire offers
-      setTimeout(() => {
-        this.currentOffers.delete(offer.id);
-      }, offer.expiresIn * 1000);
-    });
-    
-    // Emit new offers event
-    this.emit('powerUpOffers', { offers });
-  }
-  
-  getCurrentOffers(): PowerUpOffer[] {
-    return Array.from(this.currentOffers.values());
-  }
-  
-  getOffer(offerId: string): PowerUpOffer | undefined {
-    return this.currentOffers.get(offerId);
-  }
-}
-```
-
-### **6. Prize Pool Tracker**
-
-```typescript
-// src/game/PrizePoolTracker.ts - REAL-TIME POT TRACKING
-export class PrizePoolTracker {
-  private currentPot: number = 0;
-  private joinContributions: number = 0;
-  private powerupContributions: number = 0;
-  
-  addJoinContribution(amount: number): void {
-    const poolAmount = amount * 0.95; // 95% to pool
-    this.currentPot += poolAmount;
-    this.joinContributions += poolAmount;
-    
-    this.emit('potUpdate', {
-      currentPot: this.currentPot,
-      lastChange: poolAmount,
-      source: 'join',
-      totalPlayers: this.getPlayerCount()
-    });
-  }
-  
-  addPowerUpContribution(amount: number): void {
-    const poolAmount = amount * 0.90; // 90% to pool
-    this.currentPot += poolAmount;
-    this.powerupContributions += poolAmount;
-    
-    this.emit('potUpdate', {
-      currentPot: this.currentPot,
-      lastChange: poolAmount,
-      source: 'powerup',
-      totalPlayers: this.getPlayerCount()
-    });
-  }
-  
-  getCurrentPot(): number {
-    return this.currentPot;
-  }
-  
-  getBreakdown(): PotBreakdown {
-    return {
-      total: this.currentPot,
-      fromJoins: this.joinContributions,
-      fromPowerUps: this.powerupContributions,
-      percentFromPowerUps: (this.powerupContributions / this.currentPot) * 100
-    };
-  }
+interface VaultCrackResult {
+  gladiator: string;
+  monster: string;
+  crackChance: number;
+  roll: number;
+  success: boolean;
+  vrfProof: string;
+  timestamp: number;
 }
 ```
 <!-- MVP:END -->
@@ -1233,90 +913,103 @@ export class CombatEngine {
 <!-- POST-MVP:END -->
 
 <!-- MVP:START -->
-### **6. WebSocket Handler**
+### **5. Combat Handler**
 
 ```typescript
-// src/websocket/SocketManager.ts - MVP VERSION
-import { Server } from 'socket.io';
+// src/combat/CombatHandler.ts - ORCHESTRATE COMBAT FLOW
+import { MonsterManager } from './MonsterManager';
+import { CombatResolver } from './CombatResolver';
+import { VaultCracker } from './VaultCracker';
+import { ProofNetworkVRF } from '../services/ProofNetworkVRF';
+import { SolanaService } from '../services/SolanaService';
 
-export class SocketManager {
-  private io: Server;
-  private clients: Map<string, ClientInfo> = new Map();
+export class CombatHandler {
+  private combatResolver: CombatResolver;
+  private vaultCracker: VaultCracker;
   
-  constructor(io: Server, private gameManager: GameManager) {
-    this.io = io;
-    this.setupHandlers();
+  constructor(
+    private monsterManager: MonsterManager,
+    private vrfService: ProofNetworkVRF,
+    private solanaService: SolanaService
+  ) {
+    this.combatResolver = new CombatResolver(vrfService);
+    this.vaultCracker = new VaultCracker(vrfService);
   }
   
-  private setupHandlers(): void {
-    this.io.on('connection', async (socket) => {
-      console.log(`Client connected: ${socket.id}`);
+  async handleCombatRequest(request: CombatRequest): Promise<CombatResponse> {
+    const monster = this.monsterManager.getCurrentMonster();
+    if (!monster) throw new Error('No active monster');
+    
+    // 1. Verify entry payment on-chain
+    const payment = await this.solanaService.verifyPayment(
+      request.wallet,
+      request.txSignature,
+      monster.tier.entryFee
+    );
+    
+    // 2. Resolve combat
+    const combatResult = await this.combatResolver.resolveCombat(
+      request.wallet,
+      payment.amount,
+      monster,
+      request.combatId
+    );
+    
+    // 3. Record combat
+    this.monsterManager.recordCombat(request.wallet, combatResult.victory);
+    
+    // 4. Handle victory
+    let vaultResult = null;
+    if (combatResult.victory && request.attemptVault) {
+      vaultResult = await this.vaultCracker.attemptVaultCrack(
+        request.wallet,
+        monster,
+        request.combatId
+      );
       
-      // Simple auth - just store wallet
-      socket.on('auth', async (data) => {
-        const { wallet } = data;
+      if (vaultResult.success) {
+        // Process jackpot win
+        await this.processJackpotWin(request.wallet, vaultResult);
         
-        this.clients.set(socket.id, {
-          wallet,
-          socketId: socket.id
-        });
-        
-        socket.emit('authenticated', { wallet });
-      });
-      
-      // Join game
-      socket.on('joinGame', async (data) => {
-        try {
-          const client = this.clients.get(socket.id);
-          if (!client) {
-            socket.emit('error', { code: 'NOT_AUTHENTICATED' });
-            return;
-          }
-          
-          const result = await this.gameManager.joinGame(
-            data.gameId,
-            client.wallet
-          );
-          
-          socket.join(`game:${data.gameId}`);
-          socket.emit('joinedGame', result);
-          
-        } catch (error) {
-          socket.emit('error', { 
-            code: 'JOIN_FAILED',
-            message: error.message 
-          });
-        }
-      });
-      
-      // Buy power-up
-      socket.on('buyPowerUp', async (data) => {
-        const client = this.clients.get(socket.id);
-        if (!client) return;
-        
-        try {
-          await this.gameManager.processPowerUpPurchase(
-            data.gameId,
-            client.wallet,
-            data.offerId
-          );
-        } catch (error) {
-          socket.emit('error', { 
-            code: 'PURCHASE_FAILED',
-            message: error.message 
-          });
-        }
-      });
-      
-      socket.on('disconnect', () => {
-        this.clients.delete(socket.id);
-      });
-    });
+        // Spawn new monster
+        const newJackpot = await this.solanaService.getJackpotAmount();
+        this.monsterManager.spawnMonster(newJackpot);
+      }
+    }
+    
+    // 5. Submit results to blockchain
+    await this.solanaService.submitCombatResult(
+      combatResult,
+      vaultResult
+    );
+    
+    return {
+      combatResult,
+      vaultResult,
+      newMonster: this.monsterManager.getCurrentMonster()
+    };
   }
   
-  broadcastToGame(gameId: string, event: string, data: any): void {
-    this.io.to(`game:${gameId}`).emit(event, data);
+  private async processJackpotWin(
+    winner: string,
+    vaultResult: VaultCrackResult
+  ): Promise<void> {
+    console.log(`JACKPOT WON! ${winner} cracked the vault!`);
+    // Blockchain will handle the actual payout
   }
+}
+
+interface CombatRequest {
+  wallet: string;
+  txSignature: string;
+  combatId: string;
+  attemptVault: boolean;
+}
+
+interface CombatResponse {
+  combatResult: any;
+  vaultResult: any | null;
+  newMonster: any;
 }
 ```
 <!-- MVP:END -->
@@ -1719,13 +1412,53 @@ interface XPBreakdown {
 ```
 <!-- POST-MVP:END -->
 
-<!-- POST-MVP:PHASE2 -->
-### **9. ProofNetwork Integration**
+<!-- MVP:START -->
+### **6. ProofNetwork VRF Service**
 
 ```typescript
-// src/services/ProofNetworkVRF.ts - NOT IN MVP
+// src/services/ProofNetworkVRF.ts - MVP VERSION
+export class ProofNetworkVRF {
+  // For MVP, use mock VRF that returns deterministic "random" values
+  // Replace with real ProofNetwork API in production
+  
+  async requestRandomness(params: {
+    seed: string;
+    numValues: number;
+  }): Promise<VRFResult> {
+    // Mock implementation for MVP
+    const values = [];
+    for (let i = 0; i < params.numValues; i++) {
+      // Simple hash-based pseudo-random
+      const hash = this.simpleHash(params.seed + i);
+      values.push(hash);
+    }
+    
+    return {
+      values,
+      proof: `mock_proof_${params.seed}`,
+      timestamp: Date.now()
+    };
+  }
+  
+  private simpleHash(input: string): number {
+    let hash = 0;
+    for (let i = 0; i < input.length; i++) {
+      const char = input.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash);
+  }
+}
+
+interface VRFResult {
+  values: number[];
+  proof: string;
+  timestamp: number;
+}
+
+/* Production implementation:
 import axios from 'axios';
-import { blackbox } from '@proofnetwork/sdk';
 
 export class ProofNetworkVRF {
   private apiKey: string;
@@ -1734,50 +1467,183 @@ export class ProofNetworkVRF {
     this.apiKey = process.env.PROOFNETWORK_API_KEY!;
   }
   
-  async randomRange(min: number, max: number): Promise<number> {
+  async requestRandomness(params: {
+    seed: string;
+    numValues: number;
+  }): Promise<VRFResult> {
     const response = await axios.post(
-      'https://api.proofnetwork.org/vrf/range',
-      { min, max },
+      'https://api.proofnetwork.org/vrf/generate',
+      params,
       { headers: { 'X-API-Key': this.apiKey } }
     );
     
-    return response.data.result;
-  }
-  
-  async selectIndex(arrayLength: number): Promise<number> {
-    const response = await axios.post(
-      'https://api.proofnetwork.org/vrf/select',
-      { max: arrayLength - 1 },
-      { headers: { 'X-API-Key': this.apiKey } }
-    );
-    
-    return response.data.result;
-  }
-  
-  async triggerSpecialEvent(probability: number): Promise<boolean> {
-    const roll = await this.randomRange(0, 10000);
-    return roll < probability * 10000;
-  }
-  
-  async getServerSigningKey(): Promise<any> {
-    return await blackbox.getSecret('gameServerKey');
-  }
-  
-  async signGameResult(gameId: string, winners: any[]): Promise<string> {
-    const message = JSON.stringify({
-      gameId,
-      winners,
-      timestamp: Date.now(),
-      serverVersion: '1.0.0'
-    });
-    
-    return await blackbox.signMessage('gameServerKey', message);
+    return response.data;
   }
 }
+*/
 ```
-<!-- POST-MVP:END -->
+<!-- MVP:END -->
 
 ---
+
+<!-- MVP:START -->
+### **7. API Routes**
+
+```typescript
+// src/api/routes.ts - REST ENDPOINTS
+import { Express } from 'express';
+import { CombatHandler } from '../combat/CombatHandler';
+import { MonsterManager } from '../combat/MonsterManager';
+
+export function setupRoutes(
+  app: Express,
+  combatHandler: CombatHandler,
+  monsterManager: MonsterManager
+) {
+  // Get current game state
+  app.get('/api/state', async (req, res) => {
+    try {
+      const monster = monsterManager.getCurrentMonster();
+      const jackpot = await getJackpotAmount(); // From blockchain
+      
+      res.json({
+        currentMonster: monster,
+        currentJackpot: jackpot,
+        totalEntries: monster?.totalCombats || 0
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Enter combat
+  app.post('/api/combat/enter', async (req, res) => {
+    try {
+      const { wallet, txSignature, combatId } = req.body;
+      
+      const result = await combatHandler.handleCombatRequest({
+        wallet,
+        txSignature,
+        combatId,
+        attemptVault: true // Always attempt if victorious
+      });
+      
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Get combat history
+  app.get('/api/combat/history/:wallet', async (req, res) => {
+    try {
+      // TODO: Implement combat history from blockchain
+      res.json({ history: [] });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Health check
+  app.get('/health', (req, res) => {
+    res.json({ status: 'healthy', timestamp: Date.now() });
+  });
+}
+```
+
+### **8. Constants & Monster Configuration**
+
+```typescript
+// src/utils/constants.ts - MONSTER TIERS AND GAME CONFIG
+export interface MonsterTier {
+  name: string;
+  poolRange: [number, number]; // Min/max SOL for spawn
+  baseHealth: number;          // Starting HP
+  defenseMultiplier: number;   // Combat difficulty
+  vaultCrackChance: number;    // % chance after defeat
+  entryFee: number;           // SOL to fight (in lamports)
+}
+
+export const MONSTER_TIERS: MonsterTier[] = [
+  {
+    name: "Skeleton Warrior",
+    poolRange: [0, 1],
+    baseHealth: 100,
+    defenseMultiplier: 1.0,
+    vaultCrackChance: 10,
+    entryFee: 10_000_000, // 0.01 SOL
+  },
+  {
+    name: "Goblin Berserker",
+    poolRange: [1, 3],
+    baseHealth: 200,
+    defenseMultiplier: 1.2,
+    vaultCrackChance: 20,
+    entryFee: 20_000_000, // 0.02 SOL
+  },
+  {
+    name: "Minotaur Guardian",
+    poolRange: [3, 10],
+    baseHealth: 400,
+    defenseMultiplier: 1.5,
+    vaultCrackChance: 35,
+    entryFee: 50_000_000, // 0.05 SOL
+  },
+  {
+    name: "Hydra",
+    poolRange: [10, 25],
+    baseHealth: 800,
+    defenseMultiplier: 1.8,
+    vaultCrackChance: 50,
+    entryFee: 100_000_000, // 0.1 SOL
+  },
+  {
+    name: "Ancient Dragon",
+    poolRange: [25, 100],
+    baseHealth: 1500,
+    defenseMultiplier: 2.2,
+    vaultCrackChance: 70,
+    entryFee: 250_000_000, // 0.25 SOL
+  },
+  {
+    name: "Titan of Sol",
+    poolRange: [100, Infinity],
+    baseHealth: 3000,
+    defenseMultiplier: 3.0,
+    vaultCrackChance: 90,
+    entryFee: 500_000_000, // 0.5 SOL
+  }
+];
+
+export interface Monster {
+  id: string;
+  type: string;
+  tier: MonsterTier;
+  baseHealth: number;
+  currentHealth: number;
+  spawnedAt: number;
+  defeatedBy: string | null;
+  totalCombats: number;
+  victories: number;
+}
+```
+<!-- MVP:END -->
+
+## **🎯 MVP Testing**
+
+```bash
+# Test combat flow
+curl -X POST http://localhost:4000/api/combat/enter \
+  -H "Content-Type: application/json" \
+  -d '{
+    "wallet": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "txSignature": "test_sig_123",
+    "combatId": "combat_001"
+  }'
+
+# Get current state
+curl http://localhost:4000/api/state
+```
 
 <!-- POST-MVP:PHASE3 -->
 ## **📊 Performance Optimization**
@@ -2202,5 +2068,4 @@ export class MetricsService {
 
 ---
 
-*This architecture provides a scalable, secure foundation for real-time gameplay with <100ms latency.*
-<!-- POST-MVP:END -->
+*This architecture provides a simple, verifiable backend for the Aurelius Colosseum monster combat jackpot system.*

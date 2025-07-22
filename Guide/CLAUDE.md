@@ -1,48 +1,45 @@
-# **AURELIUS PROJECT RULES**
+# **AURELIUS COLOSSEUM PROJECT RULES**
 *This file is automatically loaded by Claude when working in this directory*
 
 ## **Project Context**
-You are helping with Aurelius, an **input-driven PvP arena** on Solana where players make strategic decisions while watching visual combat theater. **NO REAL COMBAT** - all warrior fighting is fake animation. Winner determined by **weight calculation + VRF system** based on strategic input quality. Features Arena Blitz (90s input collection) and Glory Siege (5min strategic wars). WEB-ONLY application with responsive design.
+You are helping with **Aurelius Colosseum**, a **monster-fighting jackpot game** on Solana where players send gladiators to fight progressively harder monsters. Each victory gives a chance to crack the treasure vault and claim the growing SOL prize pool. Failed attempts add to the jackpot, creating escalating stakes and excitement. WEB-ONLY application with Phaser.js visualization.
 
 ## **Guide Documents Overview**
 
 ### **Core Design Documents**
-1. **AURELIUS_GAME_DESIGN.md** - Complete game design with dual modes
-2. **DUAL_MODE_COMPLETE_DESIGN.md** - Detailed dual-mode mechanics and balance
-3. **INTERFACE_CONTRACT.md v4.0** - Sacred data structures and protocols (INPUT-DRIVEN)
-4. **ARCHIVED_DUAL_PLATFORM_STRATEGY.md** - (No longer used - web-only now)
-5. **MINIMUM_MVP.md** - Web-only MVP guide (2 days)
+1. **AURELIUS_COLOSSEUM_DESIGN.md** - Monster combat jackpot game design
+2. **MONSTER_COMBAT_SYSTEM.md** - Combat mechanics, XP, and progression
+3. **INTERFACE_CONTRACT.md v6.0** - Sacred data structures and protocols (MONSTER COMBAT)
+4. **MVP_IMPLEMENTATION.md** - 2-3 day implementation roadmap with code examples
 
 ### **Technical Implementation**
-6. **TECHNICAL_ARCHITECTURE.md** - System architecture and tech stack
-7. **SMART_CONTRACT_IMPLEMENTATION.md** - Anchor framework guide
-8. **GAME_SERVER_ARCHITECTURE.md** - Real-time backend implementation
-9. **SHARED_CODE_PATTERNS.md** - (Archived - no longer needed for web-only)
+5. **TECHNICAL_ARCHITECTURE.md** - System architecture and tech stack
+6. **SMART_CONTRACT_IMPLEMENTATION.md** - Monster combat smart contracts
+7. **GAME_SERVER_ARCHITECTURE.md** - Monster spawning and VRF backend
+8. **PHASER_INTEGRATION.md** - Game visualization guide
 
-### **Collaboration & Process**
-10. **PROJECT_MANAGEMENT.md** - Task division and responsibilities
-11. **DESIGN_CHANGE_PROTOCOL.md** - How to handle design changes
-12. **WORKFLOW_COLLAB.md** - Vibecoding methodology
+### **Development Tracking**
+9. **PARTNER_A_PROGRESS.md** - Backend/Smart contract progress tracker (Partner A only)
 
 ### **Reference Materials**
-13. **proofnetwork-documentation.md** - VRF and randomness guide
-14. **AURELIUS_APPEAL_STRATEGY.md** - User psychology insights
+10. **proofnetwork-documentation.md** - VRF and randomness guide
+11. **CLAUDE.md** - This file (auto-loaded project rules)
 
-## **🎮 CRITICAL: Input-Driven Battle System**
+## **⚔️ CRITICAL: Monster Combat System**
 
 ### **How It Works**
-1. **NO REAL COMBAT** - Warriors don't actually fight each other
-2. **INPUT COLLECTION** - Backend collects all player strategic decisions
-3. **WEIGHT CALCULATION** - Each input affects player's final weight
-4. **VISUAL FEEDBACK** - Frontend shows fake combat animations
-5. **VRF SELECTION** - Winner chosen based on weight distribution
+1. **PAY TO ENTER** - Entry fee based on current monster (0.01-0.5 SOL)
+2. **FIGHT MONSTER** - Combat resolved via ProofNetwork VRF
+3. **VICTORY** - Get chance to crack vault (10-90% based on monster)
+4. **DEATH** - Entry fee grows the jackpot
+5. **JACKPOT WIN** - Crack vault = take entire prize pool!
 
 ### **Key Points**
-- Visual HP bars are FAKE (just for show)
-- Damage numbers are FAKE (not calculated)
-- Movement is VISUAL ONLY (no pathfinding)
-- All that matters is WHEN and HOW players make inputs
-- Better strategy = Higher weight = Better odds (but not guaranteed)
+- Monster difficulty scales with jackpot size
+- Combat is verifiably random (VRF)
+- Linear power scaling (no whale advantage)
+- Failed attempts make next person's odds better
+- Visual combat in Phaser.js for engagement
 
 ## **Automatic Behaviors**
 
@@ -62,58 +59,69 @@ You are helping with Aurelius, an **input-driven PvP arena** on Solana where pla
 1. Follow GAME_SERVER_ARCHITECTURE.md patterns
 2. Implement anti-cheat measures
 3. Use Redis for game state, PostgreSQL for history
-4. Ensure <100ms latency with WebSocket optimization
+4. Ensure <100ms latency with REST API (no WebSocket for MVP)
 
 ### **When I ask about game mechanics:**
-- Reference DUAL_MODE_COMPLETE_DESIGN.md for mode specifics
-- Arena Blitz: 90s, 0.002 SOL, instant action, single winner
-- Glory Siege: 5min, 0.01 SOL, strategic, top 3 winners
-- Include underdog mechanics and special events
+- Reference AURELIUS_COLOSSEUM_DESIGN.md for core concept
+- Reference MONSTER_COMBAT_SYSTEM.md for combat details
+- Monster tiers: Skeleton → Goblin → Minotaur → Hydra → Dragon → Titan
+- Entry fees: 0.01 → 0.02 → 0.05 → 0.1 → 0.25 → 0.5 SOL
+- Vault crack chances: 10% → 20% → 35% → 50% → 70% → 90%
 
 ### **When I ask about implementation:**
-1. Check INTERFACE_CONTRACT.md v4.0 for data structures
-2. Verify task ownership in PROJECT_MANAGEMENT.md
-3. Follow the 2-day MVP implementation roadmap
-4. Use TypeScript/Rust types exactly as defined
-5. Remember: **NO REAL COMBAT** - visual theater only, players make strategic inputs for weight
+1. Check INTERFACE_CONTRACT.md v6.0 for data structures
+2. Follow MVP_IMPLEMENTATION.md for 2-3 day roadmap
+3. Use TypeScript/Rust types exactly as defined
+4. Remember: **VRF COMBAT** - ProofNetwork determines outcomes
+
+### **When I ask about frontend/visualization:**
+1. Reference PHASER_INTEGRATION.md for combat animations
+2. All combat outcomes are predetermined by backend VRF
+3. Phaser only provides visual representation
+4. Mobile-friendly with touch controls
+
+### **When I ask about ProofNetwork/VRF:**
+1. Reference proofnetwork-documentation.md for integration
+2. Use VRF for all combat resolution
+3. Use VRF for vault crack attempts
+4. Mock VRF for MVP, real integration post-MVP
 
 ### **When I make design changes:**
-1. Follow DESIGN_CHANGE_PROTOCOL.md strictly
-2. Update all affected documents
-3. Create partner notification
-4. Increment INTERFACE_CONTRACT.md version if breaking
+1. Update all affected documents
+2. Create partner notification through INTERFACE_CONTRACT.md
+3. Increment INTERFACE_CONTRACT.md version if breaking changes
 
 ### **When writing code:**
-- Partner A: Smart contracts (Anchor), backend service (Node.js), weight calculation system
-- Partner B: Web Frontend (Next.js/Phaser) with visual theater
-- Always use exact types from INTERFACE_CONTRACT.md v5.0 (Polling API)
-- Follow simplified architecture (no WebSockets)
-- Remember: NO real combat - only strategic input buttons (join/power-up/alliance/betrayal)
+- Partner A: Smart contracts (Anchor), backend service (Node.js), VRF integration
+- Partner B: Web Frontend (Next.js/Phaser) with monster combat visualization
+- Always use exact types from INTERFACE_CONTRACT.md v6.0 (Monster Combat API)
+- Simple REST API architecture
+- Remember: Combat resolved server-side with VRF, visualized client-side
 
 ### **When working with web development:**
 1. **Responsive design**: Ensure UI works on all screen sizes
 2. **Mobile browsers**: Test on Chrome/Safari mobile
 3. **Performance**: Desktop targets 60 FPS, mobile browsers 30 FPS
-4. **Touch controls**: Buttons must be touch-friendly (44x44px minimum)
-5. **Input-driven**: All combat is fake - strategic decisions determine weight/winner
+4. **Touch controls**: Enter combat button must be prominent
+5. **Monster combat**: Visualize gladiator vs monster battles
 
 ### **When committing:**
 ```bash
-[A] feat: Implement game escrow with power-up purchases
-[B] ui: Add Phaser arena scene with visual theater display
-[A] feat: Implement weight calculation system
-[B] ui: Add strategic input interface (join/power-up buttons)
-[AB] fix: Sync weight feedback with visual animations
+[A] feat: Implement colosseum state and monster spawning
+[B] ui: Add Phaser monster combat visualization
+[A] feat: Integrate ProofNetwork VRF for combat resolution
+[B] ui: Add vault crack attempt animation
+[AB] fix: Sync combat results with visual effects
 ```
 
 ## **Key Technical Decisions**
 
 ### **Architecture Philosophy**
-- **Minimal On-Chain**: Only money and verification
-- **Maximum Performance**: 60 FPS, <100ms latency
-- **Security First**: Funds always in escrow PDAs
-- **Cost Efficient**: ~0.003 SOL rent per account
-- **Quick Delivery**: MVP in 2 days
+- **Minimal On-Chain**: Entry fees, combat results, jackpot payouts
+- **Verifiable Randomness**: ProofNetwork VRF for all combat
+- **Security First**: Funds in colosseum PDA until won
+- **Cost Efficient**: One global jackpot state
+- **Quick Delivery**: MVP in 2-3 days
 
 ### **Anti-Overengineering Principles**
 1. **Always choose the simplest solution** that meets the requirements
@@ -128,138 +136,125 @@ You are helping with Aurelius, an **input-driven PvP arena** on Solana where pla
 8. **Use polling over WebSockets** - simpler to implement and debug
 9. **In-memory state over databases** - faster development for MVP
 
-### **Tech Stack (Simplified)**
+### **Tech Stack**
 - **Smart Contracts**: Anchor 0.30.0
-- **Backend Service**: Node.js + Express (in-memory state)
+- **Backend Service**: Node.js + Express
 - **Web Frontend**: Next.js 15 + Phaser 3.90
-- **Randomness**: Simple VRF for winner selection
-- **Infrastructure**: Vercel (web + API) + Railway (backend)
+- **Randomness**: ProofNetwork VRF
+- **Infrastructure**: Vercel (web) + Railway (backend)
 
 ## **Current Development Status**
-- Role: Partner A (Backend)
-- Phase: Web-Only Architecture Complete
-- Next: Core Development (Day 1-2)
-- Timeline: 2 days for web MVP
+- Role: Partner A (Backend/Smart Contracts)
+- Phase: Documentation Complete - Ready to Start Implementation
+- Next: Day 1 - Smart Contracts & Backend Core
+- Timeline: 2-3 days for MVP
 - Branch: main
-- Key Feature: INPUT-DRIVEN with weight-based VRF winner selection
+- Key Feature: MONSTER COMBAT with jackpot prize pool
+- Status: Haven't started any code implementation yet
 
 ## **Critical Constants**
 ```typescript
-// Game Modes
-BLITZ: { duration: 90s, fee: 0.002 SOL, max: 20 }
-SIEGE: { duration: 300s, fee: 0.01 SOL, max: 100 }
+// Monster Tiers
+const MONSTER_TIERS = [
+  { name: "Skeleton", poolRange: [0, 1], health: 100, crackChance: 10, fee: 0.01 },
+  { name: "Goblin", poolRange: [1, 3], health: 200, crackChance: 20, fee: 0.02 },
+  { name: "Minotaur", poolRange: [3, 10], health: 400, crackChance: 35, fee: 0.05 },
+  { name: "Hydra", poolRange: [10, 25], health: 800, crackChance: 50, fee: 0.1 },
+  { name: "Dragon", poolRange: [25, 100], health: 1500, crackChance: 70, fee: 0.25 },
+  { name: "Titan", poolRange: [100, ∞], health: 3000, crackChance: 90, fee: 0.5 }
+];
 
-// Visual Theater System (NO REAL COMBAT)
-FAKE_HP: 100 (visual countdown only)
-FAKE_DAMAGE: 5-8 (pure animation)
-FAKE_EFFECTS: All power-up visuals
-THEATER_UPDATE_RATE: 50ms (visual only)
+// Combat Resolution
+GLADIATOR_POWER = entryAmount * 1000; // Linear scaling
+GLADIATOR_SCORE = POWER * (50 + VRF_ROLL) / 100;
+MONSTER_SCORE = HEALTH * DEFENSE * (50 + VRF_ROLL) / 100;
+VICTORY = GLADIATOR_SCORE > MONSTER_SCORE;
 
-// Weight System (Hidden from Players)
-BASE_WEIGHT: 1000 (everyone starts equal)
-ENTRY_TIMING_BONUS: 50-300 (early bird advantage)
-POWERUP_MULTIPLIERS: 1.3x-2.0x (strategic purchases)
-PERFECT_TIMING_BONUS: +25-50% (optimal usage)
-ALLIANCE_BONUS: +75 (cooperation)
-BETRAYAL_PENALTY: -100 (trust broken)
-UNDERDOG_MULTIPLIER: 2x (comeback protection)
-LUCK_FACTOR: 0.85x-1.15x (prevents deterministic)
+// Prize Distribution
+PLATFORM_FEE: 10%
+JACKPOT_WINNER: 90%
 
-// Input Types
-JOIN_GAME: Entry with position choice
-ACTIVATE_POWERUP: Use at strategic moment
-FORM_ALLIANCE: Cooperate for bonus
-BETRAY_ALLIANCE: Risk for reward
-
-
-// Victory XP
-BLITZ_WINNER: 100 XP
-SIEGE_1ST: 150 XP, 2ND: 75 XP, 3RD: 50 XP
-
-// Special Bonuses
-UNDERDOG_MULTIPLIER: 2x
-GODSLAYER_KILL: 50 XP
-FIRST_BLOOD: 15 XP
-
-// Level Formula
+// XP System (Future)
+COMBAT_ATTEMPT: 10 XP
+MONSTER_DEFEATED: 50 XP * tierMultiplier
+VAULT_CRACKED: 500 XP
 Level = floor(sqrt(XP / 100))
 ```
 
 ## **Auto-Check List**
 Before any implementation:
 - [ ] Check task ownership in PROJECT_MANAGEMENT.md
-- [ ] Verify against INTERFACE_CONTRACT.md v5.0
+- [ ] Verify against INTERFACE_CONTRACT.md v6.0
 - [ ] Follow patterns from technical guides
 - [ ] Consider on-chain vs off-chain placement
 - [ ] Ensure security measures are in place
 - [ ] Is the UI responsive for mobile browsers?
-- [ ] Are strategic inputs being collected with timestamps?
-- [ ] Is weight calculation working correctly?
-- [ ] Are perfect timing bonuses being applied?
-- [ ] Is visual theater engaging but clearly fake?
-- [ ] Is VRF winner selection transparent?
+- [ ] Is monster spawning based on jackpot size?
+- [ ] Is combat resolution using VRF?
+- [ ] Are vault crack chances correct per tier?
+- [ ] Is the jackpot accumulating properly?
+- [ ] Are combat animations engaging?
 
 ## **Quick Command Reference**
 ```bash
 # Initial setup
-mkdir aurelius && cd aurelius
-mkdir -p programs/aurelius server web
+mkdir aurelius-colosseum && cd aurelius-colosseum
+mkdir -p programs/aurelius backend web
 
 # Development commands
 npm run dev:all      # Run everything
-npm run dev:web      # Web frontend
-npm run dev:server   # Game server
+npm run dev:web      # Web frontend with Phaser
+npm run dev:backend  # Monster combat server
 
 # Deploy contracts
 cd programs/aurelius && anchor deploy --provider.cluster devnet
 
 # Deploy web
 cd web && vercel
+
+# Deploy backend
+cd backend && railway up
 ```
 
-## **Simplified Project Structure**
+## **Project Structure**
 ```
-/Aurelius
-├── /web                    # Next.js + Phaser + API routes
-├── /programs               # Anchor smart contracts
-├── /backend                # Simple Node.js service
+/aurelius-colosseum
+├── /web                    # Next.js + Phaser combat visualization
+├── /programs               # Anchor smart contracts (colosseum)
+├── /backend                # Node.js + ProofNetwork VRF
 └── /Guide                  # All documentation
 ```
 
 ### **Web Development Rules**
-- **Desktop**: 60 FPS, full effects, keyboard shortcuts
-- **Mobile Browsers**: 30 FPS, touch-friendly UI, simplified effects
-- **Input System**: Collect strategic decisions (JOIN_GAME, ACTIVATE_POWERUP, FORM_ALLIANCE, BETRAY_ALLIANCE)
-- **Visual Theater**: Show fake combat animations to maintain engagement
-- **Weight System**: All inputs affect final weight → VRF winner selection
-- **Perfect Timing**: Power-ups get bonus effects when used optimally
+- **Desktop**: 60 FPS, full monster animations
+- **Mobile Browsers**: 30 FPS, touch-friendly combat button
+- **Combat System**: Gladiator vs Monster battles
+- **Visual Effects**: Combat animations, vault crack attempts
+- **Jackpot Display**: Live counter showing prize pool
+- **Monster Display**: Current monster and its stats
 
 ## **📚 Complete Documentation Index**
 
-All 15 guide documents are now synchronized:
+Current active documents (11 total):
 
-**Design & Strategy (5)**
-- AURELIUS_GAME_DESIGN.md - Core game design (INPUT-DRIVEN)
-- DUAL_MODE_COMPLETE_DESIGN.md - Mode balance
-- ARCHIVED_DUAL_PLATFORM_STRATEGY.md - (Archived)
-- MINIMUM_MVP.md - MVP implementation (2-day web)
-- AURELIUS_APPEAL_STRATEGY.md - User psychology
+**Design & Strategy (3)**
+- AURELIUS_COLOSSEUM_DESIGN.md - Monster combat jackpot game
+- MONSTER_COMBAT_SYSTEM.md - Combat mechanics and progression
+- MVP_IMPLEMENTATION.md - 2-3 day implementation roadmap
 
 **Technical (5)**
-- TECHNICAL_ARCHITECTURE.md - Simplified polling design
-- SMART_CONTRACT_IMPLEMENTATION.md - Blockchain
-- GAME_SERVER_ARCHITECTURE.md - Backend service
-- INTERFACE_CONTRACT.md v5.0 - Data contracts (POLLING API)
-- ARCHIVED_SHARED_CODE_PATTERNS.md - (Mobile removed)
+- TECHNICAL_ARCHITECTURE.md - System architecture
+- SMART_CONTRACT_IMPLEMENTATION.md - Colosseum contracts
+- GAME_SERVER_ARCHITECTURE.md - Monster & VRF backend
+- INTERFACE_CONTRACT.md v6.0 - Data contracts (MONSTER COMBAT)
+- PHASER_INTEGRATION.md - Combat visualization guide
 
-**Process & Collaboration (3)**
-- PROJECT_MANAGEMENT.md - Task tracking
-- WORKFLOW_COLLAB.md - Team workflow
-- DESIGN_CHANGE_PROTOCOL.md - Change management
+**Development Tracking (1)**
+- PARTNER_A_PROGRESS.md - Backend progress tracker
 
 **Reference (2)**
 - proofnetwork-documentation.md - VRF guide
 - CLAUDE.md - This file (auto-loaded)
 
 ---
-*Updated for web-only input-driven architecture. The game features **strategic decision-making** with **visual combat theater** where every action affects your weight/odds and grows the prize pool!*
+*Updated for Aurelius Colosseum monster combat system. The game features **escalating jackpots** with **verifiable combat** where every failed attempt makes the prize pool bigger and the next person's victory more valuable!*
