@@ -1,0 +1,846 @@
+// Action Combat Scene - Real-time combat with movement
+import { Scene } from 'phaser';
+import { Monster } from '../../types';
+
+export class CombatScene extends Scene {
+  private player!: Phaser.GameObjects.Sprite;
+  private monster!: Phaser.GameObjects.Sprite;
+  private vault!: Phaser.GameObjects.Sprite;
+  
+  // Game objects
+  private playerHealthBar!: Phaser.GameObjects.Graphics;
+  private monsterHealthBar!: Phaser.GameObjects.Graphics;
+  private playerHealthText!: Phaser.GameObjects.Text;
+  private monsterHealthText!: Phaser.GameObjects.Text;
+  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private wasdKeys!: any;
+  private spaceKey!: Phaser.Input.Keyboard.Key;
+  private eKey!: Phaser.Input.Keyboard.Key;
+  
+  // Combat
+  private spears!: Phaser.GameObjects.Group;
+  private maxSpears: number = 5;
+  private currentSpears: number = 5;
+  private spearText!: Phaser.GameObjects.Text;
+  
+  // Game state
+  private playerHealth: number = 100;
+  private playerMaxHealth: number = 100;
+  private monsterHealth: number = 100;
+  private monsterMaxHealth: number = 100;
+  private monsterData!: Monster;
+  private lastMeleeTime: number = 0;
+  private lastSpearTime: number = 0;
+  private meleeCooldown: number = 500; // 0.5 seconds
+  private spearCooldown: number = 300; // 0.3 seconds
+  private spearRegenTime: number = 2000; // 2 seconds per spear
+  private lastSpearRegen: number = 0;
+  private isGameOver: boolean = false;
+  
+  // Monster attack properties
+  private monsterAttackRange: number = 80; // Monster attacks when this close
+  private monsterAttackCooldown: number = 1500; // 1.5 seconds between attacks
+  private lastMonsterAttackTime: number = 0;
+  
+  // Range indicators (for development)
+  private meleeRangeIndicator!: Phaser.GameObjects.Graphics;
+  private meleeRange: number = 150; // Good melee range for better UX
+  private debugGraphics!: Phaser.GameObjects.Graphics;
+  private debugMode: boolean = true; // Toggle for debug visualization
+  private attackRangeIndicator!: Phaser.GameObjects.Graphics; // Shows where player can attack
+  
+  constructor() {
+    super({ key: 'CombatScene' });
+  }
+
+  init(data: { monster: Monster; combatId: string; walletAddress?: string }) {
+    console.log('CombatScene init data:', data);
+    
+    if (!data || !data.monster) {
+      console.error('No monster data provided to CombatScene');
+      // Return to colosseum if no monster data
+      this.scene.start('ColosseumScene');
+      return;
+    }
+    
+    this.monsterData = data.monster;
+    this.monsterHealth = this.monsterData.baseHealth;
+    this.monsterMaxHealth = this.monsterData.baseHealth;
+    
+    // Reset other game state
+    this.playerHealth = this.playerMaxHealth;
+    this.isGameOver = false;
+    this.lastMeleeTime = 0;
+    this.lastMonsterAttackTime = 0;
+  }
+
+  create() {
+    // Safety check - ensure we have monster data
+    if (!this.monsterData) {
+      console.error('CombatScene create: No monster data available');
+      this.scene.start('ColosseumScene');
+      return;
+    }
+    
+    const { width, height } = this.cameras.main;
+
+    // Create arena background
+    this.add.rectangle(width/2, height/2, width, height, 0x2a2a3a);
+    
+    // Add arena borders
+    this.add.rectangle(width/2, 20, width-40, 40, 0x444444);
+    this.add.rectangle(width/2, height-20, width-40, 40, 0x444444);
+    this.add.rectangle(20, height/2, 40, height-40, 0x444444);
+    this.add.rectangle(width-20, height/2, 40, height-40, 0x444444);
+
+    // Create player (blue circle for now)
+    this.player = this.add.sprite(width * 0.2, height * 0.5, 'gladiator-placeholder');
+    this.player.setTint(0x4444ff);
+    this.player.setScale(2);
+    
+    // Create monster (red circle, positioned to guard the vault)
+    this.monster = this.add.sprite(width * 0.7, height * 0.5, 'skeleton-placeholder');
+    this.monster.setTint(0xff4444);
+    this.monster.setScale(2.5);
+    this.monster.setAlpha(1); // Ensure fully visible
+    this.monster.setVisible(true);
+    this.monster.setDepth(5); // Ensure proper rendering order
+    
+    // Create vault (gold rectangle at the back)
+    this.vault = this.add.sprite(width * 0.9, height * 0.5, 'vault-placeholder');
+    this.vault.setTint(0xffd700);
+    this.vault.setScale(1.5);
+
+    // Enable physics
+    this.physics.add.existing(this.player);
+    this.physics.add.existing(this.monster);
+    this.physics.add.existing(this.vault);
+    
+    // Set player physics properties
+    const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
+    playerBody.setCollideWorldBounds(true);
+    playerBody.setDrag(300);
+    playerBody.setMaxVelocity(200);
+
+    // Set monster physics properties  
+    const monsterBody = this.monster.body as Phaser.Physics.Arcade.Body;
+    monsterBody.setCollideWorldBounds(true);
+    monsterBody.setImmovable(false); // Ensure monster can be hit multiple times
+
+    // Create input
+    this.cursors = this.input.keyboard!.createCursorKeys();
+    this.wasdKeys = this.input.keyboard!.addKeys('W,S,A,D');
+    this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    this.eKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+
+    // Create spear group for projectiles - NO collision detection
+    this.spears = this.physics.add.group();
+
+    // Create range indicator (for development)
+    this.createRangeIndicator();
+    
+    // Create debug graphics
+    this.debugGraphics = this.add.graphics();
+    this.debugGraphics.setDepth(100); // On top of everything
+
+    // Create spear texture once
+    this.createSpearTexture();
+
+    // Create health bars
+    this.createHealthBars();
+    
+    // Create UI
+    this.createUI();
+
+    // Add mouse click for attacks
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.leftButtonDown()) {
+        this.attemptMeleeAttack();
+      } else if (pointer.rightButtonDown()) {
+        this.throwSpear(pointer);
+      }
+    });
+
+    console.log('🎮 ACTION COMBAT STARTED!');
+    console.log('🕹️  WASD or Arrow Keys to move');
+    console.log('⚔️  SPACE/Left Click for melee attack');
+    console.log('🏹  E/Right Click to throw spears');
+    console.log('🏛️  Defeat monster to access vault!');
+  }
+
+  createHealthBars() {
+    const { width } = this.cameras.main;
+    
+    // Player health bar (top left)
+    this.add.text(50, 50, 'GLADIATOR', { fontSize: '16px', color: '#4444ff', fontStyle: 'bold' });
+    this.playerHealthBar = this.add.graphics();
+    this.playerHealthText = this.add.text(125, 65, '', { fontSize: '12px', color: '#ffffff' }).setOrigin(0.5);
+    this.updatePlayerHealthBar();
+    
+    // Monster health bar (top right)  
+    const monsterName = this.monsterData?.type || 'UNKNOWN MONSTER';
+    this.add.text(width - 200, 50, monsterName.toUpperCase(), { fontSize: '16px', color: '#ff4444', fontStyle: 'bold' });
+    this.monsterHealthBar = this.add.graphics();
+    this.monsterHealthText = this.add.text(width - 125, 65, '', { fontSize: '12px', color: '#ffffff' }).setOrigin(0.5);
+    this.updateMonsterHealthBar();
+  }
+
+  createUI() {
+    const { width, height } = this.cameras.main;
+    
+    // Instructions
+    this.add.text(width/2, height - 50, 'WASD: Move • SPACE/Click: Attack • Defeat monster to access vault!', {
+      fontSize: '14px',
+      color: '#ffffff',
+      backgroundColor: '#000000',
+      padding: { x: 10, y: 5 }
+    }).setOrigin(0.5);
+
+    // Spear counter - DISABLED
+    // this.spearText = this.add.text(50, 100, `Spears: ${this.currentSpears}/${this.maxSpears}`, {
+    //   fontSize: '16px',
+    //   color: '#ffaa00',
+    //   fontStyle: 'bold'
+    // });
+    
+    // Debug info
+    if (this.debugMode) {
+      this.add.text(10, 10, 'DEBUG MODE ON', {
+        fontSize: '12px',
+        color: '#00ff00',
+        backgroundColor: '#000000',
+        padding: { x: 5, y: 2 }
+      });
+    }
+  }
+
+  createRangeIndicator() {
+    // Create a graphics object for the melee range
+    this.meleeRangeIndicator = this.add.graphics();
+    this.meleeRangeIndicator.setDepth(1); // Above floor, below sprites
+  }
+
+  createSpearTexture() {
+    // Create spear texture once to avoid creating it every throw
+    const graphics = this.add.graphics();
+    graphics.fillStyle(0xccaa00);
+    graphics.fillRect(0, 0, 20, 4);
+    graphics.generateTexture('spear-texture', 20, 4);
+    graphics.destroy();
+  }
+
+  update(time: number, delta: number) {
+    if (this.isGameOver) return;
+
+    this.handlePlayerMovement();
+    this.handleMonsterAI();
+    this.handleInputAttacks(time);
+    // this.regenerateSpears(time); // DISABLED: Spear system
+    this.updateRangeIndicator();
+    // this.checkSpearCollisions(); // DISABLED: Spear collision
+    this.checkGameOver();
+  }
+
+  updateRangeIndicator() {
+    // Update position to follow player
+    this.meleeRangeIndicator.setPosition(this.player.x, this.player.y);
+    
+    // Check distance to monster
+    const distance = Phaser.Math.Distance.Between(this.monster.x, this.monster.y, this.player.x, this.player.y);
+    const inRange = distance < this.meleeRange && this.monsterHealth > 0;
+    
+    // Clear and redraw
+    this.meleeRangeIndicator.clear();
+    
+    // Only show indicators if monster is alive
+    if (this.monsterHealth > 0) {
+      // Show monster's attack range (danger zone)
+      const monsterDistance = Phaser.Math.Distance.Between(this.monster.x, this.monster.y, this.player.x, this.player.y);
+      if (monsterDistance <= this.monsterAttackRange) {
+        // DANGER! Monster can attack you
+        this.meleeRangeIndicator.lineStyle(3, 0xff0000, 0.6);
+        this.meleeRangeIndicator.strokeCircle(0, 0, 35);
+        this.meleeRangeIndicator.fillStyle(0xff0000, 0.2);
+        this.meleeRangeIndicator.fillCircle(0, 0, 35);
+      }
+      
+      if (inRange) {
+        // IN RANGE: Show bright green circle pulsing
+        const pulse = Math.sin(this.time.now * 0.005) * 0.3 + 0.7;
+        this.meleeRangeIndicator.lineStyle(4, 0x00ff00, pulse);
+        this.meleeRangeIndicator.strokeCircle(0, 0, 50); // Your attack indicator
+        
+        // Show attack zone
+        this.meleeRangeIndicator.fillStyle(0x00ff00, 0.1);
+        this.meleeRangeIndicator.fillCircle(0, 0, 50);
+      } else if (monsterDistance > this.monsterAttackRange) {
+        // OUT OF RANGE: Show distance to get in range
+        this.meleeRangeIndicator.lineStyle(2, 0xff0000, 0.5);
+        
+        // Draw a line from player to monster
+        const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, this.monster.x, this.monster.y);
+        const lineEndX = Math.cos(angle) * (distance - 50);
+        const lineEndY = Math.sin(angle) * (distance - 50);
+        
+        this.meleeRangeIndicator.moveTo(0, 0);
+        this.meleeRangeIndicator.lineTo(lineEndX, lineEndY);
+        this.meleeRangeIndicator.strokePath();
+        
+        // Show how much closer you need to be
+        const distanceToRange = Math.floor(distance - this.meleeRange);
+        if (distanceToRange > 0) {
+          // Create a temporary text object to show distance
+          const distText = this.add.text(
+            this.player.x + lineEndX/2, 
+            this.player.y + lineEndY/2 - 10, 
+            `${distanceToRange}px`, 
+            {
+              fontSize: '12px',
+              color: '#ff0000',
+              fontStyle: 'bold'
+            }
+          ).setOrigin(0.5);
+          
+          // Remove after next frame
+          this.time.delayedCall(16, () => distText.destroy());
+        }
+      }
+    }
+  }
+
+  handlePlayerMovement() {
+    const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
+    const speed = 150;
+
+    // Reset velocity
+    playerBody.setVelocity(0);
+
+    // Handle input
+    if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
+      playerBody.setVelocityX(-speed);
+    } else if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
+      playerBody.setVelocityX(speed);
+    }
+
+    if (this.cursors.up.isDown || this.wasdKeys.W.isDown) {
+      playerBody.setVelocityY(-speed);
+    } else if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
+      playerBody.setVelocityY(speed);
+    }
+  }
+
+  handleMonsterAI() {
+    // Stop if no body
+    if (!this.monster.body) return;
+    
+    const monsterBody = this.monster.body as Phaser.Physics.Arcade.Body;
+    
+    // If dead, ensure monster stops moving
+    if (this.monsterHealth <= 0) {
+      monsterBody.setVelocity(0, 0);
+      monsterBody.enable = false; // Disable physics completely when dead
+      return;
+    }
+
+    const distance = Phaser.Math.Distance.Between(this.monster.x, this.monster.y, this.player.x, this.player.y);
+    
+    // Check if monster can attack
+    if (distance <= this.monsterAttackRange && this.playerHealth > 0) {
+      // Stop moving when in attack range
+      monsterBody.setVelocity(0);
+      
+      // Try to attack if cooldown is over
+      const currentTime = this.time.now;
+      if (currentTime > this.lastMonsterAttackTime + this.monsterAttackCooldown) {
+        console.log('Monster in range! Distance:', distance, 'Attack range:', this.monsterAttackRange);
+        this.performMonsterAttack();
+        this.lastMonsterAttackTime = currentTime;
+      }
+    } else if (distance > this.monsterAttackRange) {
+      // Move toward player if not in attack range
+      const angle = Phaser.Math.Angle.Between(this.monster.x, this.monster.y, this.player.x, this.player.y);
+      const speed = 80;
+      monsterBody.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+    }
+  }
+
+  handleInputAttacks(time: number) {
+    // Check for keyboard attacks
+    if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
+      this.attemptMeleeAttack();
+    }
+    
+    // DISABLED: Spear throwing
+    // if (Phaser.Input.Keyboard.JustDown(this.eKey)) {
+    //   const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, this.monster.x, this.monster.y);
+    //   this.throwSpearAtAngle(angle);
+    // }
+  }
+
+  attemptMeleeAttack() {
+    const time = this.time.now;
+    if (time < this.lastMeleeTime + this.meleeCooldown || this.monsterHealth <= 0) return;
+
+    const distance = Phaser.Math.Distance.Between(this.monster.x, this.monster.y, this.player.x, this.player.y);
+    
+    // Must be close for melee
+    if (distance < this.meleeRange) {
+      this.performMeleeAttack();
+      this.lastMeleeTime = time;
+    } else {
+      // Show "Too far!" feedback
+      const text = this.add.text(this.player.x, this.player.y - 50, 'Too far!', {
+        fontSize: '14px',
+        color: '#ff6666'
+      }).setOrigin(0.5);
+      
+      this.tweens.add({
+        targets: text,
+        y: text.y - 20,
+        alpha: 0,
+        duration: 500,
+        onComplete: () => text.destroy()
+      });
+    }
+  }
+
+  performMeleeAttack() {
+    // Don't attack if monster is already dead
+    if (this.monsterHealth <= 0) {
+      // Show "Already dead!" feedback
+      const text = this.add.text(this.monster.x, this.monster.y - 50, 'Already defeated!', {
+        fontSize: '14px',
+        color: '#666666'
+      }).setOrigin(0.5);
+      
+      this.tweens.add({
+        targets: text,
+        y: text.y - 20,
+        alpha: 0,
+        duration: 500,
+        onComplete: () => text.destroy()
+      });
+      return;
+    }
+
+    // Calculate attack angle
+    const angleToMonster = Phaser.Math.Angle.Between(
+      this.player.x, this.player.y,
+      this.monster.x, this.monster.y
+    );
+
+    // Create sword swing effect
+    const swingGraphics = this.add.graphics();
+    swingGraphics.setPosition(this.player.x, this.player.y);
+    swingGraphics.setDepth(10);
+    
+    // Draw sword arc
+    const arcAngle = Phaser.Math.DegToRad(90); // 90 degree swing
+    swingGraphics.lineStyle(4, 0xffffff, 0.8);
+    swingGraphics.beginPath();
+    swingGraphics.arc(
+      0, 0,
+      this.meleeRange * 0.8,
+      angleToMonster - arcAngle/2,
+      angleToMonster + arcAngle/2,
+      false
+    );
+    swingGraphics.strokePath();
+    
+    // Animate the swing
+    this.tweens.add({
+      targets: swingGraphics,
+      alpha: 0,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      duration: 200,
+      onComplete: () => swingGraphics.destroy()
+    });
+
+    // Player attack animation
+    this.tweens.add({
+      targets: this.player,
+      scaleX: 2.5,
+      scaleY: 2.5,
+      duration: 100,
+      yoyo: true,
+      ease: 'Power1'
+    });
+
+    // Player attacks monster
+    const damage = Math.floor(Math.random() * 25) + 15; // 15-40 damage
+    this.monsterHealth = Math.max(0, this.monsterHealth - damage);
+    
+    // Visual feedback
+    this.showDamageNumber(this.monster.x, this.monster.y - 40, damage, 0xff4444);
+
+    // Update health bars
+    this.updatePlayerHealthBar();
+    this.updateMonsterHealthBar();
+
+    // Flash effect on hit
+    this.monster.setTint(0xffffff);
+    this.time.delayedCall(100, () => {
+      if (this.monsterHealth > 0) {
+        this.monster.setTint(0xff4444);
+      } else {
+        this.monster.setTint(0x666666); // Grey when dead
+      }
+    });
+    
+    // If monster just died, stop it immediately
+    if (this.monsterHealth <= 0 && this.monster.body) {
+      const monsterBody = this.monster.body as Phaser.Physics.Arcade.Body;
+      monsterBody.setVelocity(0, 0);
+      monsterBody.enable = false;
+    }
+  }
+
+  performMonsterAttack() {
+    console.log('Monster attacking! Player health before:', this.playerHealth);
+    
+    // Monster attack animation
+    this.tweens.add({
+      targets: this.monster,
+      scaleX: 3,
+      scaleY: 3,
+      duration: 150,
+      yoyo: true,
+      ease: 'Power1'
+    });
+
+    // Create claw swipe effect
+    const swipeGraphics = this.add.graphics();
+    swipeGraphics.setPosition(this.player.x, this.player.y);
+    swipeGraphics.setDepth(10);
+    
+    // Draw claw marks
+    swipeGraphics.lineStyle(3, 0xff0000, 0.8);
+    for (let i = 0; i < 3; i++) {
+      swipeGraphics.moveTo(-20 + i * 20, -30);
+      swipeGraphics.lineTo(-10 + i * 20, 30);
+    }
+    swipeGraphics.strokePath();
+    
+    // Animate the swipe
+    this.tweens.add({
+      targets: swipeGraphics,
+      alpha: 0,
+      scaleX: 1.5,
+      scaleY: 1.5,
+      duration: 300,
+      onComplete: () => swipeGraphics.destroy()
+    });
+
+    // Deal damage to player
+    const damage = Math.floor(Math.random() * 20) + 10; // 10-30 damage
+    this.playerHealth = Math.max(0, this.playerHealth - damage);
+    
+    console.log('Damage dealt:', damage, 'Player health after:', this.playerHealth);
+    
+    // Show damage number
+    this.showDamageNumber(this.player.x, this.player.y - 40, damage, 0xff0000);
+    
+    // Screen shake effect
+    this.cameras.main.shake(100, 0.01);
+    
+    // Update health bar
+    this.updatePlayerHealthBar();
+    
+    // Flash player red
+    this.player.setTint(0xff0000);
+    this.time.delayedCall(100, () => {
+      this.player.setTint(0x4444ff);
+    });
+  }
+
+  throwSpear(pointer?: Phaser.Input.Pointer) {
+    if (pointer) {
+      const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, pointer.x, pointer.y);
+      this.throwSpearAtAngle(angle);
+    }
+  }
+
+  throwSpearAtAngle(angle: number) {
+    const time = this.time.now;
+    if (time < this.lastSpearTime + this.spearCooldown || this.currentSpears <= 0) return;
+
+    // Create a simple spear sprite
+    const spear = this.spears.create(this.player.x, this.player.y, 'spear-texture');
+    spear.rotation = angle;
+
+    // Set spear velocity
+    const speed = 400;
+    spear.setVelocity(
+      Math.cos(angle) * speed,
+      Math.sin(angle) * speed
+    );
+
+    // Update spear count
+    this.currentSpears--;
+    this.updateSpearUI();
+    this.lastSpearTime = time;
+
+    // Auto-destroy spear after 2 seconds
+    this.time.delayedCall(2000, () => {
+      if (spear.active) {
+        spear.destroy();
+      }
+    });
+  }
+
+  checkSpearCollisions() {
+    // Clear debug graphics
+    if (this.debugMode) {
+      this.debugGraphics.clear();
+      
+      // Draw monster collision circle
+      this.debugGraphics.lineStyle(2, 0x00ff00, 0.5);
+      this.debugGraphics.strokeCircle(this.monster.x, this.monster.y, 40);
+    }
+    
+    // Manual collision detection for each spear
+    this.spears.children.entries.forEach((spearObj) => {
+      const spear = spearObj as Phaser.GameObjects.Sprite;
+      
+      // Skip if spear is not active
+      if (!spear.active) return;
+      
+      // Calculate distance between spear and monster
+      const distance = Phaser.Math.Distance.Between(
+        spear.x, spear.y,
+        this.monster.x, this.monster.y
+      );
+      
+      // Debug: Draw line from spear to monster
+      if (this.debugMode) {
+        this.debugGraphics.lineStyle(1, distance < 40 ? 0xff0000 : 0xffffff, 0.3);
+        this.debugGraphics.strokeLineShape(new Phaser.Geom.Line(
+          spear.x, spear.y,
+          this.monster.x, this.monster.y
+        ));
+        
+        // Show distance
+        this.debugGraphics.fillStyle(0xffffff, 1);
+        this.debugGraphics.fillText(`${Math.floor(distance)}`, spear.x, spear.y - 10, '12px monospace');
+      }
+      
+      // Check if collision occurred (within 40 pixels)
+      if (distance < 40) {
+        console.log('COLLISION! Distance:', distance, 'Monster HP:', this.monsterHealth);
+        
+        // Only damage if monster is alive
+        if (this.monsterHealth > 0) {
+          // Deal damage
+          const damage = Math.floor(Math.random() * 15) + 10;
+          this.monsterHealth = Math.max(0, this.monsterHealth - damage);
+          
+          console.log('Damage dealt:', damage, 'New HP:', this.monsterHealth);
+          
+          // Show damage number
+          this.showDamageNumber(this.monster.x, this.monster.y - 40, damage, 0xffaa00);
+          
+          // Update health bar
+          this.updateMonsterHealthBar();
+          
+          // Flash effect on monster
+          this.monster.setTint(0xffffaa);
+          this.time.delayedCall(100, () => {
+            this.monster.setTint(this.monsterHealth > 0 ? 0xff4444 : 0x666666);
+          });
+        }
+        
+        // Destroy the spear regardless
+        spear.destroy();
+      }
+    });
+  }
+
+  regenerateSpears(time: number) {
+    if (this.currentSpears < this.maxSpears && time > this.lastSpearRegen + this.spearRegenTime) {
+      this.currentSpears++;
+      this.updateSpearUI();
+      this.lastSpearRegen = time;
+    }
+  }
+
+  updateSpearUI() {
+    // DISABLED: Spear UI
+    // this.spearText.setText(`Spears: ${this.currentSpears}/${this.maxSpears}`);
+  }
+
+  showDamageNumber(x: number, y: number, damage: number, color: number) {
+    const damageText = this.add.text(x, y, `-${damage}`, {
+      fontSize: '24px',
+      color: Phaser.Display.Color.IntegerToColor(color).rgba,
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5);
+    damageText.setDepth(100); // Make sure it's on top
+
+    // Animate damage number
+    this.tweens.add({
+      targets: damageText,
+      y: y - 50,
+      alpha: 0,
+      duration: 1000,
+      onComplete: () => damageText.destroy()
+    });
+  }
+
+  updatePlayerHealthBar() {
+    this.playerHealthBar.clear();
+    const barWidth = 150;
+    const barHeight = 10;
+    const healthPercent = this.playerHealth / this.playerMaxHealth;
+    
+    // Background
+    this.playerHealthBar.fillStyle(0x333333);
+    this.playerHealthBar.fillRect(50, 70, barWidth, barHeight);
+    
+    // Health
+    this.playerHealthBar.fillStyle(0x4444ff);
+    this.playerHealthBar.fillRect(50, 70, barWidth * healthPercent, barHeight);
+    
+    // Border
+    this.playerHealthBar.lineStyle(2, 0xffffff);
+    this.playerHealthBar.strokeRect(50, 70, barWidth, barHeight);
+    
+    // Update health text
+    this.playerHealthText.setText(`${this.playerHealth}/${this.playerMaxHealth}`);
+  }
+
+  updateMonsterHealthBar() {
+    const { width } = this.cameras.main;
+    this.monsterHealthBar.clear();
+    const barWidth = 150;
+    const barHeight = 10;
+    const healthPercent = this.monsterHealth / this.monsterMaxHealth;
+    
+    // Background
+    this.monsterHealthBar.fillStyle(0x333333);
+    this.monsterHealthBar.fillRect(width - 200, 70, barWidth, barHeight);
+    
+    // Health
+    this.monsterHealthBar.fillStyle(0xff4444);
+    this.monsterHealthBar.fillRect(width - 200, 70, barWidth * healthPercent, barHeight);
+    
+    // Border
+    this.monsterHealthBar.lineStyle(2, 0xffffff);
+    this.monsterHealthBar.strokeRect(width - 200, 70, barWidth, barHeight);
+    
+    // Update health text
+    this.monsterHealthText.setText(`${this.monsterHealth}/${this.monsterMaxHealth}`);
+  }
+
+  checkGameOver() {
+    if (this.isGameOver) return;
+
+    if (this.playerHealth <= 0) {
+      this.gameOver(false); // Player died
+    } else if (this.monsterHealth <= 0) {
+      this.gameOver(true); // Player won
+    }
+  }
+
+  gameOver(victory: boolean) {
+    this.isGameOver = true;
+    const { width, height } = this.cameras.main;
+
+    // Dim the screen
+    this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.7);
+
+    if (victory) {
+      // Victory - show vault access
+      this.add.text(width/2, height/2 - 50, '🎉 VICTORY! 🎉', {
+        fontSize: '48px',
+        color: '#00ff00',
+        fontStyle: 'bold'
+      }).setOrigin(0.5);
+      
+      this.add.text(width/2, height/2, 'Monster defeated! You can now approach the vault!', {
+        fontSize: '24px',
+        color: '#ffffff'
+      }).setOrigin(0.5);
+
+      // Make vault interactive
+      this.vault.setInteractive();
+      this.vault.on('pointerdown', () => {
+        this.scene.start('VaultScene', {
+          victory: true,
+          walletAddress: 'test-wallet',
+          monsterDefeated: this.monsterData.type
+        });
+      });
+
+      this.add.text(width/2, height/2 + 100, 'Click the glowing vault to claim your reward! 🏛️', {
+        fontSize: '18px',
+        color: '#ffd700',
+        backgroundColor: '#000000',
+        padding: { x: 10, y: 5 }
+      }).setOrigin(0.5);
+
+      // Add glowing effect to vault
+      this.tweens.add({
+        targets: this.vault,
+        scaleX: 1.6,
+        scaleY: 1.6,
+        alpha: 0.8,
+        duration: 800,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+
+      // Add golden glow effect
+      this.vault.setTint(0xffff00);
+      
+      // Add floating text above vault
+      const vaultText = this.add.text(this.vault.x, this.vault.y - 60, 'CLICK TO OPEN VAULT', {
+        fontSize: '20px',
+        color: '#ffff00',
+        fontStyle: 'bold',
+        backgroundColor: '#000000',
+        padding: { x: 8, y: 4 }
+      }).setOrigin(0.5);
+
+      // Make vault text pulse
+      this.tweens.add({
+        targets: vaultText,
+        scale: 1.1,
+        duration: 600,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+
+    } else {
+      // Defeat
+      this.add.text(width/2, height/2 - 50, '💀 DEFEATED! 💀', {
+        fontSize: '48px',
+        color: '#ff0000',
+        fontStyle: 'bold'
+      }).setOrigin(0.5);
+      
+      this.add.text(width/2, height/2, 'The monster has defeated you!', {
+        fontSize: '24px',
+        color: '#ffffff'
+      }).setOrigin(0.5);
+
+      this.add.text(width/2, height/2 + 50, 'Click to return to Colosseum', {
+        fontSize: '18px',
+        color: '#ffaa00',
+        backgroundColor: '#000000',
+        padding: { x: 10, y: 5 }
+      }).setOrigin(0.5);
+
+      this.input.once('pointerdown', () => {
+        // Pass wallet address back to maintain state
+        this.scene.start('ColosseumScene', {
+          walletAddress: 'test-wallet'
+        });
+      });
+    }
+  }
+}
