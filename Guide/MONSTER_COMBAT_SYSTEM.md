@@ -3,7 +3,7 @@
 
 ## **🎯 Combat Overview**
 
-The combat system is the heart of Aurelius Colosseum. It determines whether a gladiator defeats the current monster and gets a chance at the treasure vault. All combat uses **ProofNetwork VRF** for verifiable randomness.
+The combat system is the heart of Aurelius Colosseum. Players engage in **real-time skill-based combat** on the frontend, which determines whether a gladiator defeats the current monster. Victory grants a chance at the treasure vault using **ProofNetwork VRF** for verifiable randomness.
 
 ## **👹 Monster System**
 
@@ -161,63 +161,63 @@ const MONSTER_TIERS: MonsterTier[] = [
 ];
 ```
 
-## **⚔️ Combat Resolution**
+## **⚔️ Combat Resolution Architecture**
 
-### **Core Combat Logic**
+### **Frontend Combat (Real-Time Skill-Based)**
+
+The frontend handles all real-time combat mechanics:
+- Player movement (WASD/arrows)
+- Attack timing and positioning
+- Health management during combat
+- Victory/defeat determination
+
+### **Backend Validation (Simple Checks)**
 
 ```typescript
-interface CombatParams {
-  gladiatorWallet: PublicKey;
-  entryAmount: number;
-  monster: Monster;
-  vrfSeed: string;
+interface CombatValidation {
+  minimumDuration: 3000;      // 3 seconds minimum
+  damageTolerancePercent: 20; // ±20% of monster HP
 }
 
-class CombatResolver {
-  constructor(private vrfClient: ProofNetworkClient) {}
-  
-  async resolveCombat(params: CombatParams): Promise<CombatResult> {
-    // 1. Calculate gladiator power
-    const gladiatorPower = this.calculateGladiatorPower(params.entryAmount);
+class CombatValidator {
+  validateCombat(
+    sessionId: string,
+    stats: CombatStats,
+    monster: Monster
+  ): ValidationResult {
+    // Check 1: Minimum duration
+    if (stats.duration < 3000) {
+      return { 
+        valid: false, 
+        reason: "Combat too short" 
+      };
+    }
     
-    // 2. Get VRF random values
-    const vrfResult = await this.vrfClient.requestRandomness({
-      seed: params.vrfSeed,
-      numValues: 2 // One for gladiator, one for monster
-    });
+    // Check 2: Damage approximately equals monster HP
+    const expectedDamage = monster.baseHealth;
+    const tolerance = expectedDamage * 0.2;
     
-    // 3. Calculate combat scores
-    const gladiatorRoll = vrfResult.values[0] % 100; // 0-99
-    const monsterRoll = vrfResult.values[1] % 100;   // 0-99
+    if (stats.totalDamageDealt < expectedDamage - tolerance ||
+        stats.totalDamageDealt > expectedDamage + tolerance) {
+      return { 
+        valid: false, 
+        reason: "Invalid damage amount" 
+      };
+    }
     
-    const gladiatorScore = gladiatorPower * (50 + gladiatorRoll) / 100;
-    const monsterScore = params.monster.baseHealth * 
-                        params.monster.tier.defenseMultiplier * 
-                        (50 + monsterRoll) / 100;
-    
-    // 4. Determine outcome
-    const victory = gladiatorScore > monsterScore;
-    
-    return {
-      gladiator: params.gladiatorWallet,
-      monster: params.monster,
-      gladiatorPower,
-      gladiatorRoll,
-      gladiatorScore,
-      monsterRoll, 
-      monsterScore,
-      victory,
-      vrfProof: vrfResult.proof,
-      timestamp: Date.now()
-    };
+    return { valid: true };
   }
-  
-  private calculateGladiatorPower(entryAmount: number): number {
-    // Base power = entry amount * multiplier
-    // Ensures linear scaling (no whale advantage)
-    const BASE_POWER_MULTIPLIER = 1000;
-    return entryAmount * BASE_POWER_MULTIPLIER;
-  }
+}
+
+// Session-based flow
+interface CombatSession {
+  sessionId: string;
+  wallet: string;
+  monster: Monster;
+  startTime: number;
+  expiryTime: number;
+  completed: boolean;
+  validated: boolean;
 }
 ```
 
@@ -408,66 +408,96 @@ interface Achievement {
 
 ## **🔧 Backend Integration**
 
-### **Combat Flow Handler**
+### **Session-Based Combat Flow**
 
 ```typescript
 class CombatHandler {
+  private sessions = new Map<string, CombatSession>();
+  
   constructor(
-    private combatResolver: CombatResolver,
+    private validator: CombatValidator,
     private vaultResolver: VaultCrackResolver,
     private monsterManager: MonsterManager,
     private blockchain: SolanaClient
   ) {}
   
-  async handleCombatRequest(request: CombatRequest): Promise<CombatResponse> {
-    // 1. Validate entry payment
+  // Step 1: Start combat session
+  async startCombat(request: CombatStartRequest): Promise<CombatStartResponse> {
+    // Validate payment (0.01 SOL)
     const payment = await this.blockchain.validatePayment(
       request.wallet,
       request.txSignature,
-      this.monsterManager.currentMonster.tier.entryFee
+      0.01 * LAMPORTS_PER_SOL
     );
     
-    // 2. Resolve combat
-    const combatResult = await this.combatResolver.resolveCombat({
-      gladiatorWallet: request.wallet,
-      entryAmount: payment.amount,
-      monster: this.monsterManager.currentMonster,
-      vrfSeed: `combat_${request.wallet}_${Date.now()}`
-    });
+    // Get current monster from blockchain pot
+    const currentPot = await this.blockchain.getCurrentPot();
+    const monster = this.monsterManager.getMonsterForPot(currentPot);
     
-    // 3. Handle victory
-    if (combatResult.victory) {
-      // Attempt vault crack
-      const vaultResult = await this.vaultResolver.attemptVaultCrack(
-        combatResult,
-        await this.blockchain.getPrizePool()
-      );
-      
-      if (vaultResult.success) {
-        // Process jackpot win
-        await this.processJackpotWin(vaultResult);
-      }
-      
-      // Update monster state
-      this.monsterManager.currentMonster.defeatedBy = request.wallet;
-      
-      // Spawn next monster if vault cracked
-      if (vaultResult.success) {
-        const newPool = 0; // Reset after jackpot
-        this.monsterManager.currentMonster = this.monsterManager.spawnMonster(newPool);
-      }
+    // Create session
+    const session: CombatSession = {
+      sessionId: generateSessionId(),
+      wallet: request.wallet,
+      monster,
+      startTime: Date.now(),
+      expiryTime: Date.now() + 300000, // 5 minutes
+      completed: false,
+      validated: false
+    };
+    
+    this.sessions.set(session.sessionId, session);
+    
+    return {
+      sessionId: session.sessionId,
+      currentMonster: monster,
+      sessionExpiry: session.expiryTime,
+      startTime: session.startTime
+    };
+  }
+  
+  // Step 2: Complete combat
+  async completeCombat(request: CombatCompleteRequest): Promise<CombatCompleteResponse> {
+    const session = this.sessions.get(request.sessionId);
+    
+    if (!session || session.completed) {
+      return { validated: false, canAttemptVault: false };
     }
     
-    // 4. Update stats
-    await this.updatePlayerStats(request.wallet, combatResult);
+    // Validate combat
+    const validationResult = this.validator.validateCombat(
+      request.sessionId,
+      request.combatStats,
+      session.monster
+    );
     
-    // 5. Return response
+    session.completed = true;
+    session.validated = validationResult.valid;
+    
     return {
-      combatResult,
-      vaultResult: combatResult.victory ? vaultResult : null,
-      newMonster: this.monsterManager.currentMonster,
-      prizePool: await this.blockchain.getPrizePool()
+      validated: validationResult.valid,
+      canAttemptVault: validationResult.valid && request.victory,
+      validationErrors: validationResult.valid ? undefined : [validationResult.reason]
     };
+  }
+  
+  // Step 3: Vault crack attempt
+  async attemptVaultCrack(request: VaultCrackRequest): Promise<VaultCrackResponse> {
+    const session = this.sessions.get(request.sessionId);
+    
+    if (!session || !session.validated) {
+      throw new Error("Invalid or unvalidated session");
+    }
+    
+    const vaultResult = await this.vaultResolver.attemptVaultCrack(
+      session.wallet,
+      session.monster,
+      await this.blockchain.getCurrentPot()
+    );
+    
+    // Clean up session
+    this.sessions.delete(request.sessionId);
+    
+    return vaultResult;
   }
 }
 ```
@@ -773,19 +803,25 @@ interface SeasonalProgression {
 
 ### **Anti-Cheat Measures**
 
-1. **All randomness via ProofNetwork VRF**
-   - No client-side RNG
+1. **Session-based validation**
+   - Unique session IDs prevent replay attacks
+   - 5-minute expiry prevents stale sessions
+   - One-time use prevents multiple attempts
+
+2. **Simple combat validation**
+   - Minimum 3-second duration check
+   - Damage must approximately equal monster HP
+   - No complex state tracking needed
+
+3. **VRF for vault fairness**
+   - ProofNetwork ensures random vault outcomes
    - Verifiable proofs stored on-chain
+   - No manipulation of jackpot results
 
-2. **Entry validation**
-   - Verify payment before combat
-   - Check for duplicate entries
-   - Rate limiting per wallet
-
-3. **Combat determinism**
-   - Outcome determined server-side
-   - Client only displays results
-   - No ability to manipulate combat
+4. **Payment verification**
+   - 0.01 SOL payment required before combat
+   - Transaction signature validated on-chain
+   - No free attempts possible
 
 ### **Fair Play Guarantees**
 

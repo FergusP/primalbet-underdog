@@ -2,85 +2,80 @@
 *Ship Monster Combat Jackpot Game in 2-3 Days*
 
 ## **🎯 MVP Philosophy**
-Build the simplest monster combat jackpot game with verifiable outcomes. Focus on core loop: Pay → Fight → Win/Lose → Vault Chance. Every failed attempt grows the pot. Ship fast with engaging visuals.
+Build the simplest monster combat jackpot game with skill-based gameplay. Focus on core loop: Pay → Real-time Combat → Win/Lose → VRF Vault Chance. Frontend handles combat, backend validates. Ship fast with engaging skill-based battles.
 
 ---
 
 ## **✅ MVP FEATURES ONLY (2-3 Days)**
 
-### **1. Core Monster Combat**
-- **Single Monster Tier** - Start with Skeleton only
-- Fixed 10% vault crack chance
-- Entry fee: 0.01 SOL
-- VRF combat resolution (mock for MVP)
-- Jackpot accumulation system
+### **1. Core Game Features**
+- **Fixed 0.01 SOL entry** for all players
+- Frontend skill-based combat (WASD + Space)
+- Backend session validation (3s min, damage check)
+- VRF for vault attempts only (not combat)
+- Blockchain-first pot tracking
 
 ### **2. Smart Contracts (Day 1)**
 ```rust
 // Minimal on-chain state:
-ColosseumState {
-    current_jackpot: u64,
-    current_monster: MonsterType,
+PotState {
+    current_pot: u64,
+    authority: Pubkey,
+    treasury: Pubkey,
     total_entries: u64,
     last_winner: Option<Pubkey>,
 }
 
-PlayerProfile {
-    wallet: Pubkey,
-    total_combats: u32,
-    monsters_defeated: u32,
-    total_winnings: u64,
-}
+// Core instructions only:
+- initialize_pot
+- pay_entry (0.01 SOL)  
+- process_win (authority only)
 
-CombatResult {
-    gladiator: Pubkey,
-    victory: bool,
-    vault_cracked: bool,
-    timestamp: i64,
-}
-
-// Core instructions:
-- initialize_colosseum
-- create_player_profile  
-- enter_colosseum (pay fee)
-- submit_combat_result (backend only)
-- attempt_vault_crack (if victory)
-- claim_jackpot (if cracked)
+// NO player profiles for MVP
+// NO combat results stored
+// Just pot accumulation and payouts
 ```
 
 ### **3. Backend Service (Day 1-2)**
 ```typescript
-// Simple Node.js + Express
-- POST /api/combat/enter
-  - Verify payment on-chain
-  - Generate VRF combat result
-  - Return victory/defeat
+// Session-based validation:
+- POST /api/combat/start
+  - Verify 0.01 SOL payment
+  - Create session (5 min expiry)
+  - Return monster based on pot
   
-- POST /api/vault/attempt (if victory)
-  - VRF roll for crack chance
-  - Process jackpot if won
+- POST /api/combat/complete
+  - Validate duration (>3s)
+  - Validate damage (~monster HP)
+  - Mark session complete
+  
+- POST /api/vault/crack (if validated victory)
+  - VRF roll for vault chance
+  - Trigger blockchain payout if won
   
 - GET /api/state
-  - Current monster & jackpot
-  - Recent combat history
+  - Current pot from blockchain
+  - Monster tier calculation
 ```
 
-### **4. Frontend Visualization (Day 2-3)**
+### **4. Frontend Combat (Day 2-3)**
 ```typescript
-// Phaser.js scenes:
+// Phaser.js real-time combat:
 1. MainScene
-   - Show current monster
-   - Display jackpot counter
-   - Big "FIGHT" button
+   - Current pot display (from blockchain)
+   - Monster preview (based on pot)
+   - "ENTER ARENA" button (0.01 SOL)
    
 2. CombatScene  
-   - Gladiator vs Monster animation
-   - Pre-determined outcome visualization
-   - Health bars (visual only)
+   - Player-controlled gladiator (WASD)
+   - Monster AI with attack patterns
+   - Real health tracking
+   - Attack timing (Space bar)
+   - Victory: Player skill determines outcome
    
-3. VaultScene
-   - Vault crack attempt animation
-   - Success: Gold explosion
+3. VaultScene (on victory)
+   - Backend VRF vault attempt
+   - Success: Jackpot animation
    - Failure: Return to main
 ```
 
@@ -132,47 +127,47 @@ aurelius-colosseum/
 
 **Morning (4 hours):**
 - [ ] Set up Anchor project
-- [ ] Create ColosseumState account
-- [ ] Create PlayerProfile account  
-- [ ] Implement enter_colosseum instruction
-- [ ] Implement submit_combat_result instruction
+- [ ] Create PotState account (minimal)
+- [ ] Implement pay_entry instruction
+- [ ] Implement process_win instruction
+- [ ] Deploy to devnet
 
 **Afternoon (4 hours):**
-- [ ] Implement vault_crack instructions
 - [ ] Set up Node.js backend
-- [ ] Create mock VRF service
-- [ ] API endpoint for combat entry
-- [ ] Deploy contracts to devnet
+- [ ] Implement session management
+- [ ] Create combat validation logic
+- [ ] Mock VRF for vault attempts
+- [ ] Test payment flow
 
 ### **Day 2: Backend Complete & Frontend Start**
 
 **Morning (4 hours):**
-- [ ] Complete combat resolution logic
-- [ ] Vault crack logic with mock VRF
-- [ ] API endpoint for game state
-- [ ] Test full combat flow
+- [ ] Complete session validation
+- [ ] Implement vault VRF logic  
+- [ ] Monster tier calculation
+- [ ] Test validation rules
 - [ ] Deploy backend to Railway
 
 **Afternoon (4 hours):**
 - [ ] Set up Next.js + Phaser
-- [ ] Create main game scene
-- [ ] Implement wallet connection
-- [ ] Basic UI layout
-- [ ] Jackpot display component
+- [ ] Basic player movement (WASD)
+- [ ] Monster AI skeleton
+- [ ] Wallet connection
+- [ ] Pot display from blockchain
 
-### **Day 3: Frontend Polish & Launch**
+### **Day 3: Frontend Combat & Launch**
 
 **Morning (4 hours):**
-- [ ] Combat scene with animations
-- [ ] Vault crack visualization
-- [ ] Sound effects
-- [ ] Mobile responsiveness
-- [ ] Error handling
+- [ ] Complete combat mechanics
+- [ ] Attack animations & damage
+- [ ] Monster AI patterns
+- [ ] Victory/defeat conditions
+- [ ] Session tracking
 
 **Afternoon (2 hours):**
+- [ ] Vault attempt integration
 - [ ] End-to-end testing
 - [ ] Deploy to Vercel
-- [ ] Final integration test
 - [ ] Launch on devnet!
 
 ---
@@ -216,23 +211,27 @@ use anchor_lang::prelude::*;
 pub mod aurelius_colosseum {
     use super::*;
     
-    pub fn enter_colosseum(ctx: Context<EnterColosseum>) -> Result<()> {
-        let colosseum = &mut ctx.accounts.colosseum_state;
-        let player = &mut ctx.accounts.player_profile;
+    pub fn pay_entry(ctx: Context<PayEntry>) -> Result<()> {
+        let pot = &mut ctx.accounts.pot_state;
+        const ENTRY_FEE: u64 = 10_000_000; // 0.01 SOL
         
-        // Transfer entry fee to colosseum
-        let fee = 10_000_000; // 0.01 SOL
-        // ... transfer logic
+        // Transfer to pot
+        let cpi_context = CpiContext::new(
+            ctx.accounts.system_program.to_account_info(),
+            system_program::Transfer {
+                from: ctx.accounts.player.to_account_info(),
+                to: ctx.accounts.pot_state.to_account_info(),
+            },
+        );
+        system_program::transfer(cpi_context, ENTRY_FEE)?;
         
-        // Update state
-        colosseum.current_jackpot += fee;
-        colosseum.total_entries += 1;
-        player.total_combats += 1;
+        // Update pot
+        pot.current_pot += ENTRY_FEE;
+        pot.total_entries += 1;
         
-        emit!(CombatEntered {
-            gladiator: ctx.accounts.player.key(),
-            entry_fee: fee,
-            current_jackpot: colosseum.current_jackpot,
+        emit!(EntryPaid {
+            player: ctx.accounts.player.key(),
+            new_pot: pot.current_pot,
         });
         
         Ok(())
@@ -240,65 +239,130 @@ pub mod aurelius_colosseum {
 }
 ```
 
-### **Backend Combat Resolution**
+### **Backend Session Validation**
 
 ```typescript
-// backend/src/combat/resolver.ts
-export async function resolveCombat(gladiator: string, entryFee: number) {
-  // Mock VRF for MVP
-  const gladiatorScore = Math.random() * 100;
-  const monsterScore = Math.random() * 100;
-  const victory = gladiatorScore > monsterScore;
+// backend/src/validation/combat.ts
+export function validateCombat(
+  session: CombatSession,
+  stats: { duration: number; damageDealt: number }
+): boolean {
+  // Check minimum duration
+  if (stats.duration < 3000) {
+    return false; // Too fast
+  }
   
-  // Submit to blockchain
-  await program.methods
-    .submitCombatResult(victory)
-    .accounts({
-      gladiator: new PublicKey(gladiator),
-      // ... other accounts
-    })
-    .rpc();
-    
-  return {
-    gladiator,
-    victory,
-    gladiatorScore: Math.floor(gladiatorScore),
-    monsterScore: Math.floor(monsterScore),
-    vrfProof: 'mock_proof_' + Date.now()
-  };
+  // Check damage is reasonable
+  const expectedDamage = session.monster.baseHealth;
+  const tolerance = expectedDamage * 0.2; // ±20%
+  
+  if (Math.abs(stats.damageDealt - expectedDamage) > tolerance) {
+    return false; // Suspicious damage
+  }
+  
+  // Session not expired
+  if (Date.now() > session.expiryTime) {
+    return false;
+  }
+  
+  return true;
+}
+
+// Vault attempt (VRF only)
+export async function attemptVault(session: CombatSession) {
+  const roll = Math.random() * 100; // Mock VRF
+  const crackChance = session.monster.vaultCrackChance;
+  return roll < crackChance;
 }
 ```
 
-### **Frontend Combat Scene**
+### **Frontend Real-Time Combat**
 
 ```typescript
 // web/src/game/scenes/CombatScene.ts
 export class CombatScene extends Phaser.Scene {
-  private gladiator!: Phaser.GameObjects.Sprite;
-  private skeleton!: Phaser.GameObjects.Sprite;
+  private player!: Phaser.Physics.Arcade.Sprite;
+  private monster!: Phaser.Physics.Arcade.Sprite;
+  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private playerHP = 100;
+  private monsterHP: number;
+  private sessionId: string;
+  private startTime: number;
+  private damageDealt = 0;
   
-  async create(data: { combatResult: any }) {
-    // Create sprites
-    this.gladiator = this.add.sprite(200, 400, 'gladiator');
-    this.skeleton = this.add.sprite(600, 400, 'skeleton');
+  create(data: { session: any }) {
+    this.sessionId = data.session.sessionId;
+    this.monsterHP = data.session.monster.baseHealth;
+    this.startTime = Date.now();
     
-    // Play combat sequence
-    await this.playCombatSequence(data.combatResult);
+    // Player-controlled gladiator
+    this.player = this.physics.add.sprite(200, 400, 'gladiator');
+    this.monster = this.physics.add.sprite(600, 400, data.session.monster.sprite);
+    
+    // Controls
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.input.keyboard.on('keydown-SPACE', () => this.playerAttack());
+    
+    // Collision
+    this.physics.add.overlap(
+      this.player, 
+      this.monster, 
+      () => this.handleMeleeHit()
+    );
   }
   
-  private async playCombatSequence(result: any) {
-    // 5 exchanges of attacks
-    for (let i = 0; i < 5; i++) {
-      await this.gladiatorAttack();
-      await this.monsterAttack();
+  update() {
+    // Player movement
+    const speed = 160;
+    if (this.cursors.left.isDown) {
+      this.player.setVelocityX(-speed);
+    } else if (this.cursors.right.isDown) {
+      this.player.setVelocityX(speed);
+    } else {
+      this.player.setVelocityX(0);
     }
     
-    // Final outcome
-    if (result.victory) {
-      await this.showVictory();
-      this.scene.start('VaultScene', { canAttempt: true });
+    if (this.cursors.up.isDown) {
+      this.player.setVelocityY(-speed);
+    } else if (this.cursors.down.isDown) {
+      this.player.setVelocityY(speed);
     } else {
-      await this.showDefeat();
+      this.player.setVelocityY(0);
+    }
+    
+    // Check victory/defeat
+    if (this.monsterHP <= 0) {
+      this.endCombat(true);
+    } else if (this.playerHP <= 0) {
+      this.endCombat(false);
+    }
+  }
+  
+  private playerAttack() {
+    // Attack animation and damage
+    const damage = Phaser.Math.Between(15, 25);
+    this.monsterHP -= damage;
+    this.damageDealt += damage;
+    // Show damage number
+  }
+  
+  private async endCombat(victory: boolean) {
+    const duration = Date.now() - this.startTime;
+    
+    // Send to backend for validation
+    const response = await fetch('/api/combat/complete', {
+      method: 'POST',
+      body: JSON.stringify({
+        sessionId: this.sessionId,
+        victory,
+        combatStats: { duration, totalDamageDealt: this.damageDealt }
+      })
+    });
+    
+    const result = await response.json();
+    if (result.validated && victory) {
+      this.scene.start('VaultScene', { sessionId: this.sessionId });
+    } else {
       this.scene.start('MainScene');
     }
   }
@@ -310,10 +374,10 @@ export class CombatScene extends Phaser.Scene {
 ## **🎮 Post-MVP Roadmap**
 
 ### **Week 2: Monster Progression**
-- Add 5 more monster tiers
-- Scale difficulty with jackpot
-- Implement real ProofNetwork VRF
-- Add XP system
+- Dynamic monster tiers based on pot
+- Monster AI improvements
+- Real ProofNetwork VRF integration
+- Player profiles & stats
 
 ### **Week 3: Polish**
 - Better animations
@@ -349,11 +413,11 @@ export class CombatScene extends Phaser.Scene {
 
 ## **🚨 Common Pitfalls to Avoid**
 
-1. **Don't add multiple monsters** - One is enough for MVP
-2. **Don't implement real VRF yet** - Mock is fine initially  
-3. **Don't optimize performance** - Make it work first
-4. **Don't add XP/progression** - Core loop only
-5. **Skip complex animations** - Basic is better than broken
+1. **Don't store combat on-chain** - Just pot and winners
+2. **Don't use VRF for combat** - Only for vault attempts
+3. **Don't make complex validation** - Simple duration/damage checks
+4. **Don't add player profiles yet** - Just pot tracking
+5. **Keep combat simple** - Basic movement and attacks
 
 ---
 

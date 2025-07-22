@@ -2,15 +2,15 @@
 *Anchor Framework for Monster Combat Jackpot System*
 
 <!-- MVP:SUMMARY -->
-## **🚀 MVP Smart Contract Features (MONSTER COMBAT)**
+## **🚀 MVP Smart Contract Features (SIMPLIFIED)**
 For the 2-3 day MVP, implement:
-- **Player Profile**: Track combat wins, vault cracks, total earnings
-- **Colosseum State**: Global jackpot pool tracking
-- **Combat Result**: Store VRF combat outcomes
-- **Core Instructions**: create_player, enter_colosseum, submit_combat_result, attempt_vault_crack
-- **Prize Pool**: Accumulates from failed attempts, pays out on vault crack
+- **Pot State**: Global jackpot tracking only
+- **Core Instructions**: pay_entry, process_win
+- **Prize Pool**: 0.01 SOL entries accumulate
+- **Winner Payout**: 90% to winner, 10% platform
+- **Minimal Storage**: Just pot amount and last winner
 
-Skip for MVP: XP system, achievements, seasonal events
+Skip for MVP: Player profiles, combat results, XP system
 <!-- MVP:END -->
 
 ## **📁 Contract Structure**
@@ -45,32 +45,36 @@ contracts/
 ## **🔑 Core Accounts**
 
 <!-- MVP:START -->
-### **1. Program Config (Singleton) - MVP VERSION**
+### **1. Pot State (Singleton) - SIMPLIFIED MVP**
 
 ```rust
-// state/config.rs
+// state/pot.rs
 use anchor_lang::prelude::*;
 
 #[account]
-pub struct ProgramConfig {
+pub struct PotState {
+    pub current_pot: u64,            // Current jackpot amount
     pub authority: Pubkey,           // Admin wallet
-    pub treasury: Pubkey,            // Fee collection
-    pub game_server: Pubkey,         // Authorized backend server
-    pub fee_percentage: u8,          // Platform fee (10%)
-    pub is_paused: bool,             // Emergency pause
-    pub total_jackpots_won: u64,     // Lifetime jackpots cracked
-    pub total_volume: u64,           // Total SOL processed
+    pub treasury: Pubkey,            // Platform fee collection
+    pub total_entries: u64,          // Lifetime entries
+    pub total_payouts: u64,          // Lifetime payouts
+    pub last_winner: Option<Pubkey>, // Last jackpot winner
+    pub last_win_amount: u64,        // Last win amount
+    pub last_win_time: i64,          // Last win timestamp
 }
 
-impl ProgramConfig {
-    pub const SIZE: usize = 8 +     // discriminator
+impl PotState {
+    pub const SIZE: usize = 8 +      // discriminator
+        8 +                          // current_pot
         32 +                         // authority
-        32 +                         // treasury
-        32 +                         // game_server
-        1 +                          // fee_percentage
-        1 +                          // is_paused
-        8 +                          // total_jackpots_won
-        8;                           // total_volume
+        32 +                         // treasury  
+        8 +                          // total_entries
+        8 +                          // total_payouts
+        33 +                         // last_winner (Option<Pubkey>)
+        8 +                          // last_win_amount
+        8;                           // last_win_time
+        
+    pub const SEED_PREFIX: &'static [u8] = b"pot";
 }
 ```
 <!-- MVP:END -->
@@ -84,99 +88,40 @@ pub total_volume: u64,           // Total SOL processed
 ```
 <!-- POST-MVP:END -->
 
-### **2. Player Profile PDA**
+<!-- POST-MVP:PHASE2 -->
+### **2. Player Profile PDA (Future)**
 
-<!-- MVP:START -->
 ```rust
-// state/player.rs - MVP VERSION
+// state/player.rs - NOT IN MVP
+// Future implementation for tracking player stats
 #[account]
 pub struct PlayerProfile {
-    pub authority: Pubkey,           // Player wallet
-    pub total_combats: u32,          // Total monster fights
-    pub monsters_defeated: u32,      // Successful kills
-    pub vault_attempts: u32,         // Times tried to crack vault
-    pub vaults_cracked: u32,         // Successful vault cracks
-    pub total_winnings: u64,         // Total SOL won from jackpots
-    pub total_spent: u64,            // Total SOL spent on entry fees
-    pub last_combat: i64,            // Timestamp of last fight
-}
-
-impl PlayerProfile {
-    pub const SIZE: usize = 8 +      // discriminator
-        32 +                         // authority
-        4 +                          // total_combats
-        4 +                          // monsters_defeated
-        4 +                          // vault_attempts
-        4 +                          // vaults_cracked
-        8 +                          // total_winnings
-        8 +                          // total_spent
-        8;                           // last_combat
-        
-    pub const SEED_PREFIX: &'static [u8] = b"player";
-}
-```
-<!-- MVP:END -->
-
-<!-- POST-MVP:PHASE2 -->
-```rust
-// Additional fields for full version:
-pub total_wagered: u64,
-pub last_game: i64,              // Timestamp
-pub highest_streak: u16,
-pub current_streak: u16,
-pub join_date: i64,
-pub xp: u64,                     // Total XP earned
-pub level: u8,                   // Current level (0-255)
-pub xp_multiplier: u16,          // Base 100 = 1x (for events)
-
-pub fn calculate_level(xp: u64) -> u8 {
-    // Level = floor(sqrt(XP / 100))
-    let level = ((xp / 100) as f64).sqrt().floor() as u8;
-    level.min(255) // Cap at 255
+    pub authority: Pubkey,
+    pub total_entries: u64,
+    pub total_wins: u64,
+    pub total_winnings: u64,
+    pub total_spent: u64,
+    pub last_play: i64,
 }
 ```
 <!-- POST-MVP:END -->
 
-### **3. Colosseum State (Global Jackpot)**
+<!-- POST-MVP:PHASE2 -->
+### **3. Combat Session (Future)**
 
-<!-- MVP:START -->
 ```rust
-// state/colosseum.rs - MVP VERSION
+// state/session.rs - NOT IN MVP
+// Future implementation for session validation
 #[account]
-pub struct ColosseumState {
-    pub current_jackpot: u64,        // Current prize pool
-    pub current_monster: MonsterType, // Active monster type
-    pub monster_health: u32,         // For tracking damage (visual)
-    pub total_entries: u64,          // Lifetime combat entries
-    pub last_winner: Option<Pubkey>, // Last vault cracker
-    pub last_win_amount: u64,        // Last jackpot amount
-    pub last_win_time: i64,          // When last won
-}
-
-impl ColosseumState {
-    pub const SIZE: usize = 8 +      // discriminator
-        8 +                          // current_jackpot
-        1 +                          // current_monster (enum)
-        4 +                          // monster_health
-        8 +                          // total_entries
-        33 +                         // last_winner (Option<Pubkey>)
-        8 +                          // last_win_amount
-        8;                           // last_win_time
-        
-    pub const SEED_PREFIX: &'static [u8] = b"colosseum";
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq)]
-pub enum MonsterType {
-    Skeleton,
-    Goblin,
-    Minotaur,
-    Hydra,
-    Dragon,
-    Titan,
+pub struct CombatSession {
+    pub session_id: [u8; 16],
+    pub player: Pubkey,
+    pub created_at: i64,
+    pub expires_at: i64,
+    pub completed: bool,
 }
 ```
-<!-- MVP:END -->
+<!-- POST-MVP:END -->
 
 <!-- POST-MVP:PHASE2 -->
 ```rust
@@ -275,39 +220,28 @@ impl CombatResult {
 ## **📝 Core Instructions**
 
 <!-- MVP:START -->
-### **1. Initialize Program**
+### **1. Initialize Pot**
 
 ```rust
-// instructions/initialize.rs - MVP VERSION
+// instructions/initialize.rs - SIMPLIFIED MVP
 pub fn initialize(
     ctx: Context<Initialize>,
     treasury: Pubkey,
-    game_server: Pubkey,
 ) -> Result<()> {
-    let program_config = &mut ctx.accounts.program_config;
+    let pot = &mut ctx.accounts.pot_state;
     
-    program_config.authority = ctx.accounts.authority.key();
-    program_config.treasury = treasury;
-    program_config.game_server = game_server;
-    program_config.fee_percentage = 10; // 10% platform fee
-    program_config.is_paused = false;
-    program_config.total_jackpots_won = 0;
-    program_config.total_volume = 0;
+    pot.current_pot = 0;
+    pot.authority = ctx.accounts.authority.key();
+    pot.treasury = treasury;
+    pot.total_entries = 0;
+    pot.total_payouts = 0;
+    pot.last_winner = None;
+    pot.last_win_amount = 0;
+    pot.last_win_time = 0;
     
-    // Initialize colosseum state
-    let colosseum = &mut ctx.accounts.colosseum_state;
-    colosseum.current_jackpot = 0;
-    colosseum.current_monster = MonsterType::Skeleton; // Start with easiest
-    colosseum.monster_health = 100;
-    colosseum.total_entries = 0;
-    colosseum.last_winner = None;
-    colosseum.last_win_amount = 0;
-    colosseum.last_win_time = 0;
-    
-    emit!(ProgramInitialized {
-        authority: program_config.authority,
-        treasury: program_config.treasury,
-        game_server: program_config.game_server,
+    emit!(PotInitialized {
+        authority: pot.authority,
+        treasury: pot.treasury,
     });
     
     Ok(())
@@ -318,20 +252,11 @@ pub struct Initialize<'info> {
     #[account(
         init,
         payer = authority,
-        space = ProgramConfig::SIZE,
-        seeds = [b"config"],
+        space = PotState::SIZE,
+        seeds = [PotState::SEED_PREFIX],
         bump
     )]
-    pub program_config: Account<'info, ProgramConfig>,
-    
-    #[account(
-        init,
-        payer = authority,
-        space = ColosseumState::SIZE,
-        seeds = [ColosseumState::SEED_PREFIX],
-        bump
-    )]
-    pub colosseum_state: Account<'info, ColosseumState>,
+    pub pot_state: Account<'info, PotState>,
     
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -388,25 +313,50 @@ pub struct Initialize<'info> {
 ```
 
 <!-- MVP:START -->
-### **2. Create Player Profile**
+### **2. Pay Entry**
 
 ```rust
-// instructions/player.rs - MVP VERSION
-pub fn create_player_profile(ctx: Context<CreatePlayer>) -> Result<()> {
-    let player = &mut ctx.accounts.player_profile;
+// instructions/entry.rs - SIMPLIFIED MVP
+pub fn pay_entry(ctx: Context<PayEntry>) -> Result<()> {
+    let pot = &mut ctx.accounts.pot_state;
     let clock = Clock::get()?;
     
-    player.authority = ctx.accounts.player.key();
-    player.total_games = 0;
-    player.games_won = 0;
-    player.total_earnings = 0;
+    // Fixed 0.01 SOL entry
+    const ENTRY_FEE: u64 = 10_000_000; // 0.01 SOL
     
-    emit!(PlayerCreated {
-        player: player.authority,
+    // Transfer to pot
+    let cpi_context = CpiContext::new(
+        ctx.accounts.system_program.to_account_info(),
+        system_program::Transfer {
+            from: ctx.accounts.player.to_account_info(),
+            to: ctx.accounts.pot_state.to_account_info(),
+        },
+    );
+    system_program::transfer(cpi_context, ENTRY_FEE)?;
+    
+    // Update pot state
+    pot.current_pot += ENTRY_FEE;
+    pot.total_entries += 1;
+    
+    emit!(EntryPaid {
+        player: ctx.accounts.player.key(),
+        amount: ENTRY_FEE,
+        new_pot: pot.current_pot,
         timestamp: clock.unix_timestamp,
     });
     
     Ok(())
+}
+
+#[derive(Accounts)]
+pub struct PayEntry<'info> {
+    #[account(mut)]
+    pub pot_state: Account<'info, PotState>,
+    
+    #[account(mut)]
+    pub player: Signer<'info>,
+    
+    pub system_program: Program<'info, System>,
 }
 ```
 <!-- MVP:END -->
@@ -458,90 +408,68 @@ pub struct CreatePlayer<'info> {
 ```
 
 <!-- MVP:START -->
-### **3. Enter Colosseum**
+### **3. Process Win**
 
 ```rust
-// instructions/combat.rs - MVP VERSION
-pub fn enter_colosseum(
-    ctx: Context<EnterColosseum>,
-    combat_id: [u8; 16],
+// instructions/win.rs - SIMPLIFIED MVP
+pub fn process_win(
+    ctx: Context<ProcessWin>,
+    winner: Pubkey,
 ) -> Result<()> {
-    let config = &ctx.accounts.program_config;
-    require!(!config.is_paused, ErrorCode::ProgramPaused);
+    // Only authority can process wins
+    require!(
+        ctx.accounts.authority.key() == ctx.accounts.pot_state.authority,
+        ErrorCode::Unauthorized
+    );
     
-    let colosseum = &mut ctx.accounts.colosseum_state;
-    let player_profile = &mut ctx.accounts.player_profile;
+    let pot = &mut ctx.accounts.pot_state;
     let clock = Clock::get()?;
     
-    // Get entry fee based on current monster
-    let entry_fee = get_monster_entry_fee(&colosseum.current_monster);
+    // Calculate payout (90% to winner, 10% platform)
+    let total_pot = pot.current_pot;
+    let platform_fee = total_pot / 10; // 10%
+    let prize = total_pot - platform_fee;
     
-    // Transfer entry fee to colosseum PDA
-    let cpi_context = CpiContext::new(
-        ctx.accounts.system_program.to_account_info(),
-        system_program::Transfer {
-            from: ctx.accounts.player.to_account_info(),
-            to: ctx.accounts.colosseum_state.to_account_info(),
-        },
-    );
-    system_program::transfer(cpi_context, entry_fee)?;
+    // Transfer prize to winner
+    **pot.to_account_info().try_borrow_mut_lamports()? -= prize;
+    **ctx.accounts.winner.try_borrow_mut_lamports()? += prize;
     
-    // Update colosseum state
-    colosseum.current_jackpot += entry_fee;
-    colosseum.total_entries += 1;
+    // Transfer platform fee
+    **pot.to_account_info().try_borrow_mut_lamports()? -= platform_fee;
+    **ctx.accounts.treasury.try_borrow_mut_lamports()? += platform_fee;
     
-    // Update player stats
-    player_profile.total_combats += 1;
-    player_profile.total_spent += entry_fee;
-    player_profile.last_combat = clock.unix_timestamp;
+    // Update pot state
+    pot.last_winner = Some(winner);
+    pot.last_win_amount = total_pot;
+    pot.last_win_time = clock.unix_timestamp;
+    pot.total_payouts += total_pot;
+    pot.current_pot = 0; // Reset pot
     
-    // Update program stats
-    let config = &mut ctx.accounts.program_config;
-    config.total_volume += entry_fee;
-    
-    emit!(GladiatorEntered {
-        combat_id,
-        gladiator: ctx.accounts.player.key(),
-        monster: colosseum.current_monster.clone(),
-        entry_fee,
-        current_jackpot: colosseum.current_jackpot,
+    emit!(JackpotWon {
+        winner,
+        total_pot,
+        prize,
+        platform_fee,
         timestamp: clock.unix_timestamp,
     });
     
     Ok(())
 }
 
-fn get_monster_entry_fee(monster: &MonsterType) -> u64 {
-    match monster {
-        MonsterType::Skeleton => 10_000_000,     // 0.01 SOL
-        MonsterType::Goblin => 20_000_000,       // 0.02 SOL
-        MonsterType::Minotaur => 50_000_000,     // 0.05 SOL
-        MonsterType::Hydra => 100_000_000,       // 0.1 SOL
-        MonsterType::Dragon => 250_000_000,      // 0.25 SOL
-        MonsterType::Titan => 500_000_000,       // 0.5 SOL
-    }
-}
-
 #[derive(Accounts)]
-#[instruction(combat_id: [u8; 16])]
-pub struct EnterColosseum<'info> {
+pub struct ProcessWin<'info> {
     #[account(mut)]
-    pub colosseum_state: Account<'info, ColosseumState>,
+    pub pot_state: Account<'info, PotState>,
     
-    #[account(
-        mut,
-        seeds = [PlayerProfile::SEED_PREFIX, player.key().as_ref()],
-        bump
-    )]
-    pub player_profile: Account<'info, PlayerProfile>,
-    
+    /// CHECK: Winner wallet
     #[account(mut)]
-    pub program_config: Account<'info, ProgramConfig>,
+    pub winner: AccountInfo<'info>,
     
+    /// CHECK: Treasury wallet
     #[account(mut)]
-    pub player: Signer<'info>,
+    pub treasury: AccountInfo<'info>,
     
-    pub system_program: Program<'info, System>,
+    pub authority: Signer<'info>,
 }
 ```
 <!-- MVP:END -->
@@ -592,224 +520,17 @@ pub fn create_game(
 <!-- POST-MVP:END -->
 
 <!-- MVP:START -->
-### **4. Submit Combat Result**
+<!-- POST-MVP:PHASE2 -->
+### **4. Future Instructions**
 
 ```rust
-// instructions/combat.rs - MVP VERSION
-pub fn submit_combat_result(
-    ctx: Context<SubmitCombatResult>,
-    combat_id: [u8; 16],
-    gladiator_power: u64,
-    gladiator_score: u64,
-    monster_score: u64,
-    victory: bool,
-    vrf_proof: [u8; 64],
-) -> Result<()> {
-    // Verify server authority
-    require!(
-        ctx.accounts.server.key() == ctx.accounts.program_config.game_server,
-        ErrorCode::UnauthorizedServer
-    );
-    
-    let combat_result = &mut ctx.accounts.combat_result;
-    let player_profile = &mut ctx.accounts.player_profile;
-    let colosseum = &ctx.accounts.colosseum_state;
-    let clock = Clock::get()?;
-    
-    // Store combat result
-    combat_result.combat_id = combat_id;
-    combat_result.gladiator = ctx.accounts.gladiator.key();
-    combat_result.monster = colosseum.current_monster.clone();
-    combat_result.entry_fee = get_monster_entry_fee(&colosseum.current_monster);
-    combat_result.gladiator_power = gladiator_power;
-    combat_result.gladiator_score = gladiator_score;
-    combat_result.monster_score = monster_score;
-    combat_result.victory = victory;
-    combat_result.vrf_proof = vrf_proof;
-    combat_result.timestamp = clock.unix_timestamp;
-    combat_result.vault_attempted = false;
-    combat_result.vault_cracked = false;
-    
-    // Update player stats
-    if victory {
-        player_profile.monsters_defeated += 1;
-    }
-    
-    emit!(CombatResolved {
-        combat_id,
-        gladiator: ctx.accounts.gladiator.key(),
-        monster: colosseum.current_monster.clone(),
-        victory,
-        gladiator_score,
-        monster_score,
-        timestamp: clock.unix_timestamp,
-    });
-    
-    Ok(())
-}
-
-#[derive(Accounts)]
-#[instruction(combat_id: [u8; 16])]
-pub struct SubmitCombatResult<'info> {
-    #[account(
-        init,
-        payer = server,
-        space = CombatResult::SIZE,
-        seeds = [CombatResult::SEED_PREFIX, combat_id.as_ref()],
-        bump
-    )]
-    pub combat_result: Account<'info, CombatResult>,
-    
-    #[account(
-        mut,
-        seeds = [PlayerProfile::SEED_PREFIX, gladiator.key().as_ref()],
-        bump
-    )]
-    pub player_profile: Account<'info, PlayerProfile>,
-    
-    pub colosseum_state: Account<'info, ColosseumState>,
-    pub program_config: Account<'info, ProgramConfig>,
-    
-    /// CHECK: The gladiator wallet
-    pub gladiator: AccountInfo<'info>,
-    
-    #[account(mut)]
-    pub server: Signer<'info>,
-    
-    pub system_program: Program<'info, System>,
-}
+// Future instructions for post-MVP:
+// - create_player_profile
+// - submit_session_result  
+// - claim_rewards
+// - update_monster_tier
 ```
-
-### **5. Attempt Vault Crack**
-
-```rust
-// instructions/combat.rs - MVP VERSION
-pub fn attempt_vault_crack(
-    ctx: Context<AttemptVaultCrack>,
-    vrf_roll: u8, // 0-99 from VRF
-    vrf_proof: [u8; 64],
-) -> Result<()> {
-    // Verify server authority
-    require!(
-        ctx.accounts.server.key() == ctx.accounts.program_config.game_server,
-        ErrorCode::UnauthorizedServer
-    );
-    
-    let combat_result = &mut ctx.accounts.combat_result;
-    let colosseum = &mut ctx.accounts.colosseum_state;
-    let player_profile = &mut ctx.accounts.player_profile;
-    
-    // Verify victory and not already attempted
-    require!(combat_result.victory, ErrorCode::MustWinFirst);
-    require!(!combat_result.vault_attempted, ErrorCode::AlreadyAttempted);
-    
-    // Mark as attempted
-    combat_result.vault_attempted = true;
-    player_profile.vault_attempts += 1;
-    
-    // Get crack chance based on monster
-    let crack_chance = get_monster_crack_chance(&combat_result.monster);
-    let success = vrf_roll < crack_chance;
-    
-    if success {
-        // Success! Pay out jackpot
-        combat_result.vault_cracked = true;
-        player_profile.vaults_cracked += 1;
-        
-        let jackpot = colosseum.current_jackpot;
-        let platform_fee = (jackpot * ctx.accounts.program_config.fee_percentage as u64) / 100;
-        let prize = jackpot - platform_fee;
-        
-        // Transfer prize to winner
-        **colosseum.to_account_info().try_borrow_mut_lamports()? -= prize;
-        **ctx.accounts.gladiator.try_borrow_mut_lamports()? += prize;
-        
-        // Transfer platform fee
-        **colosseum.to_account_info().try_borrow_mut_lamports()? -= platform_fee;
-        **ctx.accounts.treasury.try_borrow_mut_lamports()? += platform_fee;
-        
-        // Update player and program stats
-        player_profile.total_winnings += prize;
-        let config = &mut ctx.accounts.program_config;
-        config.total_jackpots_won += 1;
-        
-        // Reset colosseum state
-        colosseum.current_jackpot = 0;
-        colosseum.current_monster = MonsterType::Skeleton; // Back to weakest
-        colosseum.monster_health = 100;
-        colosseum.last_winner = Some(ctx.accounts.gladiator.key());
-        colosseum.last_win_amount = jackpot;
-        colosseum.last_win_time = Clock::get()?.unix_timestamp;
-        
-        emit!(JackpotWon {
-            winner: ctx.accounts.gladiator.key(),
-            monster: combat_result.monster.clone(),
-            jackpot_amount: jackpot,
-            prize_after_fee: prize,
-            vrf_roll,
-            crack_chance,
-            timestamp: Clock::get()?.unix_timestamp,
-        });
-    } else {
-        // Failed - jackpot continues to grow
-        emit!(VaultCrackFailed {
-            gladiator: ctx.accounts.gladiator.key(),
-            monster: combat_result.monster.clone(),
-            vrf_roll,
-            crack_chance,
-            current_jackpot: colosseum.current_jackpot,
-        });
-    }
-    
-    Ok(())
-}
-
-fn get_monster_crack_chance(monster: &MonsterType) -> u8 {
-    match monster {
-        MonsterType::Skeleton => 10,    // 10% chance
-        MonsterType::Goblin => 20,      // 20% chance
-        MonsterType::Minotaur => 35,    // 35% chance
-        MonsterType::Hydra => 50,       // 50% chance
-        MonsterType::Dragon => 70,      // 70% chance
-        MonsterType::Titan => 90,       // 90% chance
-    }
-}
-
-#[derive(Accounts)]
-pub struct AttemptVaultCrack<'info> {
-    #[account(
-        mut,
-        seeds = [CombatResult::SEED_PREFIX, combat_result.combat_id.as_ref()],
-        bump,
-        has_one = gladiator
-    )]
-    pub combat_result: Account<'info, CombatResult>,
-    
-    #[account(mut)]
-    pub colosseum_state: Account<'info, ColosseumState>,
-    
-    #[account(
-        mut,
-        seeds = [PlayerProfile::SEED_PREFIX, gladiator.key().as_ref()],
-        bump
-    )]
-    pub player_profile: Account<'info, PlayerProfile>,
-    
-    #[account(mut)]
-    pub program_config: Account<'info, ProgramConfig>,
-    
-    /// CHECK: The gladiator wallet
-    #[account(mut)]
-    pub gladiator: AccountInfo<'info>,
-    
-    /// CHECK: Treasury wallet
-    #[account(mut)]
-    pub treasury: AccountInfo<'info>,
-    
-    #[account(mut)]
-    pub server: Signer<'info>,
-}
-```
+<!-- POST-MVP:END -->
 <!-- MVP:END -->
 
 <!-- POST-MVP:PHASE3 -->
@@ -906,49 +627,6 @@ fn calculate_entry_fee(game: &GameEscrow, warrior_count: u8, current_time: i64) 
 ```
 <!-- POST-MVP:END -->
 
-### **6. Update Monster (After Failed Attempts)**
-
-```rust
-// instructions/admin.rs - MVP VERSION
-pub fn update_monster(
-    ctx: Context<UpdateMonster>,
-    new_monster: MonsterType,
-    new_health: u32,
-) -> Result<()> {
-    // Verify server authority
-    require!(
-        ctx.accounts.server.key() == ctx.accounts.program_config.game_server,
-        ErrorCode::UnauthorizedServer
-    );
-    
-    let colosseum = &mut ctx.accounts.colosseum_state;
-    let clock = Clock::get()?;
-    
-    // Update monster based on current jackpot size
-    colosseum.current_monster = new_monster.clone();
-    colosseum.monster_health = new_health;
-    
-    emit!(MonsterSpawned {
-        monster_type: new_monster,
-        health: new_health,
-        jackpot_size: colosseum.current_jackpot,
-        timestamp: clock.unix_timestamp,
-    });
-    
-    Ok(())
-}
-
-#[derive(Accounts)]
-pub struct UpdateMonster<'info> {
-    #[account(mut)]
-    pub colosseum_state: Account<'info, ColosseumState>,
-    
-    pub program_config: Account<'info, ProgramConfig>,
-    
-    #[account(mut)]
-    pub server: Signer<'info>,
-}
-```
 
 <!-- POST-MVP:PHASE2 -->
 ### **5. End Game (Multi-Winner Support)**
@@ -1100,37 +778,22 @@ pub struct UpdatePlayerXP<'info> {
 ## **⚠️ Error Handling**
 
 ```rust
-// errors.rs
+// errors.rs - SIMPLIFIED MVP
 use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum ErrorCode {
-    #[msg("Program is currently paused")]
-    ProgramPaused,
+    #[msg("Unauthorized")]
+    Unauthorized,
     
-    #[msg("Must defeat monster before attempting vault")]
-    MustWinFirst,
-    
-    #[msg("Vault crack already attempted for this combat")]
-    AlreadyAttempted,
-    
-    #[msg("Unauthorized server")]
-    UnauthorizedServer,
-    
-    #[msg("Invalid monster type")]
-    InvalidMonster,
-    
-    #[msg("Insufficient funds for entry")]
+    #[msg("Insufficient funds")]
     InsufficientFunds,
     
-    #[msg("Player profile not found")]
-    PlayerNotFound,
+    #[msg("Invalid winner")]
+    InvalidWinner,
     
-    #[msg("Combat result not found")]
-    CombatNotFound,
-    
-    #[msg("Invalid VRF proof")]
-    InvalidVRFProof,
+    #[msg("Pot is empty")]
+    EmptyPot,
 }
 ```
 
@@ -1210,100 +873,68 @@ describe("aurelius-colosseum", () => {
   anchor.setProvider(provider);
   
   const program = anchor.workspace.AureliusColosseum as Program<AureliusColosseum>;
-  const gameServer = anchor.web3.Keypair.generate();
   
-  it("Initializes colosseum", async () => {
+  it("Initializes pot", async () => {
     const treasury = anchor.web3.Keypair.generate();
     
     await program.methods
-      .initialize(treasury.publicKey, gameServer.publicKey)
+      .initialize(treasury.publicKey)
       .accounts({
         authority: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
       })
       .rpc();
     
-    // Verify colosseum state
-    const [colosseumPDA] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("colosseum")],
+    // Verify pot state
+    const [potPDA] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("pot")],
       program.programId
     );
     
-    const colosseum = await program.account.colosseumState.fetch(colosseumPDA);
-    expect(colosseum.currentJackpot.toNumber()).to.equal(0);
-    expect(colosseum.currentMonster).to.deep.equal({ skeleton: {} });
+    const pot = await program.account.potState.fetch(potPDA);
+    expect(pot.currentPot.toNumber()).to.equal(0);
+    expect(pot.totalEntries.toNumber()).to.equal(0);
   });
   
-  it("Player enters colosseum and fights monster", async () => {
+  it("Player pays entry and wins jackpot", async () => {
     const player = anchor.web3.Keypair.generate();
-    const combatId = [...Buffer.from("test-combat-001")];
     
     // Airdrop SOL
     await provider.connection.confirmTransaction(
-      await provider.connection.requestAirdrop(player.publicKey, 10 * LAMPORTS_PER_SOL)
+      await provider.connection.requestAirdrop(player.publicKey, 1 * LAMPORTS_PER_SOL)
     );
     
-    // Create player profile
-    const [playerPDA] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("player"), player.publicKey.toBuffer()],
-      program.programId
-    );
+    // Pay entry (3 times to build pot)
+    for (let i = 0; i < 3; i++) {
+      await program.methods
+        .payEntry()
+        .accounts({
+          player: player.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .signers([player])
+        .rpc();
+    }
     
+    // Verify pot has 0.03 SOL
+    let pot = await program.account.potState.fetch(potPDA);
+    expect(pot.currentPot.toNumber()).to.equal(30_000_000);
+    
+    // Process win
     await program.methods
-      .createPlayerProfile()
+      .processWin(player.publicKey)
       .accounts({
-        playerProfile: playerPDA,
-        player: player.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
+        winner: player.publicKey,
+        treasury: treasury.publicKey,
+        authority: provider.wallet.publicKey,
       })
-      .signers([player])
       .rpc();
     
-    // Enter colosseum
-    await program.methods
-      .enterColosseum(combatId)
-      .accounts({
-        player: player.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .signers([player])
-      .rpc();
-    
-    // Simulate combat result (victory)
-    const vrfProof = [...Buffer.alloc(64).fill(1)];
-    await program.methods
-      .submitCombatResult(
-        combatId,
-        new anchor.BN(10000), // gladiator power
-        new anchor.BN(150),   // gladiator score
-        new anchor.BN(100),   // monster score
-        true,                 // victory
-        vrfProof
-      )
-      .accounts({
-        gladiator: player.publicKey,
-        server: gameServer.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .signers([gameServer])
-      .rpc();
-    
-    // Attempt vault crack
-    await program.methods
-      .attemptVaultCrack(
-        5,  // roll < 10% chance for skeleton
-        vrfProof
-      )
-      .accounts({
-        gladiator: player.publicKey,
-        server: gameServer.publicKey,
-      })
-      .signers([gameServer])
-      .rpc();
-    
-    // Verify jackpot was won
-    const colosseum = await program.account.colosseumState.fetch(colosseumPDA);
-    expect(colosseum.lastWinner.toBase58()).to.equal(player.publicKey.toBase58());
+    // Verify pot reset and winner recorded
+    pot = await program.account.potState.fetch(potPDA);
+    expect(pot.currentPot.toNumber()).to.equal(0);
+    expect(pot.lastWinner.toBase58()).to.equal(player.publicKey.toBase58());
+    expect(pot.lastWinAmount.toNumber()).to.equal(30_000_000);
   });
 });
 ```
@@ -1324,12 +955,12 @@ describe("aurelius-colosseum", () => {
 
 <!-- MVP:START -->
 ### **MVP Deployment**
-- [ ] All combat tests passing
+- [ ] Pot initialization tested
+- [ ] Entry payment tested
+- [ ] Win processing tested
 - [ ] Treasury wallet secured  
-- [ ] Game server key protected
-- [ ] VRF integration tested
-- [ ] Jackpot payout verified
 - [ ] Deploy to devnet first
+- [ ] Verify rent exemption
 <!-- MVP:END -->
 
 <!-- POST-MVP:PHASE4 -->

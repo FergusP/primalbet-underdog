@@ -10,30 +10,30 @@
 ## **🔥 Core Game Loop**
 
 ```
-PAY SOL → ENTER COLOSSEUM → FIGHT MONSTER → WIN/DIE → CRACK VAULT OR GROW POT
-    ↑                                                              ↓
-    ←←←←←←← FOMO KICKS IN (Bigger Pot, Harder Monster) ←←←←←←←←←←←
+PAY 0.01 SOL → ENTER ARENA → SKILL-BASED COMBAT → WIN/LOSE → VRF VAULT CRACK
+      ↑                                                              ↓
+      ←←←←←←← FOMO KICKS IN (Bigger Pot, Harder Monster) ←←←←←←←←←←←
 ```
 
 ### **Step-by-Step Flow**
 
 1. **💰 Pay to Enter** 
-   - Entry fee: 0.01-0.1 SOL (scales with current monster)
-   - 90% goes to prize pool, 10% platform fee
-   - Each entry spawns your gladiator
+   - Fixed entry fee: 0.01 SOL per attempt
+   - 100% goes to prize pool (platform fee from jackpot wins)
+   - Payment validates combat session
 
-2. **⚔️ Fight Current Monster**
+2. **⚔️ Real-Time Combat**
    - Monster type based on current prize pool size
-   - Combat resolved via ProofNetwork VRF
-   - Your gladiator power = entry amount × skill factor
+   - **Player-controlled combat** with movement and attacks
+   - Skill determines victory (dodging, timing, positioning)
 
-3. **🎲 Combat Resolution**
+3. **🎮 Combat Resolution**
    - **Victory:** Proceed to vault crack attempt
-   - **Death:** Entry fee grows the prize pool
-   - All combat is verifiably random (VRF)
+   - **Defeat:** Entry fee grows the prize pool
+   - Frontend determines outcome, backend validates
 
 4. **🏆 Vault Crack Attempt** (if victorious)
-   - Roll for jackpot based on monster difficulty
+   - **VRF-based** roll for jackpot chance
    - Success = claim entire prize pool!
    - Failure = survive but no prize (pool remains)
 
@@ -56,42 +56,46 @@ interface MonsterTier {
   entryFee: number;            // SOL required
 }
 
+// Fixed 0.01 SOL entry for all tiers
 const MONSTER_TIERS = [
-  { name: "Skeleton",    poolRange: [0, 1],      baseHealth: 100,  vaultCrackChance: 10,  entryFee: 0.01 },
-  { name: "Goblin",      poolRange: [1, 3],      baseHealth: 200,  vaultCrackChance: 20,  entryFee: 0.02 },
-  { name: "Minotaur",    poolRange: [3, 10],     baseHealth: 400,  vaultCrackChance: 35,  entryFee: 0.05 },
-  { name: "Hydra",       poolRange: [10, 25],    baseHealth: 800,  vaultCrackChance: 50,  entryFee: 0.1 },
-  { name: "Dragon",      poolRange: [25, 100],   baseHealth: 1500, vaultCrackChance: 70,  entryFee: 0.25 },
-  { name: "Titan",       poolRange: [100, Inf],  baseHealth: 3000, vaultCrackChance: 90,  entryFee: 0.5 }
+  { name: "Skeleton",    poolRange: [0, 0.3],    baseHealth: 80,   vaultCrackChance: 0.5,  perEntryBonus: 0.05 },
+  { name: "Goblin",      poolRange: [0.3, 0.8],  baseHealth: 100,  vaultCrackChance: 1,    perEntryBonus: 0.08 },
+  { name: "Shadow",      poolRange: [0.8, 1.5],  baseHealth: 130,  vaultCrackChance: 2,    perEntryBonus: 0.1 },
+  { name: "Demon",       poolRange: [1.5, 2.3],  baseHealth: 170,  vaultCrackChance: 3.5,  perEntryBonus: 0.15 },
+  { name: "Dragon",      poolRange: [2.3, 3.0],  baseHealth: 220,  vaultCrackChance: 6,    perEntryBonus: 0.2 },
+  { name: "Titan",       poolRange: [3.0, Inf],  baseHealth: 280,  vaultCrackChance: 10,   perEntryBonus: 0.25 }
 ];
 ```
 
 ## **⚔️ Combat Mechanics**
 
-### **Simple RNG Combat (MVP)**
+### **Real-Time Skill-Based Combat**
 ```typescript
-interface CombatSimulation {
-  // Gladiator stats
-  gladiatorPower: number = entryAmount * 1000; // Base multiplier
-  gladiatorRoll: number = ProofNetworkVRF(0, 100); // Random 0-100
+interface CombatMechanics {
+  // Player controls
+  movement: 'WASD' | 'Arrow Keys';
+  attack: 'Space' | 'Left Click';
+  dodge: 'Movement timing';
   
-  // Monster stats  
-  monsterHealth: number = currentMonster.baseHealth;
-  monsterRoll: number = ProofNetworkVRF(0, 100);
+  // Combat features
+  playerHealth: 100;
+  monsterHealth: baseHealth; // Varies by tier
+  meleeDamage: 15-40;        // Per hit
+  attackCooldown: 500ms;     // Between attacks
   
-  // Combat resolution
-  gladiatorAttack: number = gladiatorPower * (gladiatorRoll / 100);
-  monsterDefense: number = monsterHealth * (monsterRoll / 100);
-  
-  result: 'VICTORY' | 'DEATH' = gladiatorAttack > monsterDefense ? 'VICTORY' : 'DEATH';
+  // Victory conditions
+  victory: monsterHealth <= 0;
+  defeat: playerHealth <= 0;
 }
 ```
 
-### **Interactive Combat (Future Enhancement)**
-- Quick-time event: Time your attack for bonus damage
-- Multiple attack rounds with health bars
-- Special abilities based on entry amount
-- Combo system for skilled players
+### **Backend Validation**
+```typescript
+interface CombatValidation {
+  minimumDuration: 3000;      // 3 seconds
+  damageDealt: monsterHP ± 20%; // Tolerance
+  sessionBased: true;         // Prevent replay
+}
 
 ## **💎 Vault Crack Mechanics**
 
@@ -167,41 +171,42 @@ interface GladiatorRecord {
 ### **Prize Pool Distribution**
 ```typescript
 interface FeeStructure {
-  entryFee: number;           // Varies by monster
-  toPrizePool: number = 90%;  // Grows the jackpot
-  toPlatform: number = 10%;   // Sustainability
+  entryFee: 0.01 SOL;         // Fixed for all tiers
+  toPrizePool: 100%;          // All goes to jackpot
+  platformFee: 10%;           // Taken from jackpot wins only
 }
 
 interface PrizeDistribution {
-  vaultCracker: number = 100%; // Winner takes all
-  nextRound: number = 0%;      // Fresh start
+  vaultCracker: 90%;          // Winner gets 90%
+  platform: 10%;              // Platform sustainability
+  newPot: 0;                  // Reset to zero
 }
 ```
 
-### **Entry Scaling**
-- Higher tier monsters = higher entry fees
-- Prevents spam on big pools
-- Creates meaningful risk decisions
+### **Economic Balance**
+- Fixed entry prevents whale dominance
+- Skill > money for success
+- Platform sustainable via win fees
 
 ## **📱 Platform & Tech**
 
 ### **Frontend (Phaser.js)**
-- Smooth combat animations
-- Particle effects for hits/deaths
+- Real-time combat with player controls
+- Monster AI with attack patterns
+- Victory/defeat determination
 - Responsive design for all devices
-- WebGL rendering for performance
 
 ### **Backend (Node.js)**
-- Monster spawn management
-- Combat simulation
-- ProofNetwork VRF integration
-- Real-time updates via polling
+- Session-based combat validation
+- Monster tier calculation from pot
+- ProofNetwork VRF for vault only
+- Simple validation checks
 
 ### **Blockchain (Solana)**
-- Prize pool escrow
-- Combat result verification
+- Prize pool tracking
+- Payment verification
 - Winner payouts
-- Player stats tracking
+- Minimal on-chain data
 
 ## **🎯 Why This Works**
 

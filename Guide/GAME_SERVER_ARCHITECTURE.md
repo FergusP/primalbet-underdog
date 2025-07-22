@@ -2,16 +2,16 @@
 *Backend for Monster Combat Jackpot System*
 
 <!-- MVP:SUMMARY -->
-## **🚀 MVP Server Features (MONSTER COMBAT)**
+## **🚀 MVP Server Features (UPDATED ARCHITECTURE)**
 For the 2-3 day MVP, implement:
-- **Node.js + Express**: REST API for game actions
-- **Monster Management**: Spawn based on jackpot size
-- **Combat Resolution**: ProofNetwork VRF integration
-- **Vault Crack System**: Chance-based jackpot wins
-- **Real-time Updates**: Combat events and jackpot tracking
-- **Solana Integration**: Verify entries and payouts
+- **Node.js + Express**: REST API for session management
+- **Session System**: Create/validate combat sessions
+- **Combat Validation**: Simple duration + damage checks
+- **Vault Crack System**: VRF for jackpot attempts only
+- **Blockchain Integration**: Query pot, validate payments
+- **Minimal State**: Sessions expire after 5 minutes
 
-Skip for MVP: Databases, XP system, achievements
+Skip for MVP: Databases, XP system, complex validation
 <!-- MVP:END -->
 
 ## **🏗️ Monster Combat Architecture**
@@ -19,7 +19,10 @@ Skip for MVP: Databases, XP system, achievements
 ```
 ┌─────────────────────┐
 │   Web Frontend      │
-│  (Next.js/Phaser)   │
+│  (Next.js/Phaser)   │  
+│  - Skill-based      │
+│    combat           │
+│  - Real-time action │
 └──────────┬──────────┘
            │ HTTP Requests
            ▼
@@ -28,22 +31,22 @@ Skip for MVP: Databases, XP system, achievements
 │   (Node.js/Express) │
 │                     │
 │  Features:          │
-│  - Monster spawning │
-│  - Combat VRF       │
-│  - Vault crack logic│
-│  - Jackpot tracking │
-│  - ProofNetwork API │
+│  - Session mgmt     │
+│  - Combat validation│
+│  - VRF vault only   │
+│  - Simple checks    │
 └──────────┬──────────┘
            │
 ┌──────────▼──────────┐
 │  Solana Blockchain  │
 │  - Entry payments   │
-│  - Combat results   │
-│  - Jackpot payouts  │
+│  - Pot management   │  
+│  - Winner payouts   │
+│  - Monster tiers    │
 └─────────────────────┘
 
-Simple REST API with ProofNetwork VRF
-No complex state management needed
+Blockchain-first pot tracking
+Frontend combat, backend validation
 ```
 
 ---
@@ -109,11 +112,12 @@ Additional files for full version:
 ### **1. Server Entry Point**
 
 ```typescript
-// src/index.ts - MONSTER COMBAT VERSION
+// src/index.ts - SESSION-BASED VALIDATION VERSION
 import express from 'express';
 import cors from 'cors';
-import { MonsterManager } from './combat/MonsterManager';
-import { CombatHandler } from './combat/CombatHandler';
+import { SessionManager } from './session/SessionManager';
+import { CombatValidator } from './validation/CombatValidator';
+import { VaultResolver } from './vault/VaultResolver';
 import { ProofNetworkVRF } from './services/ProofNetworkVRF';
 import { SolanaService } from './services/SolanaService';
 import { setupRoutes } from './api/routes';
@@ -127,23 +131,25 @@ app.use(express.json());
 // Initialize services
 const vrfService = new ProofNetworkVRF();
 const solanaService = new SolanaService();
-const monsterManager = new MonsterManager();
-const combatHandler = new CombatHandler(
-  monsterManager,
-  vrfService,
-  solanaService
-);
+const sessionManager = new SessionManager();
+const combatValidator = new CombatValidator();
+const vaultResolver = new VaultResolver(vrfService);
 
 // Setup API routes
-setupRoutes(app, combatHandler, monsterManager);
+setupRoutes(app, {
+  sessionManager,
+  combatValidator,
+  vaultResolver,
+  solanaService
+});
 
 // Start server
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Aurelius Colosseum backend running on port ${PORT}`);
   
-  // Initialize current monster based on jackpot
-  monsterManager.initializeMonster();
+  // Cleanup expired sessions periodically
+  setInterval(() => sessionManager.cleanupExpired(), 60000);
 });
 ```
 <!-- MVP:END -->
@@ -212,76 +218,91 @@ start();
 <!-- POST-MVP:END -->
 
 <!-- MVP:START -->
-### **2. Monster Manager**
+### **2. Session Manager**
 
 ```typescript
-// src/combat/MonsterManager.ts - MONSTER SPAWNING
-import { Monster, MonsterTier, MONSTER_TIERS } from '../utils/constants';
+// src/session/SessionManager.ts - SESSION-BASED VALIDATION
+import { v4 as uuidv4 } from 'uuid';
+import { CombatSession } from '../types';
 
-export class MonsterManager {
-  private currentMonster: Monster | null = null;
-  private monsterHistory: Monster[] = [];
+export class SessionManager {
+  private sessions = new Map<string, CombatSession>();
+  private readonly SESSION_DURATION = 300000; // 5 minutes
   
-  async initializeMonster(): Promise<void> {
-    // Get current jackpot from blockchain
-    const jackpotAmount = await this.getJackpotAmount();
-    this.spawnMonster(jackpotAmount);
-  }
-  
-  spawnMonster(jackpotAmount: number): Monster {
-    const tier = this.getMonsterTier(jackpotAmount);
+  createSession(
+    wallet: string,
+    monster: Monster,
+    txSignature: string
+  ): CombatSession {
+    const sessionId = uuidv4();
+    const now = Date.now();
     
-    const monster: Monster = {
-      id: Date.now().toString(),
-      type: tier.name,
-      tier: tier,
-      baseHealth: tier.baseHealth,
-      currentHealth: tier.baseHealth,
-      spawnedAt: Date.now(),
-      defeatedBy: null,
-      totalCombats: 0,
-      victories: 0
+    const session: CombatSession = {
+      sessionId,
+      wallet,
+      monster,
+      txSignature,
+      startTime: now,
+      expiryTime: now + this.SESSION_DURATION,
+      completed: false,
+      validated: false,
+      combatResult: null
     };
     
-    this.currentMonster = monster;
-    this.monsterHistory.push(monster);
+    this.sessions.set(sessionId, session);
+    console.log(`Created session ${sessionId} for ${wallet}`);
     
-    console.log(`Spawned ${tier.name} for ${jackpotAmount} SOL jackpot`);
-    return monster;
+    return session;
   }
   
-  private getMonsterTier(poolAmount: number): MonsterTier {
-    // Find appropriate tier based on pool size (in SOL)
-    const poolInSol = poolAmount / 1e9;
+  getSession(sessionId: string): CombatSession | null {
+    const session = this.sessions.get(sessionId);
     
-    for (const tier of MONSTER_TIERS) {
-      if (poolInSol >= tier.poolRange[0] && poolInSol < tier.poolRange[1]) {
-        return tier;
+    if (!session) return null;
+    
+    // Check expiry
+    if (Date.now() > session.expiryTime) {
+      this.sessions.delete(sessionId);
+      return null;
+    }
+    
+    return session;
+  }
+  
+  completeSession(
+    sessionId: string,
+    victory: boolean,
+    combatStats: any
+  ): boolean {
+    const session = this.getSession(sessionId);
+    
+    if (!session || session.completed) {
+      return false;
+    }
+    
+    session.completed = true;
+    session.combatResult = {
+      victory,
+      ...combatStats
+    };
+    
+    return true;
+  }
+  
+  cleanupExpired(): void {
+    const now = Date.now();
+    let cleaned = 0;
+    
+    for (const [id, session] of this.sessions) {
+      if (now > session.expiryTime) {
+        this.sessions.delete(id);
+        cleaned++;
       }
     }
     
-    // Return highest tier if pool exceeds all ranges
-    return MONSTER_TIERS[MONSTER_TIERS.length - 1];
-  }
-  
-  getCurrentMonster(): Monster | null {
-    return this.currentMonster;
-  }
-  
-  recordCombat(gladiator: string, victory: boolean): void {
-    if (!this.currentMonster) return;
-    
-    this.currentMonster.totalCombats++;
-    if (!victory) {
-      this.currentMonster.victories++;
-    } else {
-      this.currentMonster.defeatedBy = gladiator;
+    if (cleaned > 0) {
+      console.log(`Cleaned up ${cleaned} expired sessions`);
     }
-  }
-  
-  private async getJackpotAmount(): Promise<number> {
-    // TODO: Get from blockchain
-    return 0;
   }
 }
 ```
@@ -472,63 +493,68 @@ interface CombatResult {
 }
 ```
 
-### **3. Combat Resolver**
+### **3. Combat Validator**
 
 ```typescript
-// src/combat/CombatResolver.ts - VRF COMBAT RESOLUTION
-import { ProofNetworkVRF } from '../services/ProofNetworkVRF';
-import { Monster } from '../utils/constants';
-
-export class CombatResolver {
-  constructor(private vrfService: ProofNetworkVRF) {}
+// src/validation/CombatValidator.ts - SIMPLE VALIDATION
+export class CombatValidator {
+  private readonly MIN_DURATION = 3000; // 3 seconds
+  private readonly DAMAGE_TOLERANCE = 0.2; // ±20%
   
-  async resolveCombat(
-    gladiator: string,
-    entryAmount: number,
-    monster: Monster,
-    combatId: string
-  ): Promise<CombatResult> {
-    // 1. Calculate gladiator power (linear scaling)
-    const gladiatorPower = this.calculateGladiatorPower(entryAmount);
+  validateCombat(
+    session: CombatSession,
+    combatStats: {
+      duration: number;
+      totalDamageDealt: number;
+    }
+  ): ValidationResult {
+    // Check 1: Minimum duration
+    if (combatStats.duration < this.MIN_DURATION) {
+      return {
+        valid: false,
+        reason: 'Combat duration too short',
+        errors: [`Duration ${combatStats.duration}ms < required ${this.MIN_DURATION}ms`]
+      };
+    }
     
-    // 2. Get VRF random values
-    const vrfResult = await this.vrfService.requestRandomness({
-      seed: `combat_${combatId}`,
-      numValues: 2 // One for gladiator, one for monster
-    });
+    // Check 2: Damage validation
+    const expectedDamage = session.monster.baseHealth;
+    const minDamage = expectedDamage * (1 - this.DAMAGE_TOLERANCE);
+    const maxDamage = expectedDamage * (1 + this.DAMAGE_TOLERANCE);
     
-    // 3. Calculate combat scores
-    const gladiatorRoll = vrfResult.values[0] % 100; // 0-99
-    const monsterRoll = vrfResult.values[1] % 100;   // 0-99
+    if (combatStats.totalDamageDealt < minDamage || 
+        combatStats.totalDamageDealt > maxDamage) {
+      return {
+        valid: false,
+        reason: 'Invalid damage amount',
+        errors: [
+          `Damage ${combatStats.totalDamageDealt} outside valid range`,
+          `Expected: ${minDamage.toFixed(0)} - ${maxDamage.toFixed(0)}`
+        ]
+      };
+    }
     
-    const gladiatorScore = gladiatorPower * (50 + gladiatorRoll) / 100;
-    const monsterScore = monster.baseHealth * 
-                        monster.tier.defenseMultiplier * 
-                        (50 + monsterRoll) / 100;
+    // Check 3: Session not expired
+    if (Date.now() > session.expiryTime) {
+      return {
+        valid: false,
+        reason: 'Session expired',
+        errors: ['Combat session has expired']
+      };
+    }
     
-    // 4. Determine outcome
-    const victory = gladiatorScore > monsterScore;
-    
-    console.log(`Combat: G(${gladiatorScore.toFixed(0)}) vs M(${monsterScore.toFixed(0)}) = ${victory ? 'WIN' : 'LOSE'}`);
-    
+    // All checks passed
     return {
-      combatId,
-      gladiator,
-      monster: monster.type,
-      gladiatorPower,
-      gladiatorScore: Math.floor(gladiatorScore),
-      monsterScore: Math.floor(monsterScore),
-      victory,
-      vrfProof: vrfResult.proof,
-      timestamp: Date.now()
+      valid: true,
+      reason: 'Combat validated successfully'
     };
   }
-  
-  private calculateGladiatorPower(entryAmount: number): number {
-    // Linear scaling - no whale advantage
-    const BASE_POWER_MULTIPLIER = 1000;
-    return entryAmount * BASE_POWER_MULTIPLIER;
-  }
+}
+
+interface ValidationResult {
+  valid: boolean;
+  reason: string;
+  errors?: string[];
 }
 ```
 <!-- MVP:END -->
@@ -792,41 +818,46 @@ export class BlitzGame extends GameInstance {
 <!-- POST-MVP:END -->
 
 <!-- MVP:START -->
-### **4. Vault Cracker**
+### **4. Vault Resolver**
 
 ```typescript
-// src/combat/VaultCracker.ts - JACKPOT ATTEMPT SYSTEM
+// src/vault/VaultResolver.ts - VRF VAULT ATTEMPTS ONLY
 import { ProofNetworkVRF } from '../services/ProofNetworkVRF';
 import { Monster } from '../utils/constants';
 
-export class VaultCracker {
+export class VaultResolver {
   constructor(private vrfService: ProofNetworkVRF) {}
   
   async attemptVaultCrack(
-    gladiator: string,
-    monster: Monster,
-    combatId: string
+    session: CombatSession,
+    currentPot: number
   ): Promise<VaultCrackResult> {
+    // Must have validated combat victory
+    if (!session.validated || !session.combatResult?.victory) {
+      throw new Error('Invalid session for vault attempt');
+    }
+    
     // Get crack chance from monster tier
-    const crackChance = monster.tier.vaultCrackChance;
+    const crackChance = session.monster.tier.vaultCrackChance;
     
     // Request VRF for vault crack
     const vrfResult = await this.vrfService.requestRandomness({
-      seed: `vault_${combatId}`,
+      seed: `vault_${session.sessionId}_${Date.now()}`,
       numValues: 1
     });
     
     const roll = vrfResult.values[0] % 100; // 0-99
     const success = roll < crackChance;
     
-    console.log(`Vault crack attempt: ${roll} < ${crackChance} = ${success}`);
+    console.log(`Vault crack: ${roll} < ${crackChance} = ${success}`);
     
     return {
-      gladiator,
-      monster: monster.type,
+      gladiator: session.wallet,
+      monster: session.monster.type,
       crackChance,
       roll,
       success,
+      prizeWon: success ? currentPot : 0,
       vrfProof: vrfResult.proof,
       timestamp: Date.now()
     };
@@ -839,6 +870,7 @@ interface VaultCrackResult {
   crackChance: number;
   roll: number;
   success: boolean;
+  prizeWon: number;
   vrfProof: string;
   timestamp: number;
 }
@@ -913,103 +945,51 @@ export class CombatEngine {
 <!-- POST-MVP:END -->
 
 <!-- MVP:START -->
-### **5. Combat Handler**
+### **5. Monster Service**
 
 ```typescript
-// src/combat/CombatHandler.ts - ORCHESTRATE COMBAT FLOW
-import { MonsterManager } from './MonsterManager';
-import { CombatResolver } from './CombatResolver';
-import { VaultCracker } from './VaultCracker';
-import { ProofNetworkVRF } from '../services/ProofNetworkVRF';
-import { SolanaService } from '../services/SolanaService';
+// src/services/MonsterService.ts - BLOCKCHAIN-BASED MONSTERS
+import { MONSTER_TIERS } from '../utils/constants';
 
-export class CombatHandler {
-  private combatResolver: CombatResolver;
-  private vaultCracker: VaultCracker;
-  
-  constructor(
-    private monsterManager: MonsterManager,
-    private vrfService: ProofNetworkVRF,
-    private solanaService: SolanaService
-  ) {
-    this.combatResolver = new CombatResolver(vrfService);
-    this.vaultCracker = new VaultCracker(vrfService);
-  }
-  
-  async handleCombatRequest(request: CombatRequest): Promise<CombatResponse> {
-    const monster = this.monsterManager.getCurrentMonster();
-    if (!monster) throw new Error('No active monster');
+export class MonsterService {
+  static getMonsterForPot(potAmount: number): Monster {
+    // Convert lamports to SOL
+    const potInSol = potAmount / 1e9;
     
-    // 1. Verify entry payment on-chain
-    const payment = await this.solanaService.verifyPayment(
-      request.wallet,
-      request.txSignature,
-      monster.tier.entryFee
-    );
-    
-    // 2. Resolve combat
-    const combatResult = await this.combatResolver.resolveCombat(
-      request.wallet,
-      payment.amount,
-      monster,
-      request.combatId
-    );
-    
-    // 3. Record combat
-    this.monsterManager.recordCombat(request.wallet, combatResult.victory);
-    
-    // 4. Handle victory
-    let vaultResult = null;
-    if (combatResult.victory && request.attemptVault) {
-      vaultResult = await this.vaultCracker.attemptVaultCrack(
-        request.wallet,
-        monster,
-        request.combatId
-      );
-      
-      if (vaultResult.success) {
-        // Process jackpot win
-        await this.processJackpotWin(request.wallet, vaultResult);
-        
-        // Spawn new monster
-        const newJackpot = await this.solanaService.getJackpotAmount();
-        this.monsterManager.spawnMonster(newJackpot);
+    // Find appropriate tier
+    for (const tier of MONSTER_TIERS) {
+      if (potInSol >= tier.poolRange[0] && potInSol < tier.poolRange[1]) {
+        return {
+          id: `monster_${Date.now()}`,
+          type: tier.name,
+          tier: tier,
+          baseHealth: tier.baseHealth,
+          currentHealth: tier.baseHealth,
+          spawnedAt: Date.now()
+        };
       }
     }
     
-    // 5. Submit results to blockchain
-    await this.solanaService.submitCombatResult(
-      combatResult,
-      vaultResult
-    );
-    
+    // Return highest tier
+    const maxTier = MONSTER_TIERS[MONSTER_TIERS.length - 1];
     return {
-      combatResult,
-      vaultResult,
-      newMonster: this.monsterManager.getCurrentMonster()
+      id: `monster_${Date.now()}`,
+      type: maxTier.name,
+      tier: maxTier,
+      baseHealth: maxTier.baseHealth,
+      currentHealth: maxTier.baseHealth,
+      spawnedAt: Date.now()
     };
   }
-  
-  private async processJackpotWin(
-    winner: string,
-    vaultResult: VaultCrackResult
-  ): Promise<void> {
-    console.log(`JACKPOT WON! ${winner} cracked the vault!`);
-    // Blockchain will handle the actual payout
-  }
 }
 
-interface CombatRequest {
-  wallet: string;
-  txSignature: string;
-  combatId: string;
-  attemptVault: boolean;
-}
-
-interface CombatResponse {
-  combatResult: any;
-  vaultResult: any | null;
-  newMonster: any;
+interface Monster {
+  id: string;
+  type: string;
+  tier: MonsterTier;
+  baseHealth: number;
+  currentHealth: number;
+  spawnedAt: number;
 }
 ```
 <!-- MVP:END -->
@@ -1490,55 +1470,160 @@ export class ProofNetworkVRF {
 ### **7. API Routes**
 
 ```typescript
-// src/api/routes.ts - REST ENDPOINTS
+// src/api/routes.ts - SESSION-BASED ENDPOINTS
 import { Express } from 'express';
-import { CombatHandler } from '../combat/CombatHandler';
-import { MonsterManager } from '../combat/MonsterManager';
+import { SessionManager } from '../session/SessionManager';
+import { CombatValidator } from '../validation/CombatValidator';
+import { VaultResolver } from '../vault/VaultResolver';
+import { SolanaService } from '../services/SolanaService';
+import { MonsterService } from '../services/MonsterService';
 
 export function setupRoutes(
   app: Express,
-  combatHandler: CombatHandler,
-  monsterManager: MonsterManager
+  services: {
+    sessionManager: SessionManager;
+    combatValidator: CombatValidator;
+    vaultResolver: VaultResolver;
+    solanaService: SolanaService;
+  }
 ) {
   // Get current game state
   app.get('/api/state', async (req, res) => {
     try {
-      const monster = monsterManager.getCurrentMonster();
-      const jackpot = await getJackpotAmount(); // From blockchain
+      const currentPot = await services.solanaService.getCurrentPot();
+      const currentMonster = MonsterService.getMonsterForPot(currentPot);
+      const recentCombats = await services.solanaService.getRecentCombats();
       
       res.json({
-        currentMonster: monster,
-        currentJackpot: jackpot,
-        totalEntries: monster?.totalCombats || 0
+        currentMonster,
+        currentJackpot: currentPot,
+        totalEntries: recentCombats.length,
+        recentCombats
       });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   });
   
-  // Enter combat
-  app.post('/api/combat/enter', async (req, res) => {
+  // Start combat session
+  app.post('/api/combat/start', async (req, res) => {
     try {
-      const { wallet, txSignature, combatId } = req.body;
+      const { wallet, txSignature } = req.body;
       
-      const result = await combatHandler.handleCombatRequest({
+      // Verify payment (0.01 SOL fixed)
+      const payment = await services.solanaService.verifyPayment(
         wallet,
         txSignature,
-        combatId,
-        attemptVault: true // Always attempt if victorious
-      });
+        10_000_000 // 0.01 SOL in lamports
+      );
       
-      res.json(result);
+      // Get current monster based on pot
+      const currentPot = await services.solanaService.getCurrentPot();
+      const monster = MonsterService.getMonsterForPot(currentPot);
+      
+      // Create session
+      const session = services.sessionManager.createSession(
+        wallet,
+        monster,
+        txSignature
+      );
+      
+      res.json({
+        sessionId: session.sessionId,
+        currentMonster: monster,
+        sessionExpiry: session.expiryTime,
+        startTime: session.startTime
+      });
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
   });
   
-  // Get combat history
-  app.get('/api/combat/history/:wallet', async (req, res) => {
+  // Complete combat session
+  app.post('/api/combat/complete', async (req, res) => {
     try {
-      // TODO: Implement combat history from blockchain
-      res.json({ history: [] });
+      const { wallet, sessionId, victory, combatStats } = req.body;
+      
+      // Get session
+      const session = services.sessionManager.getSession(sessionId);
+      if (!session || session.wallet !== wallet) {
+        return res.status(404).json({ error: 'Invalid session' });
+      }
+      
+      // Complete session
+      const completed = services.sessionManager.completeSession(
+        sessionId,
+        victory,
+        combatStats
+      );
+      
+      if (!completed) {
+        return res.status(400).json({ error: 'Session already completed' });
+      }
+      
+      // Validate combat
+      const validation = services.combatValidator.validateCombat(
+        session,
+        combatStats
+      );
+      
+      session.validated = validation.valid;
+      
+      res.json({
+        validated: validation.valid,
+        canAttemptVault: validation.valid && victory,
+        validationErrors: validation.errors
+      });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Vault crack attempt
+  app.post('/api/vault/crack', async (req, res) => {
+    try {
+      const { wallet, sessionId } = req.body;
+      
+      // Get validated session
+      const session = services.sessionManager.getSession(sessionId);
+      if (!session || session.wallet !== wallet) {
+        return res.status(404).json({ error: 'Invalid session' });
+      }
+      
+      if (!session.validated || !session.combatResult?.victory) {
+        return res.status(400).json({ error: 'Invalid combat result' });
+      }
+      
+      // Get current pot
+      const currentPot = await services.solanaService.getCurrentPot();
+      
+      // Attempt vault crack
+      const vaultResult = await services.vaultResolver.attemptVaultCrack(
+        session,
+        currentPot
+      );
+      
+      // If won, trigger payout on blockchain
+      if (vaultResult.success) {
+        await services.solanaService.processJackpotWin(
+          wallet,
+          vaultResult.prizeWon
+        );
+      }
+      
+      res.json(vaultResult);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Get player stats
+  app.get('/api/player/:wallet', async (req, res) => {
+    try {
+      const stats = await services.solanaService.getPlayerStats(
+        req.params.wallet
+      );
+      res.json(stats);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -1551,94 +1636,113 @@ export function setupRoutes(
 }
 ```
 
-### **8. Constants & Monster Configuration**
+### **8. Constants & Types**
 
 ```typescript
-// src/utils/constants.ts - MONSTER TIERS AND GAME CONFIG
+// src/utils/constants.ts - UPDATED FOR FIXED 0.01 SOL ENTRY
 export interface MonsterTier {
   name: string;
   poolRange: [number, number]; // Min/max SOL for spawn
   baseHealth: number;          // Starting HP
-  defenseMultiplier: number;   // Combat difficulty
   vaultCrackChance: number;    // % chance after defeat
-  entryFee: number;           // SOL to fight (in lamports)
+  // REMOVED: entryFee - Now fixed at 0.01 SOL
+  // REMOVED: defenseMultiplier - Frontend handles difficulty
 }
 
 export const MONSTER_TIERS: MonsterTier[] = [
   {
     name: "Skeleton Warrior",
-    poolRange: [0, 1],
-    baseHealth: 100,
-    defenseMultiplier: 1.0,
-    vaultCrackChance: 10,
-    entryFee: 10_000_000, // 0.01 SOL
+    poolRange: [0, 0.3],
+    baseHealth: 80,
+    vaultCrackChance: 0.5
   },
   {
     name: "Goblin Berserker",
-    poolRange: [1, 3],
-    baseHealth: 200,
-    defenseMultiplier: 1.2,
-    vaultCrackChance: 20,
-    entryFee: 20_000_000, // 0.02 SOL
+    poolRange: [0.3, 0.8],
+    baseHealth: 100,
+    vaultCrackChance: 1
   },
   {
-    name: "Minotaur Guardian",
-    poolRange: [3, 10],
-    baseHealth: 400,
-    defenseMultiplier: 1.5,
-    vaultCrackChance: 35,
-    entryFee: 50_000_000, // 0.05 SOL
+    name: "Shadow Assassin",
+    poolRange: [0.8, 1.5],
+    baseHealth: 130,
+    vaultCrackChance: 2
   },
   {
-    name: "Hydra",
-    poolRange: [10, 25],
-    baseHealth: 800,
-    defenseMultiplier: 1.8,
-    vaultCrackChance: 50,
-    entryFee: 100_000_000, // 0.1 SOL
+    name: "Demon Knight",
+    poolRange: [1.5, 2.3],
+    baseHealth: 170,
+    vaultCrackChance: 3.5
   },
   {
-    name: "Ancient Dragon",
-    poolRange: [25, 100],
-    baseHealth: 1500,
-    defenseMultiplier: 2.2,
-    vaultCrackChance: 70,
-    entryFee: 250_000_000, // 0.25 SOL
+    name: "Dragon Lord",
+    poolRange: [2.3, 3.0],
+    baseHealth: 220,
+    vaultCrackChance: 6
   },
   {
-    name: "Titan of Sol",
-    poolRange: [100, Infinity],
-    baseHealth: 3000,
-    defenseMultiplier: 3.0,
-    vaultCrackChance: 90,
-    entryFee: 500_000_000, // 0.5 SOL
+    name: "Ancient Titan",
+    poolRange: [3.0, Infinity],
+    baseHealth: 280,
+    vaultCrackChance: 10
   }
 ];
 
-export interface Monster {
-  id: string;
-  type: string;
-  tier: MonsterTier;
-  baseHealth: number;
-  currentHealth: number;
-  spawnedAt: number;
-  defeatedBy: string | null;
-  totalCombats: number;
-  victories: number;
+// Session types
+export interface CombatSession {
+  sessionId: string;
+  wallet: string;
+  monster: any; // Monster instance
+  txSignature: string;
+  startTime: number;
+  expiryTime: number;
+  completed: boolean;
+  validated: boolean;
+  combatResult: {
+    victory: boolean;
+    duration: number;
+    totalDamageDealt: number;
+  } | null;
 }
+
+// Fixed entry fee for all combats
+export const FIXED_ENTRY_FEE = 10_000_000; // 0.01 SOL in lamports
+export const SESSION_DURATION = 300_000; // 5 minutes
+export const MIN_COMBAT_DURATION = 3_000; // 3 seconds
+export const DAMAGE_TOLERANCE = 0.2; // ±20%
 ```
 <!-- MVP:END -->
 
 ## **🎯 MVP Testing**
 
 ```bash
-# Test combat flow
-curl -X POST http://localhost:4000/api/combat/enter \
+# Start combat session
+curl -X POST http://localhost:4000/api/combat/start \
   -H "Content-Type: application/json" \
   -d '{
     "wallet": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-    "txSignature": "test_sig_123",
-    "combatId": "combat_001"
+    "txSignature": "test_sig_123"
+  }'
+
+# Complete combat
+curl -X POST http://localhost:4000/api/combat/complete \
+  -H "Content-Type: application/json" \
+  -d '{
+    "wallet": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "sessionId": "session-uuid-here",
+    "victory": true,
+    "combatStats": {
+      "duration": 45000,
+      "totalDamageDealt": 85
+    }
+  }'
+
+# Attempt vault crack
+curl -X POST http://localhost:4000/api/vault/crack \
+  -H "Content-Type: application/json" \
+  -d '{
+    "wallet": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "sessionId": "session-uuid-here"
   }'
 
 # Get current state

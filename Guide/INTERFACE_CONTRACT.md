@@ -1,11 +1,12 @@
-# **INTERFACE CONTRACT v6.0**
+# **INTERFACE CONTRACT v7.0**
 *The Sacred Source of Truth for Aurelius Colosseum Monster Combat System*
 
-**BREAKING CHANGES FROM v5.0:**
-- Complete redesign from input-driven arena to monster combat jackpot
-- All warrior/weight systems replaced with gladiator/monster combat
-- New VRF-based combat resolution
-- Jackpot prize pool mechanics
+**BREAKING CHANGES FROM v6.0:**
+- Frontend handles real-time skill-based combat
+- Backend validates combat results with simple checks
+- VRF used only for vault crack attempts, not combat
+- Session-based API flow for security
+- Blockchain-first pot management
 
 ---
 
@@ -60,51 +61,55 @@ interface Monster {
 ### **2. Combat System**
 
 ```typescript
-// Combat request from frontend
-interface CombatRequest {
+// Start combat session
+interface CombatStartRequest {
   wallet: string;                      // Player's public key
-  txSignature: string;                 // Entry payment proof
-  combatId: string;                    // Unique combat identifier
-  attemptVault: boolean;               // Always true for MVP
+  txSignature: string;                 // Entry payment proof (0.01 SOL)
 }
 
-// Combat result from backend
-interface CombatResult {
-  combatId: string;
-  gladiator: string;                   // Player wallet
-  monster: string;                     // Monster type name
-  gladiatorPower: number;              // Calculated from entry amount
-  gladiatorScore: number;              // Final combat score
-  monsterScore: number;                // Monster's combat score
-  victory: boolean;                    // Combat outcome
-  vrfProof: string;                    // ProofNetwork verification
-  timestamp: number;
-  
-  // Visual data for frontend
-  combatLog?: CombatLogEntry[];        // For animation sequencing
+interface CombatStartResponse {
+  sessionId: string;                   // Unique session identifier
+  currentMonster: Monster;             // Monster to fight
+  sessionExpiry: number;               // Timestamp when session expires
+  startTime: number;                   // Combat start timestamp
 }
 
-interface CombatLogEntry {
-  action: 'attack' | 'defend' | 'special';
-  source: 'gladiator' | 'monster';
-  damage?: number;                     // Visual only
-  effect?: string;
-  timestamp: number;
+// Complete combat session
+interface CombatCompleteRequest {
+  wallet: string;
+  sessionId: string;
+  victory: boolean;                    // Frontend-determined outcome
+  combatStats: {
+    duration: number;                  // Combat duration in ms
+    totalDamageDealt: number;          // Total damage to monster
+  };
+}
+
+interface CombatCompleteResponse {
+  validated: boolean;                  // Backend validation result
+  canAttemptVault: boolean;           // True if validated && victory
+  validationErrors?: string[];         // Reasons if validation failed
 }
 ```
 
 ### **3. Vault System**
 
 ```typescript
-// Vault crack attempt (only if combat victory)
-interface VaultCrackResult {
+// Vault crack attempt (only if combat validated && victory)
+interface VaultCrackRequest {
+  wallet: string;
+  sessionId: string;                   // Must have validated combat victory
+}
+
+interface VaultCrackResponse {
   gladiator: string;
   monster: string;
-  crackChance: number;                 // From monster tier
+  crackChance: number;                 // From monster tier + entry bonus
   roll: number;                        // VRF result (0-99)
   success: boolean;
   prizeWon: number;                    // 0 if failed, jackpot if success
-  vrfProof: string;
+  vrfProof: string;                    // ProofNetwork verification
+  newPot?: number;                     // New pot if won (reset to 0)
   timestamp: number;
 }
 ```
@@ -184,27 +189,33 @@ Response: {
   recentCombats: CombatSummary[];
 }
 
-// 2. Enter combat
-POST /api/combat/enter
-Body: CombatRequest
-Response: {
-  combatResult: CombatResult;
-  vaultResult?: VaultCrackResult;      // Only if victory
-  newMonster?: Monster;                // If jackpot won
-}
+// 2. Start combat session
+POST /api/combat/start
+Body: CombatStartRequest
+Response: CombatStartResponse
 
-// 3. Get player stats
+// 3. Complete combat session
+POST /api/combat/complete
+Body: CombatCompleteRequest
+Response: CombatCompleteResponse
+
+// 4. Attempt vault crack
+POST /api/vault/crack
+Body: VaultCrackRequest
+Response: VaultCrackResponse
+
+// 5. Get player stats
 GET /api/player/:wallet
 Response: PlayerProfile
 
-// 4. Get leaderboard
+// 6. Get leaderboard
 GET /api/leaderboard
 Query: ?type=winnings|winrate|vaults
 Response: PlayerStats[]
 
-// 5. Get combat history
+// 7. Get combat history
 GET /api/combat/history/:wallet
-Response: CombatResult[]
+Response: CombatHistory[]
 ```
 
 ---
@@ -293,19 +304,26 @@ interface StateChangeEvents {
 ### **Backend Validation**
 
 ```typescript
-// All combat requests must include
-interface ValidationRequirements {
-  validTxSignature: boolean;           // Verified on-chain
-  sufficientPayment: boolean;          // >= monster entry fee
-  uniqueCombatId: boolean;             // No replay attacks
+// Session validation requirements
+interface SessionValidation {
+  validTxSignature: boolean;           // Verified on-chain (0.01 SOL)
+  activeSession: boolean;              // Session not expired
+  singleCompletion: boolean;           // Session used only once
   authorizedWallet: boolean;           // Matches tx signer
 }
 
-// VRF requirements
-interface VRFRequirements {
+// Combat validation rules
+interface CombatValidation {
+  minimumDuration: 3000;               // 3 seconds minimum
+  damageTolerancePercent: 20;          // ±20% of monster HP
+  sessionTimeout: 300000;              // 5 minutes max
+}
+
+// VRF requirements (vault only)
+interface VaultVRFRequirements {
   verifiableProof: boolean;            // Can be checked on-chain
-  uniqueSeed: boolean;                 // Includes combatId
-  tamperProof: boolean;                // No manipulation possible
+  uniqueSeed: boolean;                 // Includes sessionId
+  validatedCombat: boolean;            // Must have valid combat victory
 }
 ```
 
@@ -405,7 +423,8 @@ export * from '../idl/aurelius_colosseum';
 ---
 
 **Version History:**
-- v6.0 (Current) - Complete redesign to monster combat jackpot system
+- v7.0 (Current) - Frontend combat with backend validation, VRF vault-only
+- v6.0 (Deprecated) - VRF-based combat resolution
 - v5.0 (Deprecated) - Input-driven weight-based arena
 - v4.0 (Deprecated) - Dual-platform architecture
 - v3.0 (Deprecated) - WebSocket real-time
