@@ -14,11 +14,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "🏛️ Aurelius Colosseum - Monster Combat Jackpot on Solana",
+  title: "Aurelius Colosseum - Monster Combat Jackpot on Solana",
   description: "Fight monsters, crack the vault, claim the SOL jackpot. The ultimate blockchain arena game.",
   keywords: "Solana, Game, NFT, Jackpot, Combat, Blockchain, Crypto",
   authors: [{ name: "Aurelius Colosseum Team" }],
   viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
+  icons: {
+    icon: [
+      { url: '/colosseum-icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' }
+    ],
+    shortcut: '/colosseum-icon.svg',
+    apple: '/colosseum-icon.svg',
+  },
 };
 
 export default function RootLayout({

@@ -4,12 +4,14 @@ import * as Phaser from 'phaser';
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'game-container',
-  width: '100%',
-  height: '100%',
-  backgroundColor: '#1a1a2e',
+  width: window.innerWidth,
+  height: window.innerHeight,
+  backgroundColor: '#2a1f1a',
   scale: {
     mode: Phaser.Scale.RESIZE,
-    autoCenter: Phaser.Scale.CENTER_BOTH
+    autoCenter: Phaser.Scale.NO_CENTER,
+    width: window.innerWidth,
+    height: window.innerHeight
   },
   scene: [], // Will be populated with scene classes
   physics: {

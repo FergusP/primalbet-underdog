@@ -149,6 +149,11 @@ export class PreloadScene extends Scene {
   }
 
   create() {
+    // Emit initial scene
+    window.dispatchEvent(new CustomEvent('sceneChanged', { 
+      detail: { sceneName: 'PreloadScene' } 
+    }));
+    
     // Create all animations
     this.createAnimations();
     
