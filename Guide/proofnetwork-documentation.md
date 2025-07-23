@@ -21,20 +21,20 @@ ProofNetwork is a comprehensive blockchain platform that combines verifiable ran
 // Deploy your first smart contract
 const state = {
   counter: 0,
-  lastCaller: null
+  lastCaller: null,
 };
 
 async function increment(inputs) {
   state.counter++;
   state.lastCaller = inputs.from;
-  
+
   // Use VRF for random bonus
   const bonus = await vrfApi.selectNumber(1, 10);
   state.counter += bonus.result;
-  
+
   return {
     newCount: state.counter,
-    bonus: bonus.result
+    bonus: bonus.result,
   };
 }
 ```
@@ -56,18 +56,22 @@ Verifiable Random Function (VRF) provides cryptographically secure random number
 ## VRF Types
 
 ### Single Wallet
+
 Validate if a wallet address wins
 `POST /api/vrf/single`
 
 ### Number Range
+
 Select random number in range
 `POST /api/vrf/range`
 
 ### Array Selection
+
 Select from wallets, numbers, or strings
 `POST /api/vrf/array`
 
 ### Performance
+
 - Up to 20,000 items
 - 500 requests/second
 - <5ms for small arrays
@@ -78,18 +82,18 @@ Select from wallets, numbers, or strings
 // Using VRF in smart contracts
 async function selectWinner(inputs) {
   const participants = state.lottery.participants;
-  
+
   // Select random winner from array
   const result = await vrfApi.selectFromArray(participants, 1);
   const winner = result.result[0];
-  
+
   // Select random prize amount
   const prizeResult = await vrfApi.selectNumber(100, 1000);
   const prize = prizeResult.result;
-  
+
   state.lottery.winner = winner;
   state.lottery.prize = prize;
-  
+
   return { winner, prize };
 }
 ```
@@ -103,6 +107,7 @@ Write powerful smart contracts in JavaScript with access to VRF, blackbox securi
 ## Contract Structure
 
 ### State Management
+
 Contracts maintain persistent state between function calls. State is automatically saved to the blockchain after each successful execution.
 
 ```javascript
@@ -110,33 +115,34 @@ const state = {
   users: {},
   totalSupply: 0,
   metadata: {
-    name: "My Token",
-    symbol: "MTK"
-  }
+    name: 'My Token',
+    symbol: 'MTK',
+  },
 };
 ```
 
 ### Function Definitions
+
 Define functions that can be called externally. Functions receive inputs and must return a result object.
 
 ```javascript
 function transfer(inputs) {
   if (!inputs.to || !inputs.amount) {
-    throw new Error("Missing required parameters");
+    throw new Error('Missing required parameters');
   }
-  
+
   if (state.users[inputs.from] < inputs.amount) {
-    throw new Error("Insufficient balance");
+    throw new Error('Insufficient balance');
   }
-  
+
   state.users[inputs.from] -= inputs.amount;
   state.users[inputs.to] = (state.users[inputs.to] || 0) + inputs.amount;
-  
+
   return {
     success: true,
     from: inputs.from,
     to: inputs.to,
-    amount: inputs.amount
+    amount: inputs.amount,
   };
 }
 ```
@@ -144,6 +150,7 @@ function transfer(inputs) {
 ## Available APIs
 
 ### VRF API
+
 ```javascript
 // Select random number in range
 const result = await vrfApi.selectNumber(1, 100);
@@ -154,59 +161,61 @@ const winners = await vrfApi.selectFromArray(participants, 3);
 const selected = winners.result;
 
 // Select from range object
-const value = await vrfApi.selectFromRange({start: 0, end: 10});
+const value = await vrfApi.selectFromRange({ start: 0, end: 10 });
 ```
 
 ### Blackbox API
+
 ```javascript
 // Generate Solana keypair
 const keypair = blackbox.generateSolanaKeypair();
-blackbox.storeSecret("wallet1", keypair.privateKey);
+blackbox.storeSecret('wallet1', keypair.privateKey);
 
 // Sign message
-const signature = blackbox.signMessage("wallet1", "Hello World");
+const signature = blackbox.signMessage('wallet1', 'Hello World');
 
 // Sign transaction
-const signedTx = blackbox.signTransaction("wallet1", base64Tx);
+const signedTx = blackbox.signTransaction('wallet1', base64Tx);
 
 // Store API keys
-blackbox.storeSecret("apiKey", "sk_live_abc123");
-const key = blackbox.getSecret("apiKey");
+blackbox.storeSecret('apiKey', 'sk_live_abc123');
+const key = blackbox.getSecret('apiKey');
 ```
 
 ### Contract API
+
 ```javascript
 // Call another contract
-const result = await contract.call(
-  "0xABC123...", 
-  "transfer", 
-  {to: "alice", amount: 100}
-);
+const result = await contract.call('0xABC123...', 'transfer', {
+  to: 'alice',
+  amount: 100,
+});
 
 // Get contract info
-const info = await contract.getContract("0xABC123...");
+const info = await contract.getContract('0xABC123...');
 
 // Set composability rules
 contract.setComposabilityRules({
-  allowedCallers: ["0xDEF456..."],
-  blockedFunctions: ["withdraw"]
+  allowedCallers: ['0xDEF456...'],
+  blockedFunctions: ['withdraw'],
 });
 ```
 
 ### Rate Limiting
+
 ```javascript
 // Initialize rate limits
 rateLimit.initRateLimit({
   global: { limit: 1000, window: 60 },
   functions: {
     transfer: { limit: 100, window: 60 },
-    mint: { limit: 10, window: 3600 }
-  }
+    mint: { limit: 10, window: 3600 },
+  },
 });
 
 // Check if allowed
 if (!rateLimit.checkRateLimit(address, 'transfer')) {
-  throw new Error("Rate limit exceeded");
+  throw new Error('Rate limit exceeded');
 }
 
 // Consume a slot
@@ -222,12 +231,15 @@ Store private keys, API secrets, and sensitive data securely without exposing th
 ## How Blackbox Works
 
 ### Isolated Storage
+
 Blackbox data is stored separately from contract state and is never included in view function responses or transaction logs.
 
 ### Execution-Only Access
+
 Secrets can only be accessed during contract execution, ensuring they remain private even from contract viewers.
 
 ### Automatic Redaction
+
 Any sensitive data that appears in transaction inputs or outputs is automatically redacted as "[REDACTED]" in logs.
 
 ## Secure Wallet Example
@@ -236,44 +248,44 @@ Any sensitive data that appears in transaction inputs or outputs is automaticall
 // Secure wallet management
 const state = {
   wallets: {},
-  transactions: []
+  transactions: [],
 };
 
 function createWallet(inputs) {
   const keypair = blackbox.generateSolanaKeypair();
   const walletId = inputs.walletId || Date.now().toString();
-  
+
   // Store private key securely
   blackbox.storeSecret(walletId, keypair.privateKey);
-  
+
   // Only store public key in visible state
   state.wallets[walletId] = {
     publicKey: keypair.publicKey,
-    created: Date.now()
+    created: Date.now(),
   };
-  
+
   return {
     walletId,
-    publicKey: keypair.publicKey
+    publicKey: keypair.publicKey,
   };
 }
 
 async function signTransaction(inputs) {
   if (!state.wallets[inputs.walletId]) {
-    throw new Error("Wallet not found");
+    throw new Error('Wallet not found');
   }
-  
+
   // Sign transaction with stored private key
   const signedTx = await blackbox.signTransaction(
     inputs.walletId,
     inputs.transaction
   );
-  
+
   state.transactions.push({
     walletId: inputs.walletId,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
-  
+
   return { signedTransaction: signedTx };
 }
 ```
@@ -287,24 +299,28 @@ Comprehensive cryptographic signature verification for secure wallet authenticat
 ## Security Features
 
 ### Multi-Format Support
+
 - Base58 encoded signatures (Phantom wallet)
 - Hex encoded signatures (64 bytes)
 - Automatic format detection
 - Fallback handling for compatibility
 
 ### Challenge-Based Auth
+
 - Time-limited challenges (5-30 min)
 - Cryptographically secure nonces
 - One-time use prevents replay attacks
 - Wallet address binding
 
 ### Verification Methods
+
 - Contract challenges (most secure)
 - Timestamped verification
 - Basic message verification
 - Multiple signature batch verification
 
 ### Attack Prevention
+
 - Replay attack protection
 - Clock skew protection (1 min tolerance)
 - Cross-wallet attack prevention
@@ -317,8 +333,8 @@ Most secure method using one-time challenges with cryptographic nonces. Perfect 
 ```javascript
 // 1. Generate challenge for any action
 const challenge = generateContractChallenge(
-  walletAddress, 
-  "transfer_tokens",  // Can be any action: "mint_nft", "vote", "claim_reward", etc.
+  walletAddress,
+  'transfer_tokens', // Can be any action: "mint_nft", "vote", "claim_reward", etc.
   5 // Expiry in minutes
 );
 
@@ -327,10 +343,10 @@ const challenge = generateContractChallenge(
 const result = verifyContractChallenge(challengeId, signature, walletAddress);
 if (result.success) {
   // Proceed with the action
-  console.log("Verified action:", result.action);
-  console.log("Wallet:", result.walletAddress);
+  console.log('Verified action:', result.action);
+  console.log('Wallet:', result.walletAddress);
 } else {
-  console.error("Verification failed:", result.error);
+  console.error('Verification failed:', result.error);
 }
 ```
 
@@ -341,11 +357,11 @@ if (result.success) {
 const state = {
   owner: null,
   treasury: 0,
-  nonce: 0
+  nonce: 0,
 };
 
 function initialize(inputs) {
-  if (state.owner) throw new Error("Already initialized");
+  if (state.owner) throw new Error('Already initialized');
   state.owner = inputs.ownerWallet;
   return { success: true, owner: state.owner };
 }
@@ -354,31 +370,31 @@ function initialize(inputs) {
 async function withdraw(inputs) {
   // Create message with nonce to prevent replay attacks
   const message = `Withdraw:${inputs.amount}:Nonce:${state.nonce}`;
-  
+
   // Verify owner signature
   const isValid = await verify.verifyMessageSignature(
     message,
     inputs.signature,
     state.owner
   );
-  
+
   if (!isValid) {
-    throw new Error("Invalid owner signature");
+    throw new Error('Invalid owner signature');
   }
-  
+
   if (inputs.amount > state.treasury) {
-    throw new Error("Insufficient funds");
+    throw new Error('Insufficient funds');
   }
-  
+
   // Process withdrawal
   state.treasury -= inputs.amount;
   state.nonce++; // Increment nonce to prevent replay
-  
+
   return {
     success: true,
     withdrawn: inputs.amount,
     remaining: state.treasury,
-    to: inputs.to
+    to: inputs.to,
   };
 }
 ```
@@ -394,6 +410,7 @@ Comprehensive content management system for large game data, assets, and text co
 The Content API provides a file-based content management system for handling large amounts of game data, assets, and text content. This eliminates database bloat and state storage limitations while providing fast access through in-memory caching.
 
 ### Benefits
+
 - No database storage limits
 - Fast in-memory caching
 - Modular content loading
@@ -401,6 +418,7 @@ The Content API provides a file-based content management system for handling lar
 - Easy JSON editing
 
 ### Use Cases
+
 - Game dialogue systems
 - Asset management
 - Lore and story content
@@ -451,21 +469,27 @@ All content is stored as JSON files in the `/content` directory with a standardi
 ## API Endpoints
 
 ### GET /api/content
+
 List all available game content
 
 ### GET /api/content/:gameId
+
 Get full content for a specific game
 
 ### GET /api/content/:gameId/dialogue/:characterId?
+
 Get dialogue for specific character or all dialogue
 
 ### GET /api/content/:gameId/path
+
 Get partial content using dot notation path - perfect for optimized access to specific JSON subsets
 
 ### POST /api/content/:gameId
+
 Save or update game content (requires authentication and ownership for updates)
 
 ### DELETE /api/content/:gameId
+
 Delete game content (requires authentication and ownership)
 
 ## Smart Contract Integration
@@ -475,29 +499,29 @@ Smart contracts can access the Content API through the `content` global object, 
 ```javascript
 // Content-Aware RPG Contract Example
 const state = {
-  gameId: "example-rpg-game",
+  gameId: 'example-rpg-game',
   players: {},
-  currentLocation: "royal_castle"
+  currentLocation: 'royal_castle',
 };
 
 // Get character dialogue - OPTIMIZED with partial path access
 async function getDialogue(inputs) {
   const { player, characterId } = inputs;
-  
+
   // Get ONLY the specific dialogue using path access (much faster!)
   const dialogue = await content.getContentByPath(
-    state.gameId, 
+    state.gameId,
     `text.dialogue.${characterId}`
   );
-  
+
   if (!dialogue) {
-    return { success: false, error: "Character not found" };
+    return { success: false, error: 'Character not found' };
   }
-  
+
   return {
     success: true,
     character: characterId,
-    dialogue: dialogue
+    dialogue: dialogue,
   };
 }
 ```
@@ -513,6 +537,7 @@ Full Solana blockchain integration with wallet authentication, transaction build
 ProofNetworkChain uses Solana wallet message signing for secure authentication. Users sign a message with their wallet to prove ownership and receive a session token.
 
 ### Authentication Flow
+
 1. Request authentication challenge from /api/auth/challenge
 2. Sign the challenge message with Phantom or other Solana wallet
 3. Submit signature to /api/auth/verify
@@ -521,10 +546,12 @@ ProofNetworkChain uses Solana wallet message signing for secure authentication. 
 ## Transaction Builder
 
 ### SOL Transfers
+
 Single or multi-recipient SOL transfers with Web3.js or Umi
 `POST /api/tx-builder/sol`
 
 ### Token Transfers
+
 SPL token transfers with automatic ATA creation
 `POST /api/tx-builder/token`
 
@@ -534,46 +561,46 @@ SPL token transfers with automatic ATA creation
 // Using Solana Agent Kit in contracts
 const state = {
   treasury: null,
-  tokens: {}
+  tokens: {},
 };
 
 async function initialize(inputs) {
   // Create treasury wallet
   const keypair = blackbox.generateSolanaKeypair();
-  blackbox.storeSecret("treasury", keypair.privateKey);
-  
+  blackbox.storeSecret('treasury', keypair.privateKey);
+
   state.treasury = keypair.publicKey;
-  
+
   // Initialize Solana agent
   await solanaAgent.initialize(keypair.privateKey);
-  
+
   return {
-    treasuryAddress: state.treasury
+    treasuryAddress: state.treasury,
   };
 }
 
 async function deployToken(inputs) {
   if (!inputs.name || !inputs.symbol || !inputs.supply) {
-    throw new Error("Missing token parameters");
+    throw new Error('Missing token parameters');
   }
-  
+
   // Deploy new SPL token
   const token = await solanaAgent.deployToken(
     inputs.name,
     inputs.symbol,
     inputs.supply,
-    9  // decimals
+    9 // decimals
   );
-  
+
   state.tokens[inputs.symbol] = {
     mint: token.mint,
     decimals: token.decimals,
-    supply: inputs.supply
+    supply: inputs.supply,
   };
-  
+
   return {
     tokenMint: token.mint,
-    transactionSignature: token.signature
+    transactionSignature: token.signature,
   };
 }
 ```
@@ -585,23 +612,27 @@ The Metaplex UMI framework provides a powerful way to build complex Solana trans
 ### UMI API Reference
 
 #### Core Functions
+
 - `umi.createUmi(rpcUrl?)` - Create UMI instance with optional custom RPC
 - `umi.generateSigner(umiInstance)` - Generate new keypair signer
 - `umi.createSignerFromPrivateKey(umi, privateKey)` - Create signer from base58 private key
 - `umi.createNoopSigner(publicKey)` - Create no-op signer for fee payer
 
 #### Transaction Building
+
 - `umi.transactionBuilder()` - Create new transaction builder
 - `umi.buildAndSerialize(umi, builder)` - Build and serialize transaction to base64
 - `umi.buildSignAndSerialize(umi, builder, signer)` - Build, sign and serialize transaction
 
 #### Token Operations
+
 - `umi.transferSol(umi, options)` - Transfer SOL between accounts
 - `umi.createMint(umi, options)` - Create new SPL token mint
 - `umi.mintTokensTo(umi, options)` - Mint tokens to an account
 - `umi.transferTokens(umi, options)` - Transfer SPL tokens
 
 #### Utility Functions
+
 - `umi.publicKey(address)` - Convert string address to UMI PublicKey type
 - `umi.sol(amount)` - Convert SOL amount to lamports
 - `umi.applyFee(amount, feePercent)` - Calculate fee and return object with newAmount and feeAmount
@@ -615,60 +646,75 @@ Complete API documentation for all ProofNetworkChain endpoints with fetch and cu
 ## VRF Endpoints
 
 ### POST /api/vrf/single
+
 Single wallet validation - returns true/false for whether a wallet is selected
 
 ### POST /api/vrf/range
+
 Number range selection - returns random number(s) within specified range
 
 ### POST /api/vrf/array
+
 Array selection - returns random item(s) from provided array (wallets, numbers, or strings)
 
 ## Smart Contract Endpoints
 
 ### POST /api/blockchain/contracts/deploy
+
 Deploy a new smart contract to the blockchain
 
 ### POST /api/blockchain/contracts/call
+
 Execute a function on a deployed smart contract
 
 ### GET /api/blockchain/contracts/:address
+
 Retrieve contract information and state
 
 ### GET /api/blockchain/contracts
+
 List all deployed contracts with pagination
 
 ## Authentication Endpoints
 
 ### POST /api/auth/challenge
+
 Request authentication challenge for wallet signing
 
 ### POST /api/auth/verify
+
 Verify wallet signature and receive session token
 
 ### GET /api/auth/session
+
 Check current session status
 
 ## TX Builder Endpoints
 
 ### POST /api/tx-builder/build
+
 Build Solana transactions for SOL and SPL token transfers
 
 ## Statistics Endpoints
 
 ### GET /api/vrf/stats
+
 Get VRF usage statistics and performance metrics
 
 ### GET /api/blockchain/stats
+
 Get blockchain statistics including contracts and transactions
 
 ## Rate Limits & Error Handling
 
 ### Rate Limits
+
 - VRF API: 500/second
 - Contract Calls: 100/minute
 - General API: 450k/15min
 
 ### Error Codes
+
 - 400: Bad Request
 - 401: Unauthorized
 - 429: Rate Limited
@@ -688,74 +734,81 @@ The TX Builder Service provides a powerful API for creating Solana transactions 
 
 ```typescript
 interface TxBuilderRequest {
-  framework: "web3js" | "umi";
+  framework: 'web3js' | 'umi';
   transactions: Transaction[];
 }
 
 interface Transaction {
-  type: "sol" | "token";
-  from: string;           // Sender's wallet address
-  to?: string;            // Recipient address (single transfer)
-  amount?: number;        // Amount (single transfer)
-  recipients?: {          // Multi-recipient transfers
+  type: 'sol' | 'token';
+  from: string; // Sender's wallet address
+  to?: string; // Recipient address (single transfer)
+  amount?: number; // Amount (single transfer)
+  recipients?: {
+    // Multi-recipient transfers
     address: string;
     amount: number;
   }[];
-  tokenMint?: string;     // SPL token mint (for token transfers)
-  decimals?: number;      // Token decimals (default: 9)
+  tokenMint?: string; // SPL token mint (for token transfers)
+  decimals?: number; // Token decimals (default: 9)
 }
 ```
 
 ## Examples
 
 ### SOL Transfer
+
 ```javascript
 fetch('/api/tx-builder/build', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': 'Bearer YOUR_TOKEN'
+    Authorization: 'Bearer YOUR_TOKEN',
   },
   body: JSON.stringify({
-    framework: "web3js",
-    transactions: [{
-      type: "sol",
-      from: "BwZthB7QVbTKoPCEkgQ7UBV7ejtKWyWAvPabEigjWFof",
-      to: "6AF3suy7QWvKaAPkZzZbJkJ9zSKzNC8Cieray5MXoXJj",
-      amount: 0.1
-    }]
-  })
-})
+    framework: 'web3js',
+    transactions: [
+      {
+        type: 'sol',
+        from: 'BwZthB7QVbTKoPCEkgQ7UBV7ejtKWyWAvPabEigjWFof',
+        to: '6AF3suy7QWvKaAPkZzZbJkJ9zSKzNC8Cieray5MXoXJj',
+        amount: 0.1,
+      },
+    ],
+  }),
+});
 ```
 
 ### Multi-Recipient Token Transfer
+
 ```javascript
 fetch('/api/tx-builder/build', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': 'Bearer YOUR_TOKEN'
+    Authorization: 'Bearer YOUR_TOKEN',
   },
   body: JSON.stringify({
-    framework: "umi",
-    transactions: [{
-      type: "token",
-      from: "BwZthB7QVbTKoPCEkgQ7UBV7ejtKWyWAvPabEigjWFof",
-      tokenMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-      decimals: 6,
-      recipients: [
-        {
-          address: "6AF3suy7QWvKaAPkZzZbJkJ9zSKzNC8Cieray5MXoXJj",
-          amount: 100
-        },
-        {
-          address: "Dhma1HhR1rUEuUwnSHXWroqB5Hrj1W5n3oqrhcPDF1np",
-          amount: 50
-        }
-      ]
-    }]
-  })
-})
+    framework: 'umi',
+    transactions: [
+      {
+        type: 'token',
+        from: 'BwZthB7QVbTKoPCEkgQ7UBV7ejtKWyWAvPabEigjWFof',
+        tokenMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        decimals: 6,
+        recipients: [
+          {
+            address: '6AF3suy7QWvKaAPkZzZbJkJ9zSKzNC8Cieray5MXoXJj',
+            amount: 100,
+          },
+          {
+            address: 'Dhma1HhR1rUEuUwnSHXWroqB5Hrj1W5n3oqrhcPDF1np',
+            amount: 50,
+          },
+        ],
+      },
+    ],
+  }),
+});
 ```
 
 ## Response Format
@@ -775,26 +828,24 @@ fetch('/api/tx-builder/build', {
 // Example: Generate payment transaction in smart contract
 async function generatePayment(inputs) {
   const txRequest = {
-    framework: "web3js",
-    transactions: [{
-      type: "sol",
-      from: inputs.payer,
-      to: state.treasuryWallet,
-      amount: inputs.amount
-    }]
+    framework: 'web3js',
+    transactions: [
+      {
+        type: 'sol',
+        from: inputs.payer,
+        to: state.treasuryWallet,
+        amount: inputs.amount,
+      },
+    ],
   };
-  
+
   // Call TX Builder API
-  const response = await apiRequest(
-    "POST",
-    "/api/tx-builder/build",
-    txRequest
-  );
-  
+  const response = await apiRequest('POST', '/api/tx-builder/build', txRequest);
+
   return {
     success: true,
     base64Transaction: response.transaction,
-    message: "Payment transaction ready for signing"
+    message: 'Payment transaction ready for signing',
   };
 }
 ```
@@ -802,12 +853,14 @@ async function generatePayment(inputs) {
 ## Rate Limits & Error Handling
 
 ### Rate Limits
+
 - TX Builder: 30 requests/minute
 - Authentication: Required for all requests
 - Rate Reset: Every 60 seconds
 - Burst Limit: 5 concurrent requests
 
 ### Important Notes
+
 - Transactions are created but not signed - user's wallet must sign
 - Uses Helius RPC API for reliable transaction building
 - Automatically handles token account creation if needed
@@ -858,15 +911,19 @@ ProofNetworkChain integrates with popular tools and frameworks to provide a comp
 ## Integrated Tools
 
 ### Phantom Wallet
+
 Native integration for authentication and transaction signing
 
 ### Helius RPC
+
 High-performance Solana RPC for reliable blockchain access
 
 ### Jupiter DEX
+
 Token swaps and DeFi operations through Solana Agent Kit
 
 ### Metaplex
+
 NFT creation and management with Umi framework support
 
 ---
@@ -881,7 +938,7 @@ A: Always use throw statements for errors. This ensures transactions are marked 
 
 ```javascript
 if (!inputs.amount || inputs.amount <= 0) {
-  throw new Error("Invalid amount");
+  throw new Error('Invalid amount');
 }
 ```
 
@@ -894,8 +951,8 @@ A: No, contracts run in a sandboxed environment without access to npm packages. 
 A: Use the blackbox API to store secrets that won't be exposed in logs or view functions:
 
 ```javascript
-blackbox.storeSecret("apiKey", "sk_live_abc123");
-const key = blackbox.getSecret("apiKey"); // Only works during execution
+blackbox.storeSecret('apiKey', 'sk_live_abc123');
+const key = blackbox.getSecret('apiKey'); // Only works during execution
 ```
 
 ## Q: What's the gas limit for contract execution?
@@ -911,9 +968,7 @@ A: Use the Developers tab in the web interface. You can deploy contracts, call f
 A: Yes! Use the contract API for composability:
 
 ```javascript
-const result = await contract.call(
-  "0xOtherContract",
-  "functionName",
-  { param1: "value" }
-);
+const result = await contract.call('0xOtherContract', 'functionName', {
+  param1: 'value',
+});
 ```
