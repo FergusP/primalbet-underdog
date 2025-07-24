@@ -14,6 +14,7 @@ export class ColosseumScene extends BaseScene {
   private incomingGladiators: Phaser.GameObjects.Rectangle[] = []; // Track walking gladiators
   private currentGladiator?: Phaser.GameObjects.Rectangle; // Center gladiator
   private gladiatorHealth: number = 2; // Health for center gladiator
+  private selectedMonster: string = 'SKELETON_WARRIOR'; // Dev mode selected monster
 
   constructor() {
     super({ key: 'ColosseumScene' });
@@ -732,19 +733,32 @@ export class ColosseumScene extends BaseScene {
       console.log('Fight button clicked from HTML overlay');
       this.startCombat();
     };
+    
+    // Listen for dev monster selection
+    const handleMonsterSelect = (event: CustomEvent) => {
+      this.selectedMonster = event.detail.monster;
+      console.log('Dev: Selected monster:', this.selectedMonster);
+      // Reload state with new monster
+      this.loadGameState();
+    };
 
     window.addEventListener('fightButtonClicked', handleFightClick);
+    window.addEventListener('devMonsterSelect', handleMonsterSelect as EventListener);
     
     // Clean up listener when scene is destroyed
     this.events.once('shutdown', () => {
       window.removeEventListener('fightButtonClicked', handleFightClick);
+      window.removeEventListener('devMonsterSelect', handleMonsterSelect as EventListener);
     });
   }
 
   private async loadGameState() {
     try {
-      // Call backend API as specified in guide
-      const response = await fetch('/api/state');
+      // Call backend API with selected monster for dev mode
+      const url = new URL('/api/state', window.location.origin);
+      url.searchParams.set('monster', this.selectedMonster);
+      
+      const response = await fetch(url.toString());
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -786,11 +800,30 @@ export class ColosseumScene extends BaseScene {
 
     const monster = this.colosseumState.currentMonster;
     
-    // Update monster sprite
-    const spriteKey = monster.type.toLowerCase().replace(' ', '');
+    // Update monster sprite using tier's sprite key
+    const spriteKey = monster.tier.sprite;
     if (this.textures.exists(spriteKey)) {
       this.monsterSprite.setTexture(spriteKey);
-      this.monsterSprite.play(`${spriteKey}_idle`);
+      
+      // Set appropriate tint based on monster type
+      const tints: Record<string, number> = {
+        'skeleton-placeholder': 0xff4444,  // Red
+        'goblin-placeholder': 0x44ff44,    // Green
+        'orc-placeholder': 0xff8844,       // Orange
+        'minotaur-placeholder': 0x8844ff,  // Purple
+        'cyclops-placeholder': 0x880000    // Dark Red
+      };
+      this.monsterSprite.setTint(tints[spriteKey] || 0xff4444);
+      
+      // Scale based on difficulty
+      const scales: Record<string, number> = {
+        'skeleton-placeholder': 2.5,
+        'goblin-placeholder': 2.5,
+        'orc-placeholder': 3.0,
+        'minotaur-placeholder': 3.5,
+        'cyclops-placeholder': 4.0
+      };
+      this.monsterSprite.setScale(scales[spriteKey] || 2.5);
     }
     
     // Ensure monster faces left towards gladiator

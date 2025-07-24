@@ -134,16 +134,48 @@ export class PreloadScene extends Scene {
     graphics.fillCircle(32, 32, 30);
     graphics.generateTexture('gladiator-placeholder', 64, 64);
     
+    // Monster placeholders with different colors for each tier
+    // Skeleton Warrior - Red (Easy)
     graphics.clear();
     graphics.fillStyle(0xff4444);
     graphics.fillCircle(32, 32, 30);
     graphics.generateTexture('skeleton-placeholder', 64, 64);
+    
+    // Goblin Archer - Green (Easy-Medium)
+    graphics.clear();
+    graphics.fillStyle(0x44ff44);
+    graphics.fillCircle(32, 32, 30);
+    graphics.generateTexture('goblin-placeholder', 64, 64);
+    
+    // Orc Gladiator - Orange (Medium)
+    graphics.clear();
+    graphics.fillStyle(0xff8844);
+    graphics.fillCircle(32, 32, 30);
+    graphics.generateTexture('orc-placeholder', 64, 64);
+    
+    // Minotaur Champion - Purple (Hard)
+    graphics.clear();
+    graphics.fillStyle(0x8844ff);
+    graphics.fillCircle(32, 32, 30);
+    graphics.generateTexture('minotaur-placeholder', 64, 64);
+    
+    // Cyclops Titan - Dark Red (Very Hard)
+    graphics.clear();
+    graphics.fillStyle(0x880000);
+    graphics.fillCircle(32, 32, 30);
+    graphics.generateTexture('cyclops-placeholder', 64, 64);
     
     // Vault placeholder
     graphics.clear();
     graphics.fillStyle(0xffd700);
     graphics.fillRect(0, 0, 80, 100);
     graphics.generateTexture('vault-placeholder', 80, 100);
+    
+    // Spark placeholder for particles
+    graphics.clear();
+    graphics.fillStyle(0xffffff);
+    graphics.fillCircle(4, 4, 4);
+    graphics.generateTexture('spark-placeholder', 8, 8);
     
     graphics.destroy();
   }

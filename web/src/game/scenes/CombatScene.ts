@@ -32,9 +32,9 @@ export class CombatScene extends BaseScene {
   private lastSpearRegen: number = 0;
   private isGameOver: boolean = false;
 
-  // Monster attack properties
+  // Monster attack properties (adjusted based on difficulty)
   private monsterAttackRange: number = 80; // Monster attacks when this close
-  private monsterAttackCooldown: number = 1500; // 1.5 seconds between attacks
+  private monsterAttackCooldown: number = 1500; // Base cooldown, adjusted per monster
   private lastMonsterAttackTime: number = 0;
 
   // Range indicators (for development)
@@ -126,14 +126,33 @@ export class CombatScene extends BaseScene {
     this.player.setTint(0x4444ff);
     this.player.setScale(2);
 
-    // Create monster (red circle, positioned to guard the vault)
+    // Create monster using tier's sprite
+    const spriteKey = this.monsterData.tier.sprite;
     this.monster = this.add.sprite(
       width * 0.7,
       height * 0.5,
-      'skeleton-placeholder'
+      spriteKey
     );
-    this.monster.setTint(0xff4444);
-    this.monster.setScale(2.5);
+    
+    // Set appropriate tint based on monster type
+    const tints: Record<string, number> = {
+      'skeleton-placeholder': 0xff4444,  // Red
+      'goblin-placeholder': 0x44ff44,    // Green
+      'orc-placeholder': 0xff8844,       // Orange
+      'minotaur-placeholder': 0x8844ff,  // Purple
+      'cyclops-placeholder': 0x880000    // Dark Red
+    };
+    this.monster.setTint(tints[spriteKey] || 0xff4444);
+    
+    // Scale based on difficulty
+    const scales: Record<string, number> = {
+      'skeleton-placeholder': 2.5,
+      'goblin-placeholder': 2.5,
+      'orc-placeholder': 3.0,
+      'minotaur-placeholder': 3.5,
+      'cyclops-placeholder': 4.0
+    };
+    this.monster.setScale(scales[spriteKey] || 2.5);
     this.monster.setAlpha(1); // Ensure fully visible
     this.monster.setVisible(true);
     this.monster.setDepth(5); // Ensure proper rendering order
@@ -443,9 +462,13 @@ export class CombatScene extends BaseScene {
 
       // Try to attack if cooldown is over
       const currentTime = this.time.now;
+      // Adjust cooldown based on monster difficulty (harder monsters attack faster)
+      const cooldownMultiplier = this.monsterData.tier.defenseMultiplier;
+      const adjustedCooldown = this.monsterAttackCooldown * cooldownMultiplier;
+      
       if (
         currentTime >
-        this.lastMonsterAttackTime + this.monsterAttackCooldown
+        this.lastMonsterAttackTime + adjustedCooldown
       ) {
         console.log(
           'Monster in range! Distance:',
@@ -464,7 +487,10 @@ export class CombatScene extends BaseScene {
         this.player.x,
         this.player.y
       );
-      const speed = 80;
+      // Adjust speed based on monster tier (harder monsters are faster)
+      const baseSpeed = 80;
+      const speedMultiplier = 1.5 - this.monsterData.tier.defenseMultiplier; // Inverse relationship
+      const speed = baseSpeed * (1 + speedMultiplier);
       monsterBody.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
     }
   }
@@ -657,8 +683,9 @@ export class CombatScene extends BaseScene {
       onComplete: () => swipeGraphics.destroy(),
     });
 
-    // Deal damage to player
-    const damage = Math.floor(Math.random() * 20) + 10; // 10-30 damage
+    // Deal damage to player based on monster's attack power
+    const baseDamage = this.monsterData.tier.attackPower;
+    const damage = Math.floor(Math.random() * baseDamage) + Math.floor(baseDamage / 2);
     this.playerHealth = Math.max(0, this.playerHealth - damage);
 
     console.log(
