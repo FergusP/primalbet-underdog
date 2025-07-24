@@ -78,7 +78,7 @@ export const MenuSceneUI: React.FC<MenuSceneUIProps> = () => {
           animation: 'titlePulse 2s ease-in-out infinite'
         }}
       >
-        AVRELIVS COLOSSEVM
+        AURELIUS COLOSSEUM
       </h1>
 
       {/* Connected Status */}

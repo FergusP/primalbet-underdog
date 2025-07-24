@@ -3,10 +3,10 @@
 // Game Wrapper - React component that integrates Phaser with wallet
 import React, { useEffect, useRef, useState } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { GameService } from '../services/GameService';
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { WalletReconnect } from './WalletReconnect';
+import { ClientWalletButton } from './ClientWalletButton';
 import { GameUIOverlay } from './GameUIOverlay';
 import { MenuSceneUI } from './MenuSceneUI';
 import { CombatSceneUI } from './CombatSceneUI';
@@ -22,6 +22,7 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
   const [isGameReady, setIsGameReady] = useState(false);
   const [currentScene, setCurrentScene] = useState<string>('');
   const [backendStatus, setBackendStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
+  const [mounted, setMounted] = useState(false);
   
   const { 
     publicKey, 
@@ -32,6 +33,11 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
   } = useWallet();
   
   const { connection } = useConnection();
+
+  // Set mounted state
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Initialize Phaser game - client-side only
   useEffect(() => {
@@ -225,10 +231,10 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
         </div>
 
         {/* Wallet connection */}
-        <WalletMultiButton className="!bg-red-600 hover:!bg-red-700 !text-white !font-bold !px-4 !py-2 !rounded-lg transition-colors" />
+        <ClientWalletButton className="!bg-red-600 hover:!bg-red-700 !text-white !font-bold !px-4 !py-2 !rounded-lg transition-colors" />
         
-        {/* Manual reconnect for development */}
-        {!connected && wallet && (
+        {/* Manual reconnect for development - only show on client */}
+        {mounted && !connected && wallet && (
           <button
             onClick={async () => {
               try {

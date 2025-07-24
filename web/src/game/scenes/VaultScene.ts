@@ -28,7 +28,7 @@ export class VaultScene extends BaseScene {
     // Clean up existing vaults if any
     if (this.vaults && this.vaults.length > 0) {
       this.vaults.forEach(vault => {
-        if (vault && !vault.destroyed) {
+        if (vault && vault.active) {
           vault.destroy();
         }
       });
@@ -245,7 +245,7 @@ export class VaultScene extends BaseScene {
     this.cameras.main.shake(1000, 0.02);
     
     // Add dramatic effects to selected vault
-    if (this.selectedVault && !this.selectedVault.destroyed) {
+    if (this.selectedVault && this.selectedVault.active) {
       this.tweens.add({
         targets: this.selectedVault,
         scaleX: 1.5,
@@ -359,10 +359,8 @@ export class VaultScene extends BaseScene {
       lifespan: 1000,
       quantity: 3,
       frequency: 100,
-      emitZone: {
-        type: 'random',
-        source: new Phaser.Geom.Circle(0, 0, 30)
-      },
+      x: { min: -30, max: 30 },
+      y: { min: -30, max: 30 },
       tint: [0xffd700, 0xffff00, 0xffaa00]
     });
     
@@ -442,10 +440,7 @@ export class VaultScene extends BaseScene {
     // Remove event listeners
     window.removeEventListener('continue-from-vault-ui', this.handleContinue);
     
-    // Call parent shutdown if exists
-    if (super.shutdown) {
-      super.shutdown();
-    }
+    // Parent class handles shutdown automatically
   }
   
   private handleContinue = () => {

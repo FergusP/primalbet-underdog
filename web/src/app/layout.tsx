@@ -18,7 +18,6 @@ export const metadata: Metadata = {
   description: "Fight monsters, crack the vault, claim the SOL jackpot. The ultimate blockchain arena game.",
   keywords: "Solana, Game, NFT, Jackpot, Combat, Blockchain, Crypto",
   authors: [{ name: "Aurelius Colosseum Team" }],
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
   icons: {
     icon: [
       { url: '/colosseum-icon.svg', type: 'image/svg+xml' },
@@ -27,6 +26,13 @@ export const metadata: Metadata = {
     shortcut: '/colosseum-icon.svg',
     apple: '/colosseum-icon.svg',
   },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
