@@ -48,7 +48,7 @@ export const AureliusWalletProvider: React.FC<Props> = ({ children }) => {
       <WalletProvider 
         wallets={wallets} 
         autoConnect={true}
-        localStorageKey="aurelius-wallet"
+        localStorageKey="walletAdapter"
       >
         <WalletModalProvider>
           {children}

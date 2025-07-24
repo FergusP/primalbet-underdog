@@ -1,31 +1,25 @@
 // Mock colosseum state endpoint for frontend development
 import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { ColosseumState } from '../../../types';
+import { MONSTER_TIERS } from '../../../data/monsters';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Get selected monster from query params (for dev mode)
+  const searchParams = request.nextUrl.searchParams;
+  const selectedMonster = searchParams.get('monster') || 'SKELETON_WARRIOR';
+  
+  // Get monster tier data
+  const monsterTier = MONSTER_TIERS[selectedMonster] || MONSTER_TIERS.SKELETON_WARRIOR;
+  
   // Mock colosseum state matching INTERFACE_CONTRACT.md v6.0
   const mockState: ColosseumState = {
     currentMonster: {
       id: 'monster_001',
-      type: 'Skeleton Warrior',
-      tier: {
-        name: 'Skeleton Warrior',
-        sprite: 'skeleton-placeholder',
-        poolRange: [1, 10] as [number, number],
-        baseHealth: 80,
-        attackPower: 15,
-        defenseMultiplier: 0.9,
-        vaultCrackChance: 0.1,
-        entryFee: 100000000, // 0.1 SOL in lamports
-        animations: {
-          idle: 'skeleton-idle',
-          attack: 'skeleton-attack',
-          hurt: 'skeleton-hurt',
-          death: 'skeleton-death'
-        }
-      },
-      baseHealth: 80,
-      currentHealth: 80,
+      type: selectedMonster,
+      tier: monsterTier,
+      baseHealth: monsterTier.baseHealth,
+      currentHealth: monsterTier.baseHealth,
       spawnedAt: Date.now() - 300000, // 5 minutes ago
       defeatedBy: null,
       totalCombats: 3,

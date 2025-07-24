@@ -1,29 +1,407 @@
-// Main Colosseum Scene - core gameplay hub
-import { Scene } from 'phaser';
+// Main Colosseum Scene - core gameplay hub with HTML UI overlay
+import { BaseScene } from './BaseScene';
 import { ColosseumState, Monster, CombatSummary } from '../../types';
 
-export class ColosseumScene extends Scene {
+export class ColosseumScene extends BaseScene {
   private walletAddress!: string;
   private colosseumState!: ColosseumState;
-  private jackpotText!: Phaser.GameObjects.Text;
   private monsterSprite!: Phaser.GameObjects.Sprite;
-  private monsterNameText!: Phaser.GameObjects.Text;
-  private monsterHealthBar!: Phaser.GameObjects.Graphics;
-  private fightButton!: Phaser.GameObjects.Container;
-  private recentCombatsFeed!: Phaser.GameObjects.Text[];
   private updateTimer!: Phaser.Time.TimerEvent;
+  private bgImage!: Phaser.GameObjects.Image;
+  private gladiatorGroup: Phaser.GameObjects.Rectangle[] = [];
+  private spearTimer?: Phaser.Time.TimerEvent;
+  private minGladiators: number = 15; // Fixed at 15 gladiators
+  private incomingGladiators: Phaser.GameObjects.Rectangle[] = []; // Track walking gladiators
+  private currentGladiator?: Phaser.GameObjects.Rectangle; // Center gladiator
+  private gladiatorHealth: number = 2; // Health for center gladiator
+  private selectedMonster: string = 'SKELETON_WARRIOR'; // Dev mode selected monster
 
   constructor() {
     super({ key: 'ColosseumScene' });
   }
+  
+  private checkAndSpawnGladiators() {
+    // Count active gladiators (not including incoming ones)
+    const activeGladiators = this.gladiatorGroup.filter(g => g && g.active).length;
+    const totalGladiators = activeGladiators + this.incomingGladiators.length;
+    
+    // Spawn new gladiators if below minimum
+    if (totalGladiators < this.minGladiators) {
+      const toSpawn = this.minGladiators - totalGladiators;
+      
+      for (let i = 0; i < toSpawn; i++) {
+        // Stagger the spawns
+        this.time.delayedCall(i * 800, () => {
+          this.spawnWalkingGladiator();
+        });
+      }
+    }
+  }
+  
+  private spawnWalkingGladiator() {
+    const { centerX, centerY, width, height } = this.cameras.main;
+    const centerOffsetX = this.scaleValue(100, width);
+    const spreadX = this.scaleValue(250, width);
+    const spreadY = this.scaleValue(200, height);
+    
+    // Define entry points
+    const entryPoints = [
+      { x: Phaser.Math.Between(centerX - 150, centerX + 150), y: -50 },
+      { x: Phaser.Math.Between(centerX - 150, centerX + 150), y: height + 50 },
+      { x: width + 50, y: Phaser.Math.Between(100, height - 100) },
+    ];
+    
+    const entry = Phaser.Utils.Array.GetRandom(entryPoints);
+    
+    // Find final position with proper spacing
+    const minDistance = this.scaleValue(60, width); // Original spacing that worked
+    let validPosition = false;
+    let attempts = 0;
+    let finalX = 0, finalY = 0;
+    
+    while (!validPosition && attempts < 200) { // More attempts for better placement
+      finalX = centerX + centerOffsetX + Phaser.Math.Between(-spreadX/2, spreadX/2);
+      finalY = centerY + Phaser.Math.Between(-spreadY/2, spreadY/2);
+      
+      if (finalX < centerX - this.scaleValue(50, width)) {
+        attempts++;
+        continue;
+      }
+      
+      validPosition = true;
+      // Check distance from all gladiators (existing and incoming)
+      const allGladiators = [...this.gladiatorGroup, ...this.incomingGladiators];
+      for (const glad of allGladiators) {
+        if (glad && glad.active) {
+          const distance = Phaser.Math.Distance.Between(finalX, finalY, glad.x, glad.y);
+          if (distance < minDistance) {
+            validPosition = false;
+            break;
+          }
+        }
+      }
+      attempts++;
+    }
+    
+    // Create gladiator at entry point
+    const boxSize = this.scaleValue(25, width);
+    const gladiator = this.add.rectangle(entry.x, entry.y, boxSize, boxSize);
+    
+    // Store the actual box size for collision detection
+    gladiator.setData('boxSize', boxSize);
+    
+    gladiator.setFillStyle(0x8b7355);
+    gladiator.setStrokeStyle(2, 0xcd853f);
+    gladiator.setAlpha(0);
+    gladiator.setDepth(3);
+    
+    // Track as incoming
+    this.incomingGladiators.push(gladiator);
+    
+    // Store position data
+    gladiator.setData('originalX', finalX - centerX);
+    gladiator.setData('originalY', finalY - centerY);
+    
+    // Fade in while moving
+    this.tweens.add({
+      targets: gladiator,
+      alpha: 0.9,
+      duration: 500
+    });
+    
+    // Walk to position
+    this.tweens.add({
+      targets: gladiator,
+      x: finalX,
+      y: finalY,
+      duration: 2500,
+      ease: 'Power2',
+      onComplete: () => {
+        // Remove from incoming list
+        const index = this.incomingGladiators.indexOf(gladiator);
+        if (index > -1) {
+          this.incomingGladiators.splice(index, 1);
+        }
+        
+        // Add to main group
+        this.gladiatorGroup.push(gladiator);
+      }
+    });
+  }
+  
+  private killSupportingGladiator(gladiator: Phaser.GameObjects.Rectangle) {
+    // Remove from group
+    const index = this.gladiatorGroup.indexOf(gladiator);
+    if (index > -1) {
+      this.gladiatorGroup.splice(index, 1);
+    }
+    
+    // Death animation - fade and fall
+    this.tweens.add({
+      targets: gladiator,
+      alpha: 0,
+      y: gladiator.y + 30,
+      scaleX: 0.7,
+      scaleY: 0.7,
+      duration: 600,
+      ease: 'Power2',
+      onComplete: () => {
+        gladiator.destroy();
+        
+        // Don't spawn immediately - let checkAndSpawnGladiators handle it
+      }
+    });
+  }
+  
+  private addNewSupportingGladiator() {
+    const { centerX, centerY, width, height } = this.cameras.main;
+    
+    // Define entry points for new gladiators
+    const entryPoints = [
+      { x: Phaser.Math.Between(centerX - 150, centerX + 150), y: -50 }, // Top
+      { x: Phaser.Math.Between(centerX - 150, centerX + 150), y: height + 50 }, // Bottom
+      { x: width + 50, y: Phaser.Math.Between(100, height - 100) }, // Right
+    ];
+    
+    const entry = Phaser.Utils.Array.GetRandom(entryPoints);
+    
+    // Find final position in the circle with proper spacing
+    const minDistance = this.scaleValue(60, width);
+    let validPosition = false;
+    let attempts = 0;
+    let finalX = 0, finalY = 0, angle = 0, radius = 0;
+    
+    while (!validPosition && attempts < 50) {
+      angle = Phaser.Math.Between(-90, 90);
+      const radian = (angle * Math.PI) / 180;
+      radius = Phaser.Math.Between(this.scaleValue(120, width), this.scaleValue(200, width));
+      
+      finalX = centerX + radius * Math.cos(radian);
+      finalY = centerY + radius * Math.sin(radian);
+      
+      // Check distance from existing gladiators
+      validPosition = true;
+      for (const glad of this.gladiatorGroup) {
+        if (glad && glad.active) {
+          const distance = Phaser.Math.Distance.Between(finalX, finalY, glad.x, glad.y);
+          if (distance < minDistance) {
+            validPosition = false;
+            break;
+          }
+        }
+      }
+      attempts++;
+    }
+    
+    // Create gladiator at entry point
+    const boxSize = this.scaleValue(30, width);
+    const gladiator = this.add.rectangle(entry.x, entry.y, boxSize, boxSize);
+    
+    const colorVariation = Phaser.Math.Between(0, 2);
+    const colors = [0x8b7355, 0x9b8365, 0x7b6345];
+    gladiator.setFillStyle(colors[colorVariation]);
+    gladiator.setStrokeStyle(3, 0xcd853f);
+    gladiator.setAlpha(0);
+    gladiator.setDepth(3);
+    
+    // Store position data
+    gladiator.setData('originalAngle', angle);
+    gladiator.setData('originalRadius', radius);
+    
+    // Fade in while moving to position
+    this.tweens.add({
+      targets: gladiator,
+      alpha: Phaser.Math.FloatBetween(0.8, 1.0),
+      duration: 300
+    });
+    
+    // Move from entry point to final position
+    this.tweens.add({
+      targets: gladiator,
+      x: finalX,
+      y: finalY,
+      duration: 1500,
+      ease: 'Power2'
+    });
+    
+    this.gladiatorGroup.push(gladiator);
+  }
+  
+  private killCurrentGladiator() {
+    if (!this.currentGladiator) return;
+    
+    // Death animation - fade and fall
+    this.tweens.add({
+      targets: this.currentGladiator,
+      alpha: 0,
+      y: this.currentGladiator.y + 50,
+      scaleX: 0.5,
+      scaleY: 0.5,
+      duration: 800,
+      ease: 'Power2',
+      onComplete: () => {
+        // Destroy the dead gladiator
+        if (this.currentGladiator) {
+          this.currentGladiator.destroy();
+        }
+        
+        // Bring in next gladiator from queue
+        this.bringNextGladiator();
+      }
+    });
+    
+    // Create death particles
+    const particles = this.add.particles(this.currentGladiator.x, this.currentGladiator.y, 'spark-placeholder', {
+      lifespan: 1000,
+      speed: { min: 50, max: 150 },
+      scale: { start: 0.8, end: 0 },
+      blendMode: 'NORMAL',
+      tint: [0x8b0000, 0x555555],
+      quantity: 20,
+      gravityY: 200
+    });
+    
+    this.time.delayedCall(1200, () => {
+      particles.destroy();
+    });
+  }
+  
+  private bringNextGladiator() {
+    const { centerX, centerY, width, height } = this.cameras.main;
+    const boxSize = this.scaleValue(40, width);
+    
+    // Define possible entry points with more variation
+    const entryPoints = [
+      { x: Phaser.Math.Between(centerX - 100, centerX + 100), y: -50, name: 'top' },
+      { x: Phaser.Math.Between(centerX - 100, centerX + 100), y: height + 50, name: 'bottom' },
+      { x: width + 50, y: Phaser.Math.Between(50, height - 50), name: 'right' },
+      { x: Phaser.Math.Between(centerX + 50, width - 50), y: -50, name: 'topRight' },
+      { x: Phaser.Math.Between(centerX + 50, width - 50), y: height + 50, name: 'bottomRight' },
+    ];
+    
+    // Randomly select entry point
+    const entryPoint = entryPoints[Math.floor(Math.random() * entryPoints.length)];
+    
+    // Create new current gladiator at entry point
+    this.currentGladiator = this.add.rectangle(
+      entryPoint.x,
+      entryPoint.y,
+      boxSize,
+      boxSize
+    );
+    
+    this.currentGladiator.setFillStyle(0x8b0000);
+    this.currentGladiator.setStrokeStyle(4, 0xff0000);
+    this.currentGladiator.setAlpha(0);
+    this.currentGladiator.setDepth(4);
+    
+    // Fade in as gladiator enters
+    this.tweens.add({
+      targets: this.currentGladiator,
+      alpha: 1,
+      duration: 500
+    });
+    
+    // Animate gladiator walking to center
+    this.tweens.add({
+      targets: this.currentGladiator,
+      x: centerX,
+      y: centerY,
+      duration: 1500,
+      ease: 'Power2',
+      onComplete: () => {
+        // No breathing animation - keep gladiator static
+      }
+    });
+    
+    // Reset health for new gladiator
+    this.gladiatorHealth = 2;
+    
+    // Register the new gladiator
+    this.registerUIElement('currentGladiator', this.currentGladiator);
+  }
+  
+  private startSpearThrowing() {
+    // Clean up existing timer
+    if (this.spearTimer) {
+      this.spearTimer.destroy();
+    }
+    
+    // Create spear throwing effect with varied timing
+    this.spearTimer = this.time.addEvent({
+      delay: Phaser.Math.Between(1200, 2000), // Random intervals
+      callback: () => {
+        // Randomly select 2-3 gladiators to throw spears
+        const throwers = Phaser.Utils.Array.Shuffle([...this.gladiatorGroup]).slice(0, Phaser.Math.Between(2, 3));
+        
+        throwers.forEach((gladiator, i) => {
+          if (!gladiator || !gladiator.active) return;
+          
+          // Create spear projectile
+          const spear = this.add.rectangle(
+            gladiator.x,
+            gladiator.y,
+            this.scaleValue(20, this.cameras.main.width),
+            this.scaleValue(3, this.cameras.main.height)
+          );
+          
+          spear.setFillStyle(0x8b7355);
+          spear.setAlpha(0.8);
+          spear.setDepth(2);
+          
+          // Calculate angle to monster
+          const angle = Phaser.Math.Angle.Between(
+            gladiator.x, gladiator.y,
+            this.monsterSprite.x, this.monsterSprite.y
+          );
+          spear.setRotation(angle);
+          
+          // Animate spear flying toward monster - slower and more realistic
+          this.tweens.add({
+            targets: spear,
+            x: this.monsterSprite.x + Phaser.Math.Between(-30, 30),
+            y: this.monsterSprite.y + Phaser.Math.Between(-30, 30),
+            duration: 1200, // Slower travel time
+            delay: i * 150,
+            ease: 'Cubic.easeOut', // More realistic arc
+            onComplete: () => {
+              // Create small impact effect
+              this.tweens.add({
+                targets: spear,
+                alpha: 0,
+                scaleX: 0.5,
+                scaleY: 0.5,
+                duration: 300,
+                onComplete: () => spear.destroy()
+              });
+            }
+          });
+          
+          // Add slight arc to spear trajectory
+          this.tweens.add({
+            targets: spear,
+            y: spear.y - 20,
+            duration: 600,
+            yoyo: true,
+            ease: 'Sine.easeOut'
+          });
+        });
+      },
+      loop: true
+    });
+  }
 
   init(data: { walletAddress?: string }) {
     this.walletAddress = data?.walletAddress || 'test-wallet';
-    this.recentCombatsFeed = [];
   }
 
-  create() {
+  protected createScene() {
     const { width, height } = this.cameras.main;
+
+    // Emit scene change event
+    window.dispatchEvent(new CustomEvent('sceneChanged', { 
+      detail: { sceneName: 'ColosseumScene' } 
+    }));
 
     // Clean up any existing timers
     if (this.updateTimer) {
@@ -34,23 +412,18 @@ export class ColosseumScene extends Scene {
     this.events.on('wake', this.handleSceneWake, this);
     this.events.on('resume', this.handleSceneResume, this);
     
-    // Background
-    const bg = this.add.image(width * 0.5, height * 0.5, 'arena-bg-placeholder');
-    bg.setDisplaySize(width, height);
+    // Background - darker and more subtle
+    const bgRect = this.add.rectangle(width/2, height/2, width, height, 0x1a1a1a);
+    this.registerUIElement('bgRect', bgRect);
+    
+    this.bgImage = this.add.image(width * 0.5, height * 0.5, 'arena-bg-placeholder');
+    this.bgImage.setDisplaySize(width, height);
+    this.bgImage.setAlpha(0.3);
+    this.registerUIElement('bg', this.bgImage);
 
-    // Add arena atmosphere
-    this.add.text(width * 0.5, 30, '🏛️ THE AURELIUS COLOSSEUM 🏛️', {
-      fontSize: '32px',
-      color: '#ffd700',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    // Create UI sections
-    this.createJackpotDisplay();
+    // Create game elements only (UI is handled by HTML overlay)
     this.createMonsterDisplay();
-    this.createFightButton();
-    this.createRecentActivity();
-    this.createPlayerStats();
+    this.setupFightButtonListener();
 
     // Load initial game state
     this.loadGameState();
@@ -69,193 +442,332 @@ export class ColosseumScene extends Scene {
     }
   }
 
-  private createJackpotDisplay() {
-    const { width } = this.cameras.main;
-
-    // Jackpot panel background
-    const jackpotBg = this.add.graphics();
-    jackpotBg.fillStyle(0x2a2a3a);
-    jackpotBg.fillRoundedRect(50, 80, 300, 100, 15);
-    jackpotBg.lineStyle(3, 0xffd700);
-    jackpotBg.strokeRoundedRect(50, 80, 300, 100, 15);
-
-    // Jackpot label
-    this.add.text(200, 100, '💰 CURRENT JACKPOT 💰', {
-      fontSize: '20px',
-      color: '#ffd700',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    // Jackpot amount (will be updated dynamically)
-    this.jackpotText = this.add.text(200, 150, '0.000 SOL', {
-      fontSize: '36px',
-      color: '#ffffff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-  }
-
   private createMonsterDisplay() {
     const { width, height } = this.cameras.main;
 
-    // Monster area background
-    const monsterBg = this.add.graphics();
-    monsterBg.fillStyle(0x3a2a2a);
-    monsterBg.fillRoundedRect(width * 0.5 - 200, 200, 400, 300, 20);
-    monsterBg.lineStyle(3, 0xff4444);
-    monsterBg.strokeRoundedRect(width * 0.5 - 200, 200, 400, 300, 20);
-
-    // "Current Guardian" label
-    this.add.text(width * 0.5, 230, '👹 CURRENT GUARDIAN 👹', {
-      fontSize: '24px',
-      color: '#ff4444',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    // Monster sprite placeholder
-    this.monsterSprite = this.add.sprite(width * 0.5, 350, 'skeleton');
-    this.monsterSprite.setScale(2);
+    // Monster sprite - larger and more imposing
+    this.monsterSprite = this.add.sprite(0, 0, 'skeleton');
+    this.monsterSprite.setScale(this.scaleValue(5, width));
     this.monsterSprite.play('skeleton_idle');
-
-    // Monster name
-    this.monsterNameText = this.add.text(width * 0.5, 450, 'Skeleton Warrior', {
-      fontSize: '28px',
-      color: '#ffffff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    // Monster health bar background
-    this.monsterHealthBar = this.add.graphics();
-    this.updateMonsterHealthBar(100, 100); // Start at full health
-  }
-
-  private createFightButton() {
-    const { width, height } = this.cameras.main;
-
-    // Fight button background
-    const buttonBg = this.add.graphics();
-    buttonBg.fillStyle(0xff4444);
-    buttonBg.fillRoundedRect(0, 0, 300, 80, 20);
-    buttonBg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 300, 80), Phaser.Geom.Rectangle.Contains);
-
-    // Fight button text
-    const buttonText = this.add.text(150, 40, '⚔️ FIGHT FOR 0.01 SOL ⚔️', {
-      fontSize: '24px',
-      color: '#ffffff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    // Create container
-    this.fightButton = this.add.container(width * 0.5 - 150, height - 120);
-    this.fightButton.add([buttonBg, buttonText]);
+    this.monsterSprite.setFlipX(true); // Face left towards gladiator
+    this.monsterSprite.setDepth(5); // Ensure it appears above background
+    this.registerUIElement('monsterSprite', this.monsterSprite);
     
-    // Ensure button is enabled
-    this.fightButton.setAlpha(1);
-
-    // Button interactions
-    buttonBg.on('pointerover', () => {
-      console.log('Fight button hover');
-      buttonBg.clear();
-      buttonBg.fillStyle(0xff5555);
-      buttonBg.fillRoundedRect(0, 0, 300, 80, 20);
-      this.fightButton.setScale(1.05);
-    });
-
-    buttonBg.on('pointerout', () => {
-      buttonBg.clear();
-      buttonBg.fillStyle(0xff4444);
-      buttonBg.fillRoundedRect(0, 0, 300, 80, 20);
-      this.fightButton.setScale(1.0);
-    });
-
-    buttonBg.on('pointerdown', () => {
-      console.log('Fight button clicked');
-      this.startCombat();
-    });
-
-    // Add pulsing effect
+    // Add shadow under monster
+    const monsterShadow = this.add.ellipse(0, 0, 
+      this.scaleValue(150, width), 
+      this.scaleValue(40, height), 
+      0x000000, 0.5
+    );
+    monsterShadow.setDepth(4);
+    this.registerUIElement('monsterShadow', monsterShadow);
+    
+    // Add red aura effect around monster
+    const auraGlow = this.add.graphics();
+    auraGlow.setDepth(3);
+    this.registerUIElement('auraGlow', auraGlow);
+    
+    // Add pulsing aura animation
     this.tweens.add({
-      targets: this.fightButton,
-      scaleX: 1.02,
-      scaleY: 1.02,
-      duration: 1500,
+      targets: { radius: 100 },
+      radius: 120,
+      duration: 2000,
       yoyo: true,
       repeat: -1,
-      ease: 'Sine.easeInOut'
+      ease: 'Sine.easeInOut',
+      onUpdate: (tween) => {
+        const radius = tween.getValue();
+        if (typeof radius === 'number') {
+          auraGlow.clear();
+          auraGlow.setAlpha(0.5);
+          for (let i = 3; i > 0; i--) {
+            auraGlow.fillStyle(0xff0000, 0.1 * i);
+            auraGlow.fillCircle(0, 0, radius / i);
+          }
+        }
+      }
     });
-  }
 
-  private createRecentActivity() {
-    const { width } = this.cameras.main;
-
-    // Activity feed background
-    const activityBg = this.add.graphics();
-    activityBg.fillStyle(0x2a2a3a);
-    activityBg.fillRoundedRect(width - 350, 80, 280, 400, 15);
-    activityBg.lineStyle(2, 0x666666);
-    activityBg.strokeRoundedRect(width - 350, 80, 280, 400, 15);
-
-    // Activity feed title
-    this.add.text(width - 210, 110, '📜 RECENT BATTLES', {
-      fontSize: '18px',
-      color: '#cccccc',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    // Activity feed content will be populated dynamically
-  }
-
-  private createPlayerStats() {
-    // Player stats panel (top right)
-    const { width } = this.cameras.main;
+    // Create small gladiator indicators
+    this.createDefeatedGladiators(width, height);
     
-    const statsBg = this.add.graphics();
-    statsBg.fillStyle(0x2a3a2a);
-    statsBg.fillRoundedRect(width - 350, 500, 280, 150, 15);
-    statsBg.lineStyle(2, 0x66ff66);
-    statsBg.strokeRoundedRect(width - 350, 500, 280, 150, 15);
-
-    this.add.text(width - 210, 520, '🛡️ YOUR STATS', {
-      fontSize: '18px',
-      color: '#66ff66',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    // Will be populated with actual stats
-    this.add.text(width - 340, 550, 'Combats: -', {
-      fontSize: '14px',
-      color: '#ffffff'
+    // Position elements
+    this.positionMonsterDisplay(width, height);
+    
+    // Emit initial positions for HTML overlay
+    this.time.delayedCall(100, () => {
+      this.emitSpritePositions();
     });
-
-    this.add.text(width - 340, 570, 'Victories: -', {
-      fontSize: '14px',
-      color: '#ffffff'
+    
+    // Add periodic attack animation
+    this.time.addEvent({
+      delay: 4000, // Attack every 4 seconds
+      callback: () => {
+        if (this.monsterSprite && this.monsterSprite.active) {
+          const spriteKey = this.monsterSprite.texture.key;
+          
+          // Play attack animation
+          if (this.anims.exists(`${spriteKey}_attack`)) {
+            this.monsterSprite.play(`${spriteKey}_attack`);
+            
+            this.monsterSprite.once('animationcomplete', () => {
+              this.monsterSprite.play(`${spriteKey}_idle`);
+            });
+          } else {
+            // Fallback attack animation - lunge forward
+            this.tweens.add({
+              targets: this.monsterSprite,
+              x: this.monsterSprite.x + 50,
+              duration: 200,
+              yoyo: true,
+              ease: 'Power2'
+            });
+          }
+          
+          // Show attack line
+          const attackLine = this.getUIElement('attackLine') as Phaser.GameObjects.Graphics;
+          if (attackLine && 'setAlpha' in attackLine) {
+            attackLine.setAlpha(1);
+            this.tweens.add({
+              targets: attackLine,
+              alpha: 0,
+              duration: 600,
+              ease: 'Power2'
+            });
+          }
+          
+          // Hit a random gladiator from the group
+          const allGladiators = this.gladiatorGroup.filter(g => g && g.active);
+          
+          if (allGladiators.length > 0) {
+            // Pick random target
+            const target = Phaser.Utils.Array.GetRandom(allGladiators);
+            
+            // Update attack line to point to target
+            const attackLine = this.getUIElement('attackLine') as Phaser.GameObjects.Graphics;
+            if (attackLine && target) {
+              attackLine.clear();
+              attackLine.lineStyle(4, 0xff0000, 0.8);
+              attackLine.beginPath();
+              attackLine.moveTo(this.monsterSprite.x + this.scaleValue(50, this.cameras.main.width), this.monsterSprite.y);
+              attackLine.lineTo(target.x, target.y);
+              attackLine.strokePath();
+            }
+            
+            // Flash red on hit
+            this.tweens.add({
+              targets: target,
+              fillColor: 0xff0000,
+              duration: 200,
+              yoyo: true,
+              onComplete: () => {
+                target.setFillStyle(0x8b7355);
+              }
+            });
+            
+            // Create impact particles
+            const particles = this.add.particles(target.x, target.y, 'spark-placeholder', {
+              lifespan: 500,
+              speed: { min: 100, max: 200 },
+              scale: { start: 0.5, end: 0 },
+              blendMode: 'ADD',
+              tint: [0xff0000, 0xff6600, 0xffaa00],
+              quantity: 10
+            });
+            
+            this.time.delayedCall(600, () => {
+              particles.destroy();
+            });
+            
+            // Each gladiator has a chance to die when hit
+            if (Phaser.Math.Between(1, 2) === 1) { // 50% chance to die
+              this.killSupportingGladiator(target);
+              
+              // Check if we need to spawn new gladiators
+              this.checkAndSpawnGladiators();
+            }
+          }
+        }
+      },
+      loop: true
     });
-
-    this.add.text(width - 340, 590, 'Vaults Cracked: -', {
-      fontSize: '14px',
-      color: '#ffffff'
+    
+    // Add separate roar animation with screen shake
+    this.time.addEvent({
+      delay: 9000, // Roar every 9 seconds (avoids sync with 4s attacks)
+      callback: () => {
+        if (this.monsterSprite && this.monsterSprite.active) {
+          const spriteKey = this.monsterSprite.texture.key;
+          
+          // Play roar animation
+          if (this.anims.exists(`${spriteKey}_roar`)) {
+            this.monsterSprite.play(`${spriteKey}_roar`);
+            
+            // Enhanced screen shake for roar - more intense
+            this.cameras.main.shake(800, 0.02);
+            
+            // Play roar sound if available
+            if (this.sound.get('monster_roar')) {
+              this.sound.play('monster_roar', { volume: 0.7 });
+            }
+            
+            this.monsterSprite.once('animationcomplete', () => {
+              this.monsterSprite.play(`${spriteKey}_idle`);
+            });
+          } else {
+            // Fallback roar effect - scale up with screen shake
+            this.tweens.add({
+              targets: this.monsterSprite,
+              scaleX: this.monsterSprite.scaleX * 1.4,
+              scaleY: this.monsterSprite.scaleY * 1.4,
+              duration: 600,
+              yoyo: true,
+              ease: 'Power2'
+            });
+            
+            // Enhanced screen shake for fallback roar - more intense
+            this.cameras.main.shake(800, 0.02);
+          }
+        }
+      },
+      loop: true
     });
+  }
+  
+  private createDefeatedGladiators(width: number, height: number) {
+    const { centerX, centerY } = this.cameras.main;
+    
+    // Create gladiator group spread out like scattered dots
+    const gladiatorCount = 15; // Fixed at 15 gladiators
+    const centerOffsetX = this.scaleValue(100, width); // Shift group to the right
+    const spreadX = this.scaleValue(300, width); // Horizontal spread
+    const spreadY = this.scaleValue(250, height); // Vertical spread
+    const minDistance = this.scaleValue(60, width); // Original spacing that worked
+    
+    const positions: { x: number, y: number, angle: number, radius: number }[] = [];
+    
+    for (let i = 0; i < gladiatorCount; i++) {
+      let validPosition = false;
+      let attempts = 0;
+      let gladX = 0, gladY = 0, angle = 0, radius = 0;
+      
+      // Try to find a position that's not too close to existing gladiators
+      while (!validPosition && attempts < 100) {
+        // Random angle for each gladiator, avoiding left side (monster side)
+        const angle = Phaser.Math.Between(-90, 90);
+        const radian = (angle * Math.PI) / 180;
+        
+        // Random distance from center
+        const radius = Phaser.Math.Between(this.scaleValue(120, width), this.scaleValue(200, width));
+        
+        gladX = centerX + radius * Math.cos(radian) + Phaser.Math.Between(-20, 20);
+        gladY = centerY + radius * Math.sin(radian) + Phaser.Math.Between(-20, 20);
+        
+        // Skip if too far left (monster side)
+        if (gladX < centerX - this.scaleValue(50, width)) {
+          attempts++;
+          continue;
+        }
+        
+        // Check distance from other gladiators
+        validPosition = true;
+        for (const pos of positions) {
+          const distance = Phaser.Math.Distance.Between(gladX, gladY, pos.x, pos.y);
+          // Simple distance check
+          if (distance < minDistance) {
+            validPosition = false;
+            break;
+          }
+        }
+        attempts++;
+      }
+      
+      // Only create gladiator if we found a valid position
+      if (!validPosition) {
+        console.warn('Could not find position for gladiator', i);
+        continue;
+      }
+      
+      positions.push({ x: gladX, y: gladY, angle: 0, radius: 0 });
+      
+      const boxSize = this.scaleValue(25, width); // Slightly smaller
+      const gladiator = this.add.rectangle(gladX, gladY, boxSize, boxSize);
+      
+      // Store the actual box size for collision detection
+      gladiator.setData('boxSize', boxSize);
+      
+      // All gladiators same bronze color since no center focus
+      gladiator.setFillStyle(0x8b7355);
+      gladiator.setStrokeStyle(2, 0xcd853f);
+      gladiator.setAlpha(0.9);
+      gladiator.setDepth(3);
+      
+      // Store original position for repositioning
+      gladiator.setData('originalX', gladX - centerX);
+      gladiator.setData('originalY', gladY - centerY);
+      
+      this.gladiatorGroup.push(gladiator);
+      this.registerUIElement(`gladiatorGroup${i}`, gladiator);
+    }
+    
+    // No center gladiator anymore since attacks are random
+    
+    // Create attack effect line
+    const attackLine = this.add.graphics();
+    attackLine.setAlpha(0);
+    attackLine.setDepth(5);
+    this.registerUIElement('attackLine', attackLine);
+    
+    // Start spear throwing animation
+    this.startSpearThrowing();
+    
+    // Initial check for gladiator count
+    this.checkAndSpawnGladiators();
+    
+    // No health tracking needed for random attacks
+  }
 
-    this.add.text(width - 340, 610, 'Total Winnings: - SOL', {
-      fontSize: '14px',
-      color: '#ffffff'
+  private setupFightButtonListener() {
+    // Listen for fight button clicks from HTML overlay
+    const handleFightClick = () => {
+      console.log('Fight button clicked from HTML overlay');
+      this.startCombat();
+    };
+    
+    // Listen for dev monster selection
+    const handleMonsterSelect = (event: CustomEvent) => {
+      this.selectedMonster = event.detail.monster;
+      console.log('Dev: Selected monster:', this.selectedMonster);
+      // Reload state with new monster
+      this.loadGameState();
+    };
+
+    window.addEventListener('fightButtonClicked', handleFightClick);
+    window.addEventListener('devMonsterSelect', handleMonsterSelect as EventListener);
+    
+    // Clean up listener when scene is destroyed
+    this.events.once('shutdown', () => {
+      window.removeEventListener('fightButtonClicked', handleFightClick);
+      window.removeEventListener('devMonsterSelect', handleMonsterSelect as EventListener);
     });
   }
 
   private async loadGameState() {
     try {
-      // Call backend API as specified in guide
-      const response = await fetch('/api/state');
+      // Call backend API with selected monster for dev mode
+      const url = new URL('/api/state', window.location.origin);
+      url.searchParams.set('monster', this.selectedMonster);
+      
+      const response = await fetch(url.toString());
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
       
       this.colosseumState = await response.json();
       
-      // Update UI with new state
-      this.updateJackpotDisplay();
+      // Update UI via events to HTML overlay
+      this.updateGameStateForUI();
       this.updateMonsterDisplay();
-      this.updateRecentActivity();
       
     } catch (error) {
       console.error('Failed to load game state:', error);
@@ -264,21 +776,23 @@ export class ColosseumScene extends Scene {
     }
   }
 
-  private updateJackpotDisplay() {
+  private updateGameStateForUI() {
     if (!this.colosseumState) return;
 
-    const solAmount = this.colosseumState.currentJackpot / 1e9; // Convert lamports to SOL
-    this.jackpotText.setText(`${solAmount.toFixed(3)} SOL`);
-
-    // Add growing animation when jackpot increases
-    this.tweens.add({
-      targets: this.jackpotText,
-      scaleX: 1.1,
-      scaleY: 1.1,
-      duration: 200,
-      yoyo: true,
-      ease: 'Power2'
-    });
+    // Emit event with game state for HTML UI
+    window.dispatchEvent(new CustomEvent('gameStateUpdate', {
+      detail: {
+        jackpot: this.colosseumState.currentJackpot || 0,
+        monsterName: this.colosseumState.currentMonster?.type || 'SKELETON WARRIOR',
+        recentCombats: this.colosseumState.recentCombats || [],
+        playerStats: {
+          combats: 0, // TODO: Get from player state
+          victories: 0,
+          vaultsCracked: 0,
+          totalWinnings: 0
+        }
+      }
+    }));
   }
 
   private updateMonsterDisplay() {
@@ -286,86 +800,57 @@ export class ColosseumScene extends Scene {
 
     const monster = this.colosseumState.currentMonster;
     
-    // Update monster sprite
-    const spriteKey = monster.type.toLowerCase().replace(' ', '');
+    // Update monster sprite using tier's sprite key
+    const spriteKey = monster.tier.sprite;
     if (this.textures.exists(spriteKey)) {
       this.monsterSprite.setTexture(spriteKey);
-      this.monsterSprite.play(`${spriteKey}_idle`);
+      
+      // Set appropriate tint based on monster type
+      const tints: Record<string, number> = {
+        'skeleton-placeholder': 0xff4444,  // Red
+        'goblin-placeholder': 0x44ff44,    // Green
+        'orc-placeholder': 0xff8844,       // Orange
+        'minotaur-placeholder': 0x8844ff,  // Purple
+        'cyclops-placeholder': 0x880000    // Dark Red
+      };
+      this.monsterSprite.setTint(tints[spriteKey] || 0xff4444);
+      
+      // Scale based on difficulty
+      const scales: Record<string, number> = {
+        'skeleton-placeholder': 2.5,
+        'goblin-placeholder': 2.5,
+        'orc-placeholder': 3.0,
+        'minotaur-placeholder': 3.5,
+        'cyclops-placeholder': 4.0
+      };
+      this.monsterSprite.setScale(scales[spriteKey] || 2.5);
+    }
+    
+    // Ensure monster faces left towards gladiator
+    this.monsterSprite.setFlipX(true);
+
+    // Emit monster position for HTML label
+    this.emitSpritePositions();
+  }
+
+  private emitSpritePositions() {
+    // Emit monster position for HTML overlay
+    if (this.monsterSprite) {
+      window.dispatchEvent(new CustomEvent('monsterPositionUpdate', {
+        detail: {
+          x: this.monsterSprite.x,
+          y: this.monsterSprite.y
+        }
+      }));
     }
 
-    // Update monster name
-    this.monsterNameText.setText(monster.type);
-
-    // Update health bar
-    const healthPercent = (monster.currentHealth / monster.baseHealth) * 100;
-    this.updateMonsterHealthBar(monster.currentHealth, monster.baseHealth);
-
-    // Update fight button (entry fee logic temporarily disabled)
-    const buttonText = this.fightButton.list[1] as Phaser.GameObjects.Text;
-    buttonText.setText(`⚔️ FIGHT MONSTER ⚔️`);
-  }
-
-  private updateMonsterHealthBar(currentHealth: number, maxHealth: number) {
-    this.monsterHealthBar.clear();
-    
-    const barWidth = 300;
-    const barHeight = 20;
-    const x = this.cameras.main.width * 0.5 - barWidth * 0.5;
-    const y = 480;
-
-    // Background
-    this.monsterHealthBar.fillStyle(0x333333);
-    this.monsterHealthBar.fillRoundedRect(x, y, barWidth, barHeight, 5);
-
-    // Health bar
-    const healthPercent = currentHealth / maxHealth;
-    const color = healthPercent > 0.6 ? 0x00ff00 : healthPercent > 0.3 ? 0xffff00 : 0xff0000;
-    
-    this.monsterHealthBar.fillStyle(color);
-    this.monsterHealthBar.fillRoundedRect(x + 2, y + 2, (barWidth - 4) * healthPercent, barHeight - 4, 3);
-
-    // Border
-    this.monsterHealthBar.lineStyle(2, 0xffffff);
-    this.monsterHealthBar.strokeRoundedRect(x, y, barWidth, barHeight, 5);
-  }
-
-  private updateRecentActivity() {
-    if (!this.colosseumState?.recentCombats) return;
-
-    // Clear existing activity text
-    this.recentCombatsFeed.forEach(text => text.destroy());
-    this.recentCombatsFeed = [];
-
-    const startY = 140;
-    const lineHeight = 35;
-
-    this.colosseumState.recentCombats.slice(0, 10).forEach((combat, index) => {
-      const shortAddress = combat.gladiator.slice(0, 4) + '...' + combat.gladiator.slice(-4);
-      let message = '';
-      let color = '#ffffff';
-
-      if (combat.vaultCracked) {
-        message = `🏆 ${shortAddress} CRACKED THE VAULT!`;
-        color = '#ffd700';
-      } else if (combat.victory && combat.vaultAttempted) {
-        message = `💪 ${shortAddress} defeated ${combat.monster}, vault failed`;
-        color = '#66ff66';
-      } else if (combat.victory) {
-        message = `⚔️ ${shortAddress} defeated ${combat.monster}`;
-        color = '#66ff66';
-      } else {
-        message = `💀 ${shortAddress} died to ${combat.monster}`;
-        color = '#ff6666';
+    // Emit gladiator group center position
+    window.dispatchEvent(new CustomEvent('gladiatorPositionUpdate', {
+      detail: {
+        x: this.getRelativePosition(0.6, this.cameras.main.width),
+        y: this.getRelativePosition(0.5, this.cameras.main.height)
       }
-
-      const text = this.add.text(this.cameras.main.width - 340, startY + (index * lineHeight), message, {
-        fontSize: '12px',
-        color: color,
-        wordWrap: { width: 260 }
-      });
-
-      this.recentCombatsFeed.push(text);
-    });
+    }));
   }
 
   private async startCombat() {
@@ -375,11 +860,6 @@ export class ColosseumScene extends Scene {
       console.error('No monster data available');
       return;
     }
-
-    // Disable fight button during combat
-    this.fightButton.setAlpha(0.5);
-    const buttonBg = this.fightButton.list[0] as Phaser.GameObjects.Graphics;
-    buttonBg.removeInteractive();
 
     try {
       // Generate combat ID
@@ -402,19 +882,12 @@ export class ColosseumScene extends Scene {
 
     } catch (error) {
       console.error('Failed to start combat:', error);
-      // Re-enable fight button
-      this.fightButton.setAlpha(1);
-      buttonBg.setInteractive();
     }
   }
 
   private showOfflineState() {
-    // Show offline indicator
-    this.add.text(this.cameras.main.width * 0.5, 50, '⚠️ CONNECTION LOST - RETRYING...', {
-      fontSize: '18px',
-      color: '#ffaa00',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
+    // Emit offline state to HTML UI
+    window.dispatchEvent(new CustomEvent('gameOffline'));
   }
 
   // Called from React when combat transaction is confirmed
@@ -448,10 +921,6 @@ export class ColosseumScene extends Scene {
 
     } catch (error) {
       console.error('Combat processing failed:', error);
-      // Show error message and re-enable button
-      this.fightButton.setAlpha(1);
-      const buttonBg = this.fightButton.list[0] as Phaser.GameObjects.Graphics;
-      buttonBg.setInteractive();
     }
   }
 
@@ -459,26 +928,12 @@ export class ColosseumScene extends Scene {
     console.log('Scene waking up');
     // Scene is waking up from sleep - reload game state
     this.loadGameState();
-    
-    // Re-enable fight button
-    if (this.fightButton) {
-      this.fightButton.setAlpha(1);
-      const buttonBg = this.fightButton.list[0] as Phaser.GameObjects.Graphics;
-      buttonBg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 300, 80), Phaser.Geom.Rectangle.Contains);
-    }
   }
   
   private handleSceneResume() {
     console.log('Scene resuming');
     // Scene is resuming - reload game state
     this.loadGameState();
-    
-    // Re-enable fight button
-    if (this.fightButton) {
-      this.fightButton.setAlpha(1);
-      const buttonBg = this.fightButton.list[0] as Phaser.GameObjects.Graphics;
-      buttonBg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 300, 80), Phaser.Geom.Rectangle.Contains);
-    }
   }
 
   destroy() {
@@ -486,10 +941,82 @@ export class ColosseumScene extends Scene {
       this.updateTimer.destroy();
     }
     
+    if (this.spearTimer) {
+      this.spearTimer.destroy();
+    }
+    
     // Clean up event listeners
     this.events.off('wake', this.handleSceneWake, this);
     this.events.off('resume', this.handleSceneResume, this);
     
     // Clean up scene resources - Phaser handles scene cleanup automatically
+  }
+
+  protected repositionUI(width: number, height: number) {
+    // Update background
+    if (this.bgImage) {
+      this.bgImage.setPosition(this.centerX(width), this.centerY(height));
+      this.bgImage.setDisplaySize(width, height);
+    }
+
+    // Reposition game elements
+    this.positionMonsterDisplay(width, height);
+    
+    // Emit new positions for HTML overlay
+    this.emitSpritePositions();
+  }
+
+  private positionMonsterDisplay(width: number, height: number) {
+    if (!this.monsterSprite) return;
+    
+    // Monster positioned left side - more centered vertically
+    const monsterX = this.getRelativePosition(0.22, width);
+    const monsterY = this.getRelativePosition(0.48, height);
+
+    // Position monster sprite - LARGER and more prominent
+    this.monsterSprite.setPosition(monsterX, monsterY);
+    this.monsterSprite.setScale(this.scaleValue(5, width)); // Increased from 3.5 to 5
+    this.monsterSprite.setDepth(5);
+    
+    // Position shadow under monster - larger shadow
+    const monsterShadow = this.getUIElement('monsterShadow') as Phaser.GameObjects.Ellipse;
+    if (monsterShadow && 'setPosition' in monsterShadow) {
+      monsterShadow.setPosition(monsterX, monsterY + this.scaleValue(100, height));
+      if ('setScale' in monsterShadow) monsterShadow.setScale(1.5, 0.5);
+      if ('setAlpha' in monsterShadow) monsterShadow.setAlpha(0.6);
+    }
+    
+    // Position aura around monster
+    const auraGlow = this.getUIElement('auraGlow') as Phaser.GameObjects.Graphics;
+    if (auraGlow && 'setPosition' in auraGlow) {
+      auraGlow.setPosition(monsterX, monsterY);
+    }
+
+    // No center gladiator to position anymore
+    
+    // Reposition gladiator group maintaining their scattered positions
+    const centerX = this.getRelativePosition(0.5, width);
+    const centerY = this.getRelativePosition(0.5, height);
+    
+    // Reposition both active and incoming gladiators
+    const allGladiators = [...this.gladiatorGroup, ...this.incomingGladiators];
+    allGladiators.forEach((glad) => {
+      if (glad && glad.active) {
+        const offsetX = glad.getData('originalX');
+        const offsetY = glad.getData('originalY');
+        
+        if (offsetX !== undefined && offsetY !== undefined) {
+          // Only reposition if not currently animating
+          if (!this.tweens.isTweening(glad)) {
+            glad.setPosition(
+              centerX + offsetX,
+              centerY + offsetY
+            );
+          }
+        }
+      }
+    });
+    
+    // Attack line is drawn dynamically during attacks
   }
 }

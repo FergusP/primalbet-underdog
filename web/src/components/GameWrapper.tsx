@@ -3,10 +3,14 @@
 // Game Wrapper - React component that integrates Phaser with wallet
 import React, { useEffect, useRef, useState } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { GameService } from '../services/GameService';
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { WalletReconnect } from './WalletReconnect';
+import { ClientWalletButton } from './ClientWalletButton';
+import { GameUIOverlay } from './GameUIOverlay';
+import { MenuSceneUI } from './MenuSceneUI';
+import { CombatSceneUI } from './CombatSceneUI';
+import { VaultSceneUI } from './VaultSceneUI';
 
 interface Props {
   className?: string;
@@ -16,7 +20,9 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
   const gameRef = useRef<HTMLDivElement>(null);
   const gameInstanceRef = useRef<any | null>(null);
   const [isGameReady, setIsGameReady] = useState(false);
+  const [currentScene, setCurrentScene] = useState<string>('');
   const [backendStatus, setBackendStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
+  const [mounted, setMounted] = useState(false);
   
   const { 
     publicKey, 
@@ -27,6 +33,11 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
   } = useWallet();
   
   const { connection } = useConnection();
+
+  // Set mounted state
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Initialize Phaser game - client-side only
   useEffect(() => {
@@ -171,6 +182,20 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
     };
   }, []);
 
+  // Listen for scene changes
+  useEffect(() => {
+    const handleSceneChange = (event: CustomEvent) => {
+      console.log('Scene changed to:', event.detail.sceneName);
+      setCurrentScene(event.detail.sceneName);
+    };
+
+    window.addEventListener('sceneChanged', handleSceneChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('sceneChanged', handleSceneChange as EventListener);
+    };
+  }, []);
+
   const getStatusColor = () => {
     switch (backendStatus) {
       case 'connected': return 'text-green-500';
@@ -193,7 +218,7 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       <WalletReconnect />
       
       {/* Header with wallet button and status */}
-      <div className="absolute top-4 right-4 z-10 flex items-center gap-4">
+      <div className="absolute top-4 right-4 flex items-center gap-4" style={{ zIndex: 9999 }}>
         {/* Backend status */}
         <div className="flex items-center gap-2 bg-black bg-opacity-50 px-3 py-2 rounded-lg">
           <div className={`w-2 h-2 rounded-full ${
@@ -206,10 +231,10 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
         </div>
 
         {/* Wallet connection */}
-        <WalletMultiButton className="!bg-red-600 hover:!bg-red-700 !text-white !font-bold !px-4 !py-2 !rounded-lg transition-colors" />
+        <ClientWalletButton className="!bg-red-600 hover:!bg-red-700 !text-white !font-bold !px-4 !py-2 !rounded-lg transition-colors" />
         
-        {/* Manual reconnect for development */}
-        {!connected && wallet && (
+        {/* Manual reconnect for development - only show on client */}
+        {mounted && !connected && wallet && (
           <button
             onClick={async () => {
               try {
@@ -229,13 +254,22 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       <div 
         id="game-container" 
         ref={gameRef}
-        className="w-full h-full"
-        style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center' 
-        }}
+        className="absolute inset-0 w-full h-full"
+        style={{ zIndex: 1 }}
       />
+
+      {/* UI Overlays - Scene-specific rendering */}
+      {isGameReady && currentScene === 'MenuScene' && <MenuSceneUI />}
+      {isGameReady && currentScene === 'ColosseumScene' && <GameUIOverlay />}
+      {isGameReady && currentScene === 'CombatScene' && <CombatSceneUI />}
+      {isGameReady && currentScene === 'VaultScene' && <VaultSceneUI />}
+      
+      {/* Debug: Show current scene */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="absolute bottom-4 left-4 text-white bg-black bg-opacity-50 px-2 py-1 rounded text-sm" style={{ zIndex: 9999 }}>
+          Current Scene: {currentScene || 'None'}
+        </div>
+      )}
 
       {/* Loading overlay */}
       {!isGameReady && (
