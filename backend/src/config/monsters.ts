@@ -9,8 +9,8 @@ export const MONSTER_TIERS: Record<number, MonsterTier> = {
     hp: 80,
     attackPower: 10,
     defenseMultiplier: 1.0,
-    vaultCrackChance: 50, // 50% chance
-    sprite: 'skeleton'
+    vaultCrackChance: 30, // 30% chance
+    sprite: 'skeleton',
   },
   2: {
     tier: 2,
@@ -21,7 +21,7 @@ export const MONSTER_TIERS: Record<number, MonsterTier> = {
     attackPower: 15,
     defenseMultiplier: 1.2,
     vaultCrackChance: 50, // 50% chance
-    sprite: 'goblin'
+    sprite: 'goblin',
   },
   3: {
     tier: 3,
@@ -32,7 +32,7 @@ export const MONSTER_TIERS: Record<number, MonsterTier> = {
     attackPower: 20,
     defenseMultiplier: 1.5,
     vaultCrackChance: 50, // 50% chance
-    sprite: 'shadow_assassin'
+    sprite: 'shadow_assassin',
   },
   4: {
     tier: 4,
@@ -43,7 +43,7 @@ export const MONSTER_TIERS: Record<number, MonsterTier> = {
     attackPower: 25,
     defenseMultiplier: 1.8,
     vaultCrackChance: 50, // 50% chance
-    sprite: 'demon_knight'
+    sprite: 'demon_knight',
   },
   5: {
     tier: 5,
@@ -54,7 +54,7 @@ export const MONSTER_TIERS: Record<number, MonsterTier> = {
     attackPower: 30,
     defenseMultiplier: 2.0,
     vaultCrackChance: 50, // 50% chance
-    sprite: 'dragon_lord'
+    sprite: 'dragon_lord',
   },
   6: {
     tier: 6,
@@ -65,8 +65,8 @@ export const MONSTER_TIERS: Record<number, MonsterTier> = {
     attackPower: 35,
     defenseMultiplier: 2.5,
     vaultCrackChance: 50, // 50% chance
-    sprite: 'ancient_titan'
-  }
+    sprite: 'ancient_titan',
+  },
 };
 
 export function getMonsterByPotSize(potInSol: number): MonsterTier {

@@ -226,6 +226,23 @@ pub mod aurelius {
         Ok(())
     }
 
+    // Withdraw SOL from player PDA back to wallet
+    pub fn withdraw_from_pda(ctx: Context<WithdrawFromPDA>, amount: u64) -> Result<()> {
+        // Check PDA has sufficient balance
+        require!(ctx.accounts.player_account.balance >= amount, ErrorCode::InsufficientPDABalance);
+        
+        // Transfer SOL from PDA to player wallet
+        **ctx.accounts.player_account.to_account_info().try_borrow_mut_lamports()? -= amount;
+        **ctx.accounts.player.try_borrow_mut_lamports()? += amount;
+        
+        // Update PDA balance tracking
+        let player_account = &mut ctx.accounts.player_account;
+        player_account.balance -= amount;
+        
+        msg!("Withdrew {} lamports from PDA. New balance: {}", amount, player_account.balance);
+        Ok(())
+    }
+
     // Get current game state (view function)
     pub fn get_game_state(ctx: Context<GetGameState>) -> Result<()> {
         let game_state = &ctx.accounts.game_state;
@@ -392,6 +409,22 @@ pub struct EnterCombatWithPDA<'info> {
     )]
     /// CHECK: Treasury wallet receives fees
     pub treasury: AccountInfo<'info>,
+    
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct WithdrawFromPDA<'info> {
+    #[account(
+        mut,
+        seeds = [b"player", player.key().as_ref()],
+        bump,
+        constraint = player_account.wallet == player.key()
+    )]
+    pub player_account: Account<'info, PlayerAccount>,
+    
+    #[account(mut)]
+    pub player: Signer<'info>,
     
     pub system_program: Program<'info, System>,
 }
