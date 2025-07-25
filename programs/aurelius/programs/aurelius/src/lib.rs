@@ -243,6 +243,53 @@ pub mod aurelius {
         Ok(())
     }
 
+    // Backend submits combat entry for player (true gasless)
+    pub fn enter_combat_for_player(
+        ctx: Context<EnterCombatForPlayer>,
+        player_wallet: Pubkey,
+    ) -> Result<()> {
+        // Verify backend signer
+        require_keys_eq!(
+            ctx.accounts.backend_signer.key(),
+            Pubkey::try_from(BACKEND_SIGNER).unwrap(),
+            ErrorCode::UnauthorizedBackend
+        );
+        
+        // Check PDA has sufficient balance
+        require!(ctx.accounts.player_account.balance >= ENTRY_FEE, ErrorCode::InsufficientPDABalance);
+        
+        // Calculate fee split
+        let treasury_fee = ENTRY_FEE * TREASURY_FEE_BPS as u64 / 10000;
+        let pool_fee = ENTRY_FEE - treasury_fee;
+        
+        // Transfer treasury fee from PDA to treasury
+        **ctx.accounts.player_account.to_account_info().try_borrow_mut_lamports()? -= treasury_fee;
+        **ctx.accounts.treasury.try_borrow_mut_lamports()? += treasury_fee;
+        
+        // Transfer pool fee from PDA to pot vault
+        **ctx.accounts.player_account.to_account_info().try_borrow_mut_lamports()? -= pool_fee;
+        **ctx.accounts.pot_vault.try_borrow_mut_lamports()? += pool_fee;
+        
+        let player_account = &mut ctx.accounts.player_account;
+        let game_state = &mut ctx.accounts.game_state;
+        
+        // Deduct from PDA balance
+        player_account.balance -= ENTRY_FEE;
+        
+        // Update game state
+        game_state.current_pot += pool_fee;
+        game_state.total_entries += 1;
+        
+        // Update player stats
+        player_account.total_combats += 1;
+        player_account.last_combat = Clock::get()?.unix_timestamp;
+        player_account.last_payment_method = 1; // PDA payment
+        
+        msg!("Player {} entered via PDA (gasless)! New pot: {} lamports, PDA balance: {}", 
+             player_wallet, game_state.current_pot, player_account.balance);
+        Ok(())
+    }
+
     // Get current game state (view function)
     pub fn get_game_state(ctx: Context<GetGameState>) -> Result<()> {
         let game_state = &ctx.accounts.game_state;
@@ -425,6 +472,45 @@ pub struct WithdrawFromPDA<'info> {
     
     #[account(mut)]
     pub player: Signer<'info>,
+    
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(player_wallet: Pubkey)]
+pub struct EnterCombatForPlayer<'info> {
+    #[account(
+        mut,
+        seeds = [b"player", player_wallet.as_ref()],
+        bump,
+        constraint = player_account.wallet == player_wallet
+    )]
+    pub player_account: Account<'info, PlayerAccount>,
+    
+    #[account(
+        mut,
+        seeds = [b"game_state"],
+        bump
+    )]
+    pub game_state: Account<'info, GameState>,
+    
+    #[account(
+        mut,
+        seeds = [b"pot_vault"],
+        bump
+    )]
+    /// CHECK: This is a PDA that holds SOL
+    pub pot_vault: AccountInfo<'info>,
+    
+    #[account(mut)]
+    pub backend_signer: Signer<'info>,
+    
+    #[account(
+        mut,
+        constraint = treasury.key() == Pubkey::try_from(TREASURY_WALLET).unwrap()
+    )]
+    /// CHECK: Treasury wallet receives fees
+    pub treasury: AccountInfo<'info>,
     
     pub system_program: Program<'info, System>,
 }

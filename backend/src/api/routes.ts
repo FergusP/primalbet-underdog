@@ -146,6 +146,38 @@ router.get('/player/:wallet/payment-options', async (req: Request, res: Response
   }
 });
 
+// Gasless combat entry - backend submits transaction for player
+router.post('/combat/enter-gasless', async (req: Request, res: Response) => {
+  try {
+    const { playerWallet } = req.body;
+    
+    if (!playerWallet) {
+      return res.status(400).json({ error: 'Player wallet required' });
+    }
+
+    // Check player has sufficient PDA balance
+    const paymentOptions = await solanaService.getPaymentOptions(playerWallet);
+    if (!paymentOptions.canPayFromPDA) {
+      return res.status(402).json({ error: 'Insufficient PDA balance' });
+    }
+
+    // Backend submits the transaction
+    const txSignature = await solanaService.enterCombatGasless(playerWallet);
+
+    res.json({
+      success: true,
+      txSignature,
+      message: 'Entered combat using PDA balance (gasless)'
+    });
+  } catch (error: any) {
+    console.error('Gasless entry error:', error);
+    res.status(500).json({ 
+      error: 'Failed to enter combat', 
+      details: error.message 
+    });
+  }
+});
+
 // Backend wallet status (for monitoring)
 router.get('/backend/status', async (req: Request, res: Response) => {
   try {

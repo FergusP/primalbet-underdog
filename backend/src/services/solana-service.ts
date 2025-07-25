@@ -315,6 +315,59 @@ class SolanaService {
     }
   }
 
+  // Backend submits combat entry for player (true gasless)
+  async enterCombatGasless(playerWallet: string): Promise<string> {
+    const playerPubkey = new PublicKey(playerWallet);
+    
+    // Derive PDAs
+    const [playerPDA] = PublicKey.findProgramAddressSync(
+      [Buffer.from('player'), playerPubkey.toBuffer()],
+      this.programId
+    );
+    
+    const [gameStatePDA] = PublicKey.findProgramAddressSync(
+      [Buffer.from('game_state')],
+      this.programId
+    );
+    
+    const [potVaultPDA] = PublicKey.findProgramAddressSync(
+      [Buffer.from('pot_vault')],
+      this.programId
+    );
+    
+    const treasury = new PublicKey(process.env.TREASURY_WALLET!);
+    
+    // Discriminator for enter_combat_for_player
+    const discriminator = Buffer.from([186, 129, 109, 164, 53, 167, 230, 172]);
+    
+    // Player wallet as argument (32 bytes)
+    const data = Buffer.concat([
+      discriminator,
+      playerPubkey.toBuffer()
+    ]);
+    
+    const instruction = new TransactionInstruction({
+      programId: this.programId,
+      keys: [
+        { pubkey: playerPDA, isSigner: false, isWritable: true },
+        { pubkey: gameStatePDA, isSigner: false, isWritable: true },
+        { pubkey: potVaultPDA, isSigner: false, isWritable: true },
+        { pubkey: this.backendKeypair.publicKey, isSigner: true, isWritable: true }, // Backend signer
+        { pubkey: treasury, isSigner: false, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      data,
+    });
+    
+    const transaction = new Transaction().add(instruction);
+    
+    const signature = await this.connection.sendTransaction(transaction, [this.backendKeypair]);
+    await this.connection.confirmTransaction(signature);
+    
+    console.log('✅ Gasless combat entry successful:', signature);
+    return signature;
+  }
+
   subscribeToProgram(callback: (logs: string[]) => void) {
     const programId = new PublicKey(process.env.PROGRAM_ID!);
     
