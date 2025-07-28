@@ -20,9 +20,22 @@ router.get('/state', async (req: Request, res: Response) => {
     const potInSol = gameState.currentPot / LAMPORTS_PER_SOL;
     const currentMonster = getMonsterByPotSize(potInSol);
 
+    // Transform to match frontend's expected format
+    const monsterData = {
+      id: `monster_${Date.now()}`,
+      type: currentMonster.name,
+      tier: currentMonster,
+      baseHealth: currentMonster.hp,
+      currentHealth: currentMonster.hp,
+      spawnedAt: Date.now(),
+      defeatedBy: null,
+      totalCombats: 0,
+      victories: 0
+    };
+
     res.json({
       currentPot: gameState.currentPot,
-      currentMonster,
+      currentMonster: monsterData,
       totalEntries: gameState.totalEntries,
       lastWinner: gameState.lastWinner,
       recentCombats: [] // Can be implemented later
@@ -47,9 +60,13 @@ router.post('/vault/attempt', async (req: Request, res: Response) => {
     const currentPot = await solanaService.getCurrentPot();
     
     // Find the monster that the player actually fought
+    console.log('Looking for monster:', monsterType);
+    console.log('Available monsters:', Object.values(MONSTER_TIERS).map(m => m.name));
+    
     const foughtMonster = Object.values(MONSTER_TIERS).find(m => m.name === monsterType);
     
     if (!foughtMonster) {
+      console.error('Monster not found:', monsterType);
       return res.status(400).json({ error: 'Invalid monster type' });
     }
     

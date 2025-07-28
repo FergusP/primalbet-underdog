@@ -6,6 +6,7 @@ export class VaultScene extends BaseScene {
   private monsterDefeated: string = '';
   private walletAddress: string = '';
   private vrfSuccess: boolean = false;
+  private prizeAmount: number = 0;
   private bgRect!: Phaser.GameObjects.Rectangle;
   private particles!: Phaser.GameObjects.Particles.ParticleEmitter;
   private vault!: Phaser.GameObjects.Sprite;
@@ -42,11 +43,13 @@ export class VaultScene extends BaseScene {
     walletAddress: string;
     monsterDefeated: string;
     vrfSuccess?: boolean;
+    prizeAmount?: number;
   }) {
     this.victory = data.victory;
     this.walletAddress = data.walletAddress;
     this.monsterDefeated = data.monsterDefeated;
     this.vrfSuccess = data.vrfSuccess || false;
+    this.prizeAmount = data.prizeAmount || 0;
     
     // Reset vaults array
     this.vaults = [];
@@ -236,7 +239,10 @@ export class VaultScene extends BaseScene {
 
     // Emit vault opening event for UI
     window.dispatchEvent(new CustomEvent('vaultOpening', {
-      detail: { vrfSuccess: this.vrfSuccess }
+      detail: { 
+        vrfSuccess: this.vrfSuccess,
+        prizeAmount: this.prizeAmount 
+      }
     }));
     
     // Opening animation is handled by UI overlay

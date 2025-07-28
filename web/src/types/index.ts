@@ -164,3 +164,12 @@ export interface CombatResponse {
   vaultResult?: VaultCrackResult;      // Only if victory
   newMonster?: Monster;                // If jackpot won
 }
+
+// Payment System Types
+export interface PaymentOptions {
+  hasAccount: boolean;                 // Player account exists
+  pdaBalance: number;                  // Balance in player PDA (lamports)
+  canUseWallet: boolean;               // Can pay from wallet
+  canUsePDA: boolean;                  // Can pay from PDA
+  lastPaymentMethod: string;           // 'wallet' or 'pda'
+}

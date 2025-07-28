@@ -58,6 +58,11 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
     const handleVaultOpening = (event: CustomEvent) => {
       setIsOpening(true);
       setShowVaultSelection(false);
+      setVrfSuccess(event.detail.vrfSuccess);
+      if (event.detail.prizeAmount) {
+        console.log('VaultSceneUI: Setting jackpot from prizeAmount:', event.detail.prizeAmount, 'lamports =', event.detail.prizeAmount / 1e9, 'SOL');
+        setJackpotAmount(event.detail.prizeAmount / 1e9); // Convert lamports to SOL
+      }
     };
     
     // Listen for vault selection ready
@@ -71,9 +76,7 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
       setIsOpening(false);
       setShowResult(true);
       setVrfSuccess(success);
-      if (jackpotAmount) {
-        setJackpotAmount(parseFloat(jackpotAmount));
-      }
+      // Don't set jackpot amount here - it's already set in handleVaultOpening
     };
 
     window.addEventListener('vaultStateUpdate', handleVaultUpdate as EventListener);

@@ -21,6 +21,7 @@ interface CombatState {
   playerHealth: HealthData;
   monsterHealth: HealthData;
   monsterName: string;
+  monsterInfo?: { name: string; baseHealth: number };
   spearCount: number;
   maxSpears: number;
   gameState: 'playing' | 'victory' | 'defeat';
@@ -71,7 +72,14 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
     };
 
     const handleMonsterInfo = (event: CustomEvent) => {
-      setCombatState((prev) => ({ ...prev, monsterName: event.detail.type }));
+      setCombatState((prev) => ({ 
+        ...prev, 
+        monsterName: event.detail.type,
+        monsterInfo: {
+          name: event.detail.type,
+          baseHealth: event.detail.baseHealth
+        }
+      }));
     };
 
     const handleDamageNumber = (event: CustomEvent) => {
@@ -200,25 +208,74 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
   }, []);
 
   // Handle crack vault button click
-  const handleCrackVault = () => {
+  const handleCrackVault = async () => {
     // Hide victory UI before transitioning
     setCombatState((prev) => ({ ...prev, gameState: 'playing' }));
 
-    // Simulate VRF check - use dev toggle if enabled
-    const success = devMode ? forceSuccess : Math.random() < 0.3;
+    try {
+      // Get wallet address and combat info from the game
+      const walletAddress = window.localStorage.getItem('walletAddress');
+      const combatId = window.localStorage.getItem('currentCombatId') || `combat_${Date.now()}`;
+      const monsterType = combatState.monsterInfo?.name || 'Unknown';
+      console.log('Vault attempt with monster:', monsterType, 'Full info:', combatState.monsterInfo);
+      console.log('Full combat state:', combatState);
 
-    // Immediately continue to vault scene with VRF result
-    window.dispatchEvent(
-      new CustomEvent('continue-from-vault', {
-        detail: { vrfResult: success },
-      })
-    );
+      if (!walletAddress) {
+        console.error('No wallet address found');
+        // Continue to vault scene with failure
+        window.dispatchEvent(
+          new CustomEvent('continue-from-vault', {
+            detail: { vrfResult: false },
+          })
+        );
+        return;
+      }
+
+      // Call backend vault attempt API
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${backendUrl}/vault/attempt`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          wallet: walletAddress,
+          combatId: combatId,
+          monsterType: monsterType,
+        }),
+      });
+
+      const result = await response.json();
+      console.log('Vault attempt result:', result);
+
+      // Continue to vault scene with actual VRF result
+      window.dispatchEvent(
+        new CustomEvent('continue-from-vault', {
+          detail: { 
+            vrfResult: result.success,
+            prizeAmount: result.prizeAmount,
+            roll: result.roll,
+            crackChance: result.crackChance,
+            claimTx: result.claimTx
+          },
+        })
+      );
+    } catch (error) {
+      console.error('Vault attempt failed:', error);
+      // Continue to vault scene with failure
+      window.dispatchEvent(
+        new CustomEvent('continue-from-vault', {
+          detail: { vrfResult: false },
+        })
+      );
+    }
   };
 
   // Removed handleContinue - no longer needed
 
   const handleReturnToColosseum = () => {
-    window.dispatchEvent(new CustomEvent('return-to-colosseum'));
+    // Return to colosseum without attempting vault
+    window.location.reload(); // Simple solution - reload to go back to colosseum
   };
 
   const getHealthBarColor = (current: number, max: number) => {
