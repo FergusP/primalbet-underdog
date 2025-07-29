@@ -507,7 +507,7 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
                     border: '3px solid #b8860b',
                   }}
                 >
-                  🔨 CRACK THE VAULT! 🔨
+                  ⚡ DEFINE YOUR DESTINY ⚡
                 </button>
 
                 <br />
