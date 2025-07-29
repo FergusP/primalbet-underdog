@@ -306,13 +306,13 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
     >
       {/* Health Bars */}
       {combatState.uiVisible && (
-        <div className="absolute top-4 left-4 right-4 flex justify-between">
+        <div className="absolute top-4 left-4 right-4 flex justify-between gap-4" style={{ maxWidth: 'calc(100% - 2rem)' }}>
           {/* Player Health */}
-          <div className="bg-black/70 p-4 rounded-lg border border-blue-500/50">
-            <div className="text-blue-400 font-bold text-lg mb-2">
+          <div className="bg-black/70 p-3 rounded-lg border border-blue-500/50 flex-1 max-w-xs">
+            <div className="text-blue-400 font-bold mb-2" style={{ fontSize: 'clamp(16px, 2vw, 20px)' }}>
               GLADIATOR
             </div>
-            <div className="w-64 h-6 bg-gray-800 rounded border border-gray-600 relative overflow-hidden">
+            <div className="w-full min-w-[150px] h-6 bg-gray-800 rounded border border-gray-600 relative overflow-hidden">
               <div
                 className="h-full transition-all duration-300 ease-out"
                 style={{
@@ -335,11 +335,11 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
           </div>
 
           {/* Monster Health */}
-          <div className="bg-black/70 p-4 rounded-lg border border-red-500/50">
-            <div className="text-red-400 font-bold text-lg mb-2 text-right">
+          <div className="bg-black/70 p-3 rounded-lg border border-red-500/50 flex-1 max-w-xs">
+            <div className="text-red-400 font-bold mb-2 text-right" style={{ fontSize: 'clamp(16px, 2vw, 20px)' }}>
               {combatState.monsterName.toUpperCase()}
             </div>
-            <div className="w-64 h-6 bg-gray-800 rounded border border-gray-600 relative overflow-hidden">
+            <div className="w-full min-w-[150px] h-6 bg-gray-800 rounded border border-gray-600 relative overflow-hidden">
               <div
                 className="h-full transition-all duration-300 ease-out"
                 style={{
@@ -363,15 +363,18 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
         </div>
       )}
 
-      {/* Spear Counter */}
+      {/* Spear Counter - Positioned at top center between health bars */}
       {combatState.uiVisible && (
-        <div className="absolute top-20 right-4">
-          <div className="bg-black/70 p-3 rounded-lg border border-yellow-500/50">
+        <div className="absolute left-1/2 transform -translate-x-1/2 top-4">
+          <div className="bg-black/70 px-6 py-2 rounded-lg border border-yellow-500/50">
             <div
-              className="font-bold text-lg"
-              style={{ color: getSpearCountColor() }}
+              className="font-bold text-center"
+              style={{ 
+                color: getSpearCountColor(),
+                fontSize: 'clamp(14px, 1.8vw, 18px)'
+              }}
             >
-              Spears: {combatState.spearCount}/{combatState.maxSpears}
+              ⚔️ Spears: {combatState.spearCount}/{combatState.maxSpears} ⚔️
             </div>
           </div>
         </div>
@@ -382,7 +385,7 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
           <div className="bg-black/70 p-4 rounded-lg border border-gray-500/50">
             <div className="text-white text-center">
-              <div className="text-sm">
+              <div style={{ fontSize: 'clamp(12px, 1.5vw, 16px)' }}>
                 WASD/Arrows: Move • Space: Melee Attack • E: Throw Spear
               </div>
             </div>

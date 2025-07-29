@@ -24,6 +24,11 @@ export abstract class BaseScene extends Scene {
     
     this.cameras.main.setSize(width, height);
     this.repositionUI(width, height);
+    
+    // Emit global resize event for HTML overlays
+    window.dispatchEvent(new CustomEvent('gameResize', {
+      detail: { width, height }
+    }));
   }
 
   protected abstract repositionUI(width: number, height: number): void;

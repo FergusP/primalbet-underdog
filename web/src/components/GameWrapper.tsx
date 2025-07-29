@@ -390,52 +390,56 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       {/* Wallet reconnection helper */}
       <WalletReconnect />
       
-      {/* Backend status - Top left */}
-      <div className="absolute top-4 left-4" style={{ zIndex: 9999 }}>
-        <div className="flex items-center gap-2 bg-black bg-opacity-50 px-3 py-2 rounded-lg">
-          <div className={`w-2 h-2 rounded-full ${
-            backendStatus === 'connected' ? 'bg-green-500' : 
-            backendStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
-          }`}></div>
-          <span className={`text-sm font-medium ${getStatusColor()}`}>
-            {getStatusText()}
-          </span>
+      {/* Backend status - Top left - Hide during combat and vault scenes */}
+      {currentScene !== 'CombatScene' && currentScene !== 'VaultScene' && (
+        <div className="absolute top-4 left-4" style={{ zIndex: 9999 }}>
+          <div className="flex items-center gap-2 bg-black bg-opacity-50 px-3 py-2 rounded-lg">
+            <div className={`w-2 h-2 rounded-full ${
+              backendStatus === 'connected' ? 'bg-green-500' : 
+              backendStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+            }`}></div>
+            <span className={`text-sm font-medium ${getStatusColor()}`}>
+              {getStatusText()}
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Header with wallet button - Top right */}
-      <div className="absolute top-4 right-4 flex items-center gap-4" style={{ zIndex: 9999 }}>
-        {/* Integrated Payment UI - only show in ColosseumScene when wallet connected */}
-        {currentScene === 'ColosseumScene' && connected && publicKey && paymentOptions && (
-          <IntegratedPaymentUI
-            pdaBalance={paymentOptions.pdaBalance}
-            selectedMethod={selectedPaymentMethod}
-            onMethodChange={setSelectedPaymentMethod}
-            onDeposit={() => setShowDepositModal(true)}
-            onWithdraw={() => setShowWithdrawModal(true)}
-            entryFee={0.01 * LAMPORTS_PER_SOL}
-          />
-        )}
-        
-        {/* Wallet connection */}
-        <ClientWalletButton className="!bg-red-600 hover:!bg-red-700 !text-white !font-bold !px-4 !py-2 !rounded-lg transition-colors" />
-        
-        {/* Manual reconnect for development - only show on client */}
-        {mounted && !connected && wallet && (
-          <button
-            onClick={async () => {
-              try {
-                await wallet.adapter.connect();
-              } catch (err) {
-                console.error('Manual reconnect failed:', err);
-              }
-            }}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm transition-colors"
-          >
-            Reconnect
-          </button>
-        )}
-      </div>
+      {/* Header with wallet button - Top right - Hide during combat and vault scenes */}
+      {currentScene !== 'CombatScene' && currentScene !== 'VaultScene' && (
+        <div className="absolute top-4 right-4 flex items-center gap-4" style={{ zIndex: 9999 }}>
+          {/* Integrated Payment UI - only show in ColosseumScene when wallet connected */}
+          {currentScene === 'ColosseumScene' && connected && publicKey && paymentOptions && (
+            <IntegratedPaymentUI
+              pdaBalance={paymentOptions.pdaBalance}
+              selectedMethod={selectedPaymentMethod}
+              onMethodChange={setSelectedPaymentMethod}
+              onDeposit={() => setShowDepositModal(true)}
+              onWithdraw={() => setShowWithdrawModal(true)}
+              entryFee={0.01 * LAMPORTS_PER_SOL}
+            />
+          )}
+          
+          {/* Wallet connection */}
+          <ClientWalletButton className="!bg-red-600 hover:!bg-red-700 !text-white !font-bold !px-4 !py-2 !rounded-lg transition-colors" />
+          
+          {/* Manual reconnect for development - only show on client */}
+          {mounted && !connected && wallet && (
+            <button
+              onClick={async () => {
+                try {
+                  await wallet.adapter.connect();
+                } catch (err) {
+                  console.error('Manual reconnect failed:', err);
+                }
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm transition-colors"
+            >
+              Reconnect
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Game container */}
       <div 
