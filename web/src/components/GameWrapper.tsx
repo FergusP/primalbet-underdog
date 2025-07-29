@@ -20,6 +20,7 @@ import { VaultSceneUI } from './VaultSceneUI';
 import { IntegratedPaymentUI } from './IntegratedPaymentUI';
 import { PDADepositModal } from './PDADepositModal';
 import { PDAWithdrawModal } from './PDAWithdrawModal';
+import { LoadingScreen } from './LoadingScreen';
 import type { PaymentOptions } from '../types';
 
 interface Props {
@@ -33,6 +34,8 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
   const [currentScene, setCurrentScene] = useState<string>('');
   const [backendStatus, setBackendStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
   const [mounted, setMounted] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Payment UI states - only for ColosseumScene
   const [paymentOptions, setPaymentOptions] = useState<PaymentOptions | null>(null);
@@ -336,6 +339,33 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
     };
   }, []);
 
+  // Listen for loading events
+  useEffect(() => {
+    const handleLoadingStarted = () => {
+      setIsLoading(true);
+      setLoadingProgress(0);
+    };
+
+    const handleLoadingProgress = (event: CustomEvent) => {
+      setLoadingProgress(event.detail.progress);
+    };
+
+    const handleLoadingComplete = () => {
+      setIsLoading(false);
+      setLoadingProgress(100);
+    };
+
+    window.addEventListener('loadingStarted', handleLoadingStarted);
+    window.addEventListener('loadingProgress', handleLoadingProgress as EventListener);
+    window.addEventListener('loadingComplete', handleLoadingComplete);
+
+    return () => {
+      window.removeEventListener('loadingStarted', handleLoadingStarted);
+      window.removeEventListener('loadingProgress', handleLoadingProgress as EventListener);
+      window.removeEventListener('loadingComplete', handleLoadingComplete);
+    };
+  }, []);
+
   const getStatusColor = () => {
     switch (backendStatus) {
       case 'connected': return 'text-green-500';
@@ -354,6 +384,9 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
 
   return (
     <div className={`relative w-full h-screen bg-gray-900 ${className || ''}`}>
+      {/* Loading Screen */}
+      <LoadingScreen progress={loadingProgress} isVisible={isLoading} />
+      
       {/* Wallet reconnection helper */}
       <WalletReconnect />
       

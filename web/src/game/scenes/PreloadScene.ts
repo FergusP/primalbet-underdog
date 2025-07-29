@@ -7,40 +7,18 @@ export class PreloadScene extends Scene {
   }
 
   preload() {
-    // Show loading bar
-    const { width, height } = this.cameras.main;
-    const loadingBar = this.add.graphics();
-    const loadingBox = this.add.graphics();
+    // Emit loading started event
+    window.dispatchEvent(new CustomEvent('loadingStarted'));
 
-    // Loading box
-    loadingBox.fillStyle(0x222222);
-    loadingBox.fillRect(width * 0.2, height * 0.45, width * 0.6, 50);
-
-    // Loading text
-    const loadingText = this.add.text(width * 0.5, height * 0.4, 'Loading Assets...', {
-      fontSize: '24px',
-      color: '#ffffff'
-    }).setOrigin(0.5, 0.5);
-
-    // Progress text
-    const progressText = this.add.text(width * 0.5, height * 0.53, '0%', {
-      fontSize: '18px',
-      color: '#ffffff'
-    }).setOrigin(0.5, 0.5);
-
-    // Update loading bar
+    // Update loading progress
     this.load.on('progress', (value: number) => {
-      loadingBar.clear();
-      loadingBar.fillStyle(0xffffff);
-      loadingBar.fillRect(width * 0.2 + 10, height * 0.45 + 10, (width * 0.6 - 20) * value, 30);
-      progressText.setText(Math.floor(value * 100) + '%');
+      window.dispatchEvent(new CustomEvent('loadingProgress', {
+        detail: { progress: value * 100 }
+      }));
     });
 
     this.load.on('complete', () => {
-      loadingBar.destroy();
-      loadingBox.destroy();
-      loadingText.destroy();
-      progressText.destroy();
+      window.dispatchEvent(new CustomEvent('loadingComplete'));
     });
 
     // UI elements

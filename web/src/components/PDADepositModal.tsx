@@ -41,12 +41,13 @@ export const PDADepositModal: React.FC<PDADepositModalProps> = ({
       // Convert amount to lamports
       const amountLamports = Math.floor(parseFloat(amount) * LAMPORTS_PER_SOL);
       
-      // Create amount buffer (u64 - 8 bytes)
-      const amountBuffer = Buffer.alloc(8);
-      amountBuffer.writeBigUInt64LE(BigInt(amountLamports), 0);
+      // Create amount buffer (u64 - 8 bytes) using DataView for browser compatibility
+      const amountBuffer = new ArrayBuffer(8);
+      const view = new DataView(amountBuffer);
+      view.setBigUint64(0, BigInt(amountLamports), true); // true for little-endian
       
       // Combine discriminator and amount
-      const data = Buffer.concat([discriminator, amountBuffer]);
+      const data = Buffer.concat([discriminator, Buffer.from(amountBuffer)]);
 
       const depositIx = new TransactionInstruction({
         programId,
