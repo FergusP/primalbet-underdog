@@ -21,6 +21,7 @@ interface CombatState {
   playerHealth: HealthData;
   monsterHealth: HealthData;
   monsterName: string;
+  monsterInfo?: { name: string; baseHealth: number };
   spearCount: number;
   maxSpears: number;
   gameState: 'playing' | 'victory' | 'defeat';
@@ -71,7 +72,14 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
     };
 
     const handleMonsterInfo = (event: CustomEvent) => {
-      setCombatState((prev) => ({ ...prev, monsterName: event.detail.type }));
+      setCombatState((prev) => ({ 
+        ...prev, 
+        monsterName: event.detail.type,
+        monsterInfo: {
+          name: event.detail.type,
+          baseHealth: event.detail.baseHealth
+        }
+      }));
     };
 
     const handleDamageNumber = (event: CustomEvent) => {
@@ -200,25 +208,74 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
   }, []);
 
   // Handle crack vault button click
-  const handleCrackVault = () => {
+  const handleCrackVault = async () => {
     // Hide victory UI before transitioning
     setCombatState((prev) => ({ ...prev, gameState: 'playing' }));
 
-    // Simulate VRF check - use dev toggle if enabled
-    const success = devMode ? forceSuccess : Math.random() < 0.3;
+    try {
+      // Get wallet address and combat info from the game
+      const walletAddress = window.localStorage.getItem('walletAddress');
+      const combatId = window.localStorage.getItem('currentCombatId') || `combat_${Date.now()}`;
+      const monsterType = combatState.monsterInfo?.name || 'Unknown';
+      console.log('Vault attempt with monster:', monsterType, 'Full info:', combatState.monsterInfo);
+      console.log('Full combat state:', combatState);
 
-    // Immediately continue to vault scene with VRF result
-    window.dispatchEvent(
-      new CustomEvent('continue-from-vault', {
-        detail: { vrfResult: success },
-      })
-    );
+      if (!walletAddress) {
+        console.error('No wallet address found');
+        // Continue to vault scene with failure
+        window.dispatchEvent(
+          new CustomEvent('continue-from-vault', {
+            detail: { vrfResult: false },
+          })
+        );
+        return;
+      }
+
+      // Call backend vault attempt API
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${backendUrl}/vault/attempt`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          wallet: walletAddress,
+          combatId: combatId,
+          monsterType: monsterType,
+        }),
+      });
+
+      const result = await response.json();
+      console.log('Vault attempt result:', result);
+
+      // Continue to vault scene with actual VRF result
+      window.dispatchEvent(
+        new CustomEvent('continue-from-vault', {
+          detail: { 
+            vrfResult: result.success,
+            prizeAmount: result.prizeAmount,
+            roll: result.roll,
+            crackChance: result.crackChance,
+            claimTx: result.claimTx
+          },
+        })
+      );
+    } catch (error) {
+      console.error('Vault attempt failed:', error);
+      // Continue to vault scene with failure
+      window.dispatchEvent(
+        new CustomEvent('continue-from-vault', {
+          detail: { vrfResult: false },
+        })
+      );
+    }
   };
 
   // Removed handleContinue - no longer needed
 
   const handleReturnToColosseum = () => {
-    window.dispatchEvent(new CustomEvent('return-to-colosseum'));
+    // Return to colosseum without attempting vault
+    window.location.reload(); // Simple solution - reload to go back to colosseum
   };
 
   const getHealthBarColor = (current: number, max: number) => {
@@ -249,13 +306,13 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
     >
       {/* Health Bars */}
       {combatState.uiVisible && (
-        <div className="absolute top-4 left-4 right-4 flex justify-between">
+        <div className="absolute top-4 left-4 right-4 flex justify-between gap-4" style={{ maxWidth: 'calc(100% - 2rem)' }}>
           {/* Player Health */}
-          <div className="bg-black/70 p-4 rounded-lg border border-blue-500/50">
-            <div className="text-blue-400 font-bold text-lg mb-2">
+          <div className="bg-black/70 p-3 rounded-lg border border-blue-500/50 flex-1 max-w-xs">
+            <div className="text-blue-400 font-bold mb-2" style={{ fontSize: 'clamp(16px, 2vw, 20px)' }}>
               GLADIATOR
             </div>
-            <div className="w-64 h-6 bg-gray-800 rounded border border-gray-600 relative overflow-hidden">
+            <div className="w-full min-w-[150px] h-6 bg-gray-800 rounded border border-gray-600 relative overflow-hidden">
               <div
                 className="h-full transition-all duration-300 ease-out"
                 style={{
@@ -278,11 +335,11 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
           </div>
 
           {/* Monster Health */}
-          <div className="bg-black/70 p-4 rounded-lg border border-red-500/50">
-            <div className="text-red-400 font-bold text-lg mb-2 text-right">
+          <div className="bg-black/70 p-3 rounded-lg border border-red-500/50 flex-1 max-w-xs">
+            <div className="text-red-400 font-bold mb-2 text-right" style={{ fontSize: 'clamp(16px, 2vw, 20px)' }}>
               {combatState.monsterName.toUpperCase()}
             </div>
-            <div className="w-64 h-6 bg-gray-800 rounded border border-gray-600 relative overflow-hidden">
+            <div className="w-full min-w-[150px] h-6 bg-gray-800 rounded border border-gray-600 relative overflow-hidden">
               <div
                 className="h-full transition-all duration-300 ease-out"
                 style={{
@@ -306,15 +363,18 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
         </div>
       )}
 
-      {/* Spear Counter */}
+      {/* Spear Counter - Positioned at top center between health bars */}
       {combatState.uiVisible && (
-        <div className="absolute top-20 right-4">
-          <div className="bg-black/70 p-3 rounded-lg border border-yellow-500/50">
+        <div className="absolute left-1/2 transform -translate-x-1/2 top-4">
+          <div className="bg-black/70 px-6 py-2 rounded-lg border border-yellow-500/50">
             <div
-              className="font-bold text-lg"
-              style={{ color: getSpearCountColor() }}
+              className="font-bold text-center"
+              style={{ 
+                color: getSpearCountColor(),
+                fontSize: 'clamp(14px, 1.8vw, 18px)'
+              }}
             >
-              Spears: {combatState.spearCount}/{combatState.maxSpears}
+              ⚔️ Spears: {combatState.spearCount}/{combatState.maxSpears} ⚔️
             </div>
           </div>
         </div>
@@ -325,7 +385,7 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
           <div className="bg-black/70 p-4 rounded-lg border border-gray-500/50">
             <div className="text-white text-center">
-              <div className="text-sm">
+              <div style={{ fontSize: 'clamp(12px, 1.5vw, 16px)' }}>
                 WASD/Arrows: Move • Space: Melee Attack • E: Throw Spear
               </div>
             </div>
@@ -447,7 +507,7 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
                     border: '3px solid #b8860b',
                   }}
                 >
-                  🔨 CRACK THE VAULT! 🔨
+                  ⚡ DEFINE YOUR DESTINY ⚡
                 </button>
 
                 <br />

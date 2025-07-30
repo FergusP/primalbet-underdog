@@ -28,6 +28,10 @@ interface GameState {
   };
 }
 
+interface GameUIOverlayProps {
+  selectedPaymentMethod?: 'wallet' | 'pda';
+}
+
 // UI Layer z-indexes as per UI.md
 const UILayer = {
   HUD: 100,
@@ -36,7 +40,7 @@ const UILayer = {
   Notifications: 9999
 };
 
-export const GameUIOverlay: React.FC = () => {
+export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({ selectedPaymentMethod = 'wallet' }) => {
   const [mounted, setMounted] = useState(false);
   const [devMode, setDevMode] = useState(false); // Dev mode toggle
   const [selectedMonster, setSelectedMonster] = useState('SKELETON_WARRIOR');
@@ -60,6 +64,7 @@ export const GameUIOverlay: React.FC = () => {
   useEffect(() => {
     // Listen for game state updates from Phaser
     const handleGameStateUpdate = (event: CustomEvent) => {
+      console.log('GameUIOverlay received gameState:', event.detail);
       setGameState(prev => ({ ...prev, ...event.detail }));
     };
 
@@ -81,7 +86,12 @@ export const GameUIOverlay: React.FC = () => {
   }, []);
 
   const handleFightClick = () => {
-    window.dispatchEvent(new CustomEvent('fightButtonClicked'));
+    // Include payment method in the event
+    window.dispatchEvent(new CustomEvent('fightButtonClicked', {
+      detail: {
+        paymentMethod: selectedPaymentMethod
+      }
+    }));
   };
 
   if (!mounted) return null;

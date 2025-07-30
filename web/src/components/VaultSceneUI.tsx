@@ -54,14 +54,23 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
       }));
     };
 
-    // Listen for vault opening event from Phaser
-    const handleVaultOpening = (event: CustomEvent) => {
+    // Listen for spinner started
+    const handleSpinnerStarted = () => {
       setIsOpening(true);
       setShowVaultSelection(false);
     };
     
-    // Listen for vault selection ready
-    const handleVaultSelectionReady = () => {
+    // Listen for spinner result
+    const handleSpinnerResult = (event: CustomEvent) => {
+      setVrfSuccess(event.detail.success);
+      if (event.detail.prizeAmount) {
+        console.log('VaultSceneUI: Setting jackpot from prizeAmount:', event.detail.prizeAmount, 'lamports =', event.detail.prizeAmount / 1e9, 'SOL');
+        setJackpotAmount(event.detail.prizeAmount / 1e9); // Convert lamports to SOL
+      }
+    };
+    
+    // Listen for spinner ready
+    const handleSpinnerReady = () => {
       setShowVaultSelection(true);
     };
     
@@ -71,24 +80,24 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
       setIsOpening(false);
       setShowResult(true);
       setVrfSuccess(success);
-      if (jackpotAmount) {
-        setJackpotAmount(parseFloat(jackpotAmount));
-      }
+      // Don't set jackpot amount here - it's already set in handleVaultOpening
     };
 
     window.addEventListener('vaultStateUpdate', handleVaultUpdate as EventListener);
     window.addEventListener('vaultAttempt', handleVaultAttempt as EventListener);
     window.addEventListener('vaultResult', handleVaultResult as EventListener);
-    window.addEventListener('vaultOpening', handleVaultOpening as EventListener);
-    window.addEventListener('vault-selection-ready', handleVaultSelectionReady as EventListener);
+    window.addEventListener('spinner-ready', handleSpinnerReady as EventListener);
+    window.addEventListener('spinner-started', handleSpinnerStarted as EventListener);
+    window.addEventListener('spinner-result', handleSpinnerResult as EventListener);
     window.addEventListener('vault-result-display', handleVaultResultDisplay as EventListener);
 
     return () => {
       window.removeEventListener('vaultStateUpdate', handleVaultUpdate as EventListener);
       window.removeEventListener('vaultAttempt', handleVaultAttempt as EventListener);
       window.removeEventListener('vaultResult', handleVaultResult as EventListener);
-      window.removeEventListener('vaultOpening', handleVaultOpening as EventListener);
-      window.removeEventListener('vault-selection-ready', handleVaultSelectionReady as EventListener);
+      window.removeEventListener('spinner-ready', handleSpinnerReady as EventListener);
+      window.removeEventListener('spinner-started', handleSpinnerStarted as EventListener);
+      window.removeEventListener('spinner-result', handleSpinnerResult as EventListener);
       window.removeEventListener('vault-result-display', handleVaultResultDisplay as EventListener);
     };
   }, []);
@@ -121,14 +130,14 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
         </div>
       )}
 
-      {/* Title */}
+      {/* Title - moved higher */}
       <h1 
         className="absolute font-bold text-center select-none"
         style={{
-          top: '10%',
+          top: '5%',
           left: '50%',
           transform: 'translateX(-50%)',
-          fontSize: 'clamp(32px, 4vw, 48px)',
+          fontSize: 'clamp(28px, 3.5vw, 42px)',
           color: '#ffd700',
           textShadow: '0 0 25px #ffaa00, 0 0 50px #ff6600, 4px 4px 8px #000000'
         }}
@@ -138,52 +147,52 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
 
       {/* Removed defeated monster text - no longer needed */}
 
-      {/* Vault Selection Instruction */}
+      {/* Spinner Instruction - positioned above spinner */}
       {showVaultSelection && !isOpening && !showResult && (
         <div className="absolute text-center select-none animate-fade-in"
              style={{
-               top: '30%',
+               top: '25%',
                left: '50%',
                transform: 'translateX(-50%)',
-               padding: '12px 30px',
-               backgroundColor: 'rgba(0, 0, 0, 0.8)',
-               borderRadius: '12px',
-               border: '2px solid rgba(255, 215, 0, 0.3)',
+               padding: '10px 24px',
+               backgroundColor: 'rgba(0, 0, 0, 0.7)',
+               borderRadius: '10px',
+               border: '2px solid rgba(255, 215, 0, 0.2)',
                whiteSpace: 'nowrap'
              }}>
           <p className="font-bold"
              style={{
-               fontSize: 'clamp(18px, 2.2vw, 24px)',
+               fontSize: 'clamp(16px, 2vw, 22px)',
                color: '#ffd700',
                textShadow: '0 0 10px #000000, 2px 2px 4px #000000',
                margin: 0
              }}>
-            The gods have decided your fate. Choose wisely, gladiator...
+            The fates are spinning... Your destiny awaits!
           </p>
         </div>
       )}
 
-      {/* Opening Animation - Show over vault selection */}
-      {isOpening && (
+      {/* Spinning Animation Text - moved lower */}
+      {isOpening && !showResult && (
         <div 
           className="absolute text-center font-bold select-none animate-pulse"
           style={{
-            top: '30%',
+            bottom: '15%',
             left: '50%',
-            transform: 'translate(-50%, -50%)',
-            fontSize: 'clamp(28px, 4vw, 40px)',
+            transform: 'translateX(-50%)',
+            fontSize: 'clamp(20px, 2.5vw, 28px)',
             color: '#ffffff',
             textShadow: '0 0 30px #ffffff, 3px 3px 6px #000000',
             zIndex: 10
           }}
         >
-          ⚡ OPENING VAULT... ⚡
+          ⚡ THE FATES ARE DECIDING... ⚡
         </div>
       )}
 
-      {/* Success Result */}
+      {/* Success Result - better positioned */}
       {showResult && vrfSuccess && (
-        <div className="absolute inset-0 flex items-start justify-center" style={{ paddingTop: '15%' }}>
+        <div className="absolute inset-0 flex items-start justify-center" style={{ paddingTop: '20%' }}>
           <div className="text-center">
             {/* Success Flash Effect */}
             <div className="absolute inset-0 bg-gradient-radial from-yellow-400/30 via-transparent to-transparent animate-ping" />
@@ -196,7 +205,7 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
               <h1 
                 className="relative font-bold mb-6 animate-bounce-in select-none animate-glow"
                 style={{
-                  fontSize: 'clamp(36px, 4.5vw, 48px)',
+                  fontSize: 'clamp(28px, 3.5vw, 38px)',
                   color: '#ffd700',
                   textShadow: '0 0 40px #ffaa00, 0 0 60px #ff6600, 0 0 20px #ffff00, 4px 4px 8px #000000',
                   WebkitTextStroke: '2px #b8860b'
@@ -209,9 +218,9 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
             {/* Jackpot Amount */}
             {jackpotAmount > 0 && (
               <h2 
-                className="font-bold mb-8 select-none"
+                className="font-bold mb-6 select-none"
                 style={{
-                  fontSize: 'clamp(24px, 3.5vw, 36px)',
+                  fontSize: 'clamp(20px, 3vw, 32px)',
                   color: '#ffd700',
                   textShadow: '0 0 20px #ffaa00, 2px 2px 4px #000000'
                 }}
@@ -251,16 +260,16 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
 
       {/* Failure Result - Empty Vault */}
       {showResult && !vrfSuccess && (
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-start justify-center" style={{ paddingTop: '20%' }}>
           <div className="text-center">
             {/* Empty Vault Text - Roman style with glow */}
-            <div className="relative mb-4">
+            <div className="relative mb-6">
               {/* Glowing background effect */}
               <div className="absolute inset-0 bg-red-600/20 blur-xl rounded-lg animate-pulse" />
               <h1 
                 className="relative font-bold select-none"
                 style={{
-                  fontSize: 'clamp(32px, 4vw, 42px)',
+                  fontSize: 'clamp(28px, 3.5vw, 36px)',
                   color: '#ff6666',
                   textShadow: '0 0 30px #ff0000, 0 0 60px #ff0000, 0 0 20px #000000, 4px 4px 8px #000000',
                   WebkitTextStroke: '1px #330000',
@@ -274,17 +283,17 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
             {/* Removed redundant empty description - vault visual shows it's empty */}
             
             {/* Jackpot Contribution Text - More Engaging */}
-            <div className="relative mb-8">
+            <div className="relative mb-6">
               {/* Subtle glow background */}
               <div className="absolute inset-0 bg-yellow-400/10 blur-lg rounded-lg" />
               <p 
                 className="relative select-none animate-pulse"
                 style={{
-                  fontSize: 'clamp(18px, 2.4vw, 26px)',
+                  fontSize: 'clamp(16px, 2vw, 22px)',
                   color: '#ffd700',
                   textShadow: '0 0 25px #ffaa00, 0 0 40px #ff6600, 3px 3px 6px #000000',
                   fontWeight: 'bold',
-                  padding: '10px 20px'
+                  padding: '8px 16px'
                 }}
               >
                 ⚔️ Your tribute feeds the colosseum's treasure! Try again, champion! ⚔️

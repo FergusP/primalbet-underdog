@@ -65,6 +65,7 @@ export class CombatScene extends BaseScene {
     }
 
     this.monsterData = data.monster;
+    console.log('CombatScene received monster data:', this.monsterData);
     this.monsterHealth = this.monsterData.baseHealth;
     this.monsterMaxHealth = this.monsterData.baseHealth;
 
@@ -207,6 +208,11 @@ export class CombatScene extends BaseScene {
     this.emitGameState();
     this.emitMonsterInfo();
     this.emitInstructions();
+    
+    // Re-emit monster info after a short delay to ensure UI is ready
+    this.time.delayedCall(100, () => {
+      this.emitMonsterInfo();
+    });
 
     // Add mouse click for attacks
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -276,6 +282,7 @@ export class CombatScene extends BaseScene {
   }
 
   emitMonsterInfo() {
+    console.log('Emitting monster info:', this.monsterData);
     window.dispatchEvent(
       new CustomEvent('monster-info', {
         detail: {
@@ -1196,6 +1203,7 @@ export class CombatScene extends BaseScene {
     const handleContinue = (event: any) => {
       window.removeEventListener('continue-from-vault', handleContinue);
       const vrfResult = event.detail?.vrfResult || false;
+      const prizeAmount = event.detail?.prizeAmount || 0;
 
       // Proceed to vault scene with VRF result
       this.scene.start('VaultScene', {
@@ -1203,6 +1211,7 @@ export class CombatScene extends BaseScene {
         walletAddress: 'test-wallet',
         monsterDefeated: this.monsterData.type,
         vrfSuccess: vrfResult,
+        prizeAmount: prizeAmount,
       });
     };
     window.addEventListener('continue-from-vault', handleContinue);

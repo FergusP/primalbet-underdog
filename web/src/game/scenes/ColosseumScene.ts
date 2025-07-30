@@ -729,9 +729,44 @@ export class ColosseumScene extends BaseScene {
 
   private setupFightButtonListener() {
     // Listen for fight button clicks from HTML overlay
-    const handleFightClick = () => {
-      console.log('Fight button clicked from HTML overlay');
-      this.startCombat();
+    const handleFightClick = (event: CustomEvent) => {
+      console.log('Fight button clicked from HTML overlay', event.detail);
+      // Don't start combat immediately - payment will be handled first
+      // Store pending combat data
+      if (this.colosseumState?.currentMonster) {
+        const combatId = `combat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        this.registry.set('pendingCombat', {
+          monster: this.colosseumState.currentMonster,
+          combatId: combatId,
+          walletAddress: this.walletAddress
+        });
+        console.log('Combat pending payment:', combatId);
+      }
+    };
+    
+    // Listen for successful payment confirmation
+    const handleCombatStarted = (event: CustomEvent) => {
+      console.log('Payment successful, starting combat', event.detail);
+      const pendingCombat = this.registry.get('pendingCombat');
+      if (pendingCombat && pendingCombat.monster) {
+        // Clear pending combat
+        this.registry.remove('pendingCombat');
+        
+        // Start combat with the stored monster data
+        this.scene.start('CombatScene', {
+          monster: pendingCombat.monster,
+          combatId: pendingCombat.combatId,
+          walletAddress: pendingCombat.walletAddress
+        });
+      }
+    };
+    
+    // Listen for payment errors
+    const handleCombatError = (event: CustomEvent) => {
+      console.error('Payment failed:', event.detail.error);
+      // Clear pending combat on error
+      this.registry.remove('pendingCombat');
+      // Could show error message in UI
     };
     
     // Listen for dev monster selection
@@ -742,23 +777,25 @@ export class ColosseumScene extends BaseScene {
       this.loadGameState();
     };
 
-    window.addEventListener('fightButtonClicked', handleFightClick);
+    window.addEventListener('fightButtonClicked', handleFightClick as EventListener);
+    window.addEventListener('combatStarted', handleCombatStarted as EventListener);
+    window.addEventListener('combatError', handleCombatError as EventListener);
     window.addEventListener('devMonsterSelect', handleMonsterSelect as EventListener);
     
     // Clean up listener when scene is destroyed
     this.events.once('shutdown', () => {
-      window.removeEventListener('fightButtonClicked', handleFightClick);
+      window.removeEventListener('fightButtonClicked', handleFightClick as EventListener);
+      window.removeEventListener('combatStarted', handleCombatStarted as EventListener);
+      window.removeEventListener('combatError', handleCombatError as EventListener);
       window.removeEventListener('devMonsterSelect', handleMonsterSelect as EventListener);
     });
   }
 
   private async loadGameState() {
     try {
-      // Call backend API with selected monster for dev mode
-      const url = new URL('/api/state', window.location.origin);
-      url.searchParams.set('monster', this.selectedMonster);
-      
-      const response = await fetch(url.toString());
+      // Call real backend API
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${backendUrl}/state`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -779,10 +816,14 @@ export class ColosseumScene extends BaseScene {
   private updateGameStateForUI() {
     if (!this.colosseumState) return;
 
+    console.log('ColosseumScene raw state:', this.colosseumState);
+    const jackpotValue = this.colosseumState.currentJackpot || 0;
+    console.log('Sending jackpot value:', jackpotValue);
+
     // Emit event with game state for HTML UI
     window.dispatchEvent(new CustomEvent('gameStateUpdate', {
       detail: {
-        jackpot: this.colosseumState.currentJackpot || 0,
+        jackpot: jackpotValue,
         monsterName: this.colosseumState.currentMonster?.type || 'SKELETON WARRIOR',
         recentCombats: this.colosseumState.recentCombats || [],
         playerStats: {
@@ -862,24 +903,8 @@ export class ColosseumScene extends BaseScene {
     }
 
     try {
-      // Generate combat ID
-      const combatId = `combat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      console.log('Transitioning to CombatScene with:', {
-        monster: this.colosseumState.currentMonster,
-        combatId: combatId,
-        walletAddress: this.walletAddress
-      });
-      
-      // First, player needs to send payment transaction
-      // This will be handled by the React wallet adapter
-      // Start action combat scene
-      this.scene.start('CombatScene', {
-        monster: this.colosseumState.currentMonster,
-        combatId: combatId,
-        walletAddress: this.walletAddress
-      });
-
+      // This method is no longer used - combat starts after payment confirmation
+      console.warn('startCombat called directly - this should not happen');
     } catch (error) {
       console.error('Failed to start combat:', error);
     }

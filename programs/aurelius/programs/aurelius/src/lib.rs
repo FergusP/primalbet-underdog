@@ -16,7 +16,7 @@ const BACKEND_SIGNER: &str = "2pde6PGeMLbXhFkLWzEhpSGFqkhU9eica8RjbrEkwvb5";
 pub mod aurelius {
     use super::*;
 
-    // Enter combat - pay entry fee and add to pot
+    // t combat - pay entry fee and add to pot
     // This now auto-creates player account if needed!
     pub fn enter_combat(ctx: Context<EnterCombat>) -> Result<()> {
         let player_account = &mut ctx.accounts.player_account;

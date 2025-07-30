@@ -4,7 +4,8 @@ import {
   CombatRequest, 
   CombatResponse, 
   PlayerProfile, 
-  PlayerStats 
+  PlayerStats,
+  PaymentOptions 
 } from '../types';
 
 export class GameService {
@@ -43,6 +44,17 @@ export class GameService {
     
     if (!response.ok) {
       throw new Error(`Failed to fetch player profile: ${response.status}`);
+    }
+    
+    return response.json();
+  }
+
+  // Get payment options for a player
+  static async getPaymentOptions(wallet: string): Promise<PaymentOptions> {
+    const response = await fetch(`${this.BASE_URL}/player/${wallet}/payment-options`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch payment options: ${response.status}`);
     }
     
     return response.json();
