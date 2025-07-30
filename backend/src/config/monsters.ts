@@ -9,7 +9,7 @@ export const MONSTER_TIERS: Record<number, MonsterTier> = {
     hp: 80,
     attackPower: 15,
     defenseMultiplier: 0.9,
-    vaultCrackChance: 1, // 30% chance
+    vaultCrackChance: 10, // 30% chance
     sprite: 'skeleton-placeholder',
   },
   2: {

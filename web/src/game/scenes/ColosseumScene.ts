@@ -817,7 +817,7 @@ export class ColosseumScene extends BaseScene {
     if (!this.colosseumState) return;
 
     console.log('ColosseumScene raw state:', this.colosseumState);
-    const jackpotValue = this.colosseumState.currentPot || this.colosseumState.currentJackpot || 0;
+    const jackpotValue = this.colosseumState.currentJackpot || 0;
     console.log('Sending jackpot value:', jackpotValue);
 
     // Emit event with game state for HTML UI

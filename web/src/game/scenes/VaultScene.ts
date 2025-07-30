@@ -21,6 +21,7 @@ export class VaultScene extends BaseScene {
   private lastTickedSlot: string | null = null;
   private tickedSlots: Set<string> = new Set();
   private nearMissOffset: number = 0; // Stores near miss direction for offset bias
+  private initialMovement?: Phaser.Tweens.Tween;
   
   // Near-miss configuration
   private readonly NEAR_MISS_CHANCE = 0.75; // 75% chance of near miss on loss
@@ -221,7 +222,7 @@ export class VaultScene extends BaseScene {
     slotsContainer.x = middleOffset;
     
     // Store the initial offset for spin calculations
-    this.registerUIElement('initialOffset', middleOffset);
+    // middleOffset is available via slotsContainer.x if needed
     
     this.spinnerContainer.add(slotsContainer);
     this.registerUIElement('slotsContainer', slotsContainer);
@@ -267,7 +268,7 @@ export class VaultScene extends BaseScene {
     this.registerUIElement('spinnerContainer', this.spinnerContainer);
     
     // Add subtle initial movement to show it's interactive - continuous right movement
-    const initialMovement = this.tweens.add({
+    this.initialMovement = this.tweens.add({
       targets: slotsContainer,
       x: slotsContainer.x - (slotSpacing * 3), // Move 3 slots slowly
       duration: 6000,
@@ -277,7 +278,6 @@ export class VaultScene extends BaseScene {
     });
     
     // Store reference to stop it when actual spin starts
-    this.registerUIElement('initialMovement', initialMovement);
     
     // Start spinning automatically after a short delay
     this.time.delayedCall(2500, () => this.startSpin());
@@ -427,9 +427,8 @@ export class VaultScene extends BaseScene {
     const slotsContainer = this.getUIElement('slotsContainer') as Phaser.GameObjects.Container;
     
     // Stop the initial movement animation
-    const initialMovement = this.getUIElement('initialMovement') as Phaser.Tweens.Tween;
-    if (initialMovement) {
-      initialMovement.stop();
+    if (this.initialMovement) {
+      this.initialMovement.stop();
     }
     
     // Emit spinning started event
@@ -574,10 +573,11 @@ export class VaultScene extends BaseScene {
     
     // Apply effects only to the closest slot if it's within threshold
     if (closestSlot && minDistance < slotSpacing * 0.5) {
+      const slot: Phaser.GameObjects.Container = closestSlot; // Type assertion helper
       // Check for dramatic finale mode
       if (this.inFinaleMode) {
-        const slotId = closestSlot.getData('uniqueId');
-        const symbol = closestSlot.getData('symbol');
+        const slotId = slot.getData('uniqueId');
+        const symbol = slot.getData('symbol');
         
         // Check if this is a new slot entering center
         if (slotId !== this.lastTickedSlot && minDistance < 30 && !this.tickedSlots.has(slotId)) {
@@ -587,28 +587,28 @@ export class VaultScene extends BaseScene {
           // Calculate intensity (0-1) based on proximity to end
           const intensity = Math.max(0, 1 - (slotsTillEnd / 8));
           
-          this.handleFinaleTick(closestSlot, intensity);
+          this.handleFinaleTick(slot, intensity);
           
           // Special effects for win symbols passing
-          if (symbol === 'win' && !closestSlot.getData('hasTriggeredNearMiss')) {
-            closestSlot.setData('hasTriggeredNearMiss', true);
-            this.handleNearMissPass(closestSlot, velocity);
+          if (symbol === 'win' && !slot.getData('hasTriggeredNearMiss')) {
+            slot.setData('hasTriggeredNearMiss', true);
+            this.handleNearMissPass(slot, velocity);
           }
           
           // Final slot gets special treatment
           if (slotsTillEnd < 1) {
-            this.handleFinalSlotApproach(closestSlot, slotsContainer);
+            this.handleFinalSlotApproach(slot, slotsContainer);
           }
         }
       } else {
         // Normal mode - subtle scale effect based on velocity
         const scale = 1 + (0.1 * (1 - velocity));
-        closestSlot.setScale(scale);
+        slot.setScale(scale);
         
         // Add subtle glow effect for the closest slot at low speeds
-        if (velocity < 0.3 && !closestSlot.getData('hasGlow')) {
-          closestSlot.setData('hasGlow', true);
-          const glowEffect = this.add.rectangle(closestSlot.x, closestSlot.y, 130, 170, 0xffffff, 0.1);
+        if (velocity < 0.3 && !slot.getData('hasGlow')) {
+          slot.setData('hasGlow', true);
+          const glowEffect = this.add.rectangle(slot.x, slot.y, 130, 170, 0xffffff, 0.1);
           slotsContainer.add(glowEffect);
           
           this.tweens.add({
@@ -617,7 +617,7 @@ export class VaultScene extends BaseScene {
             duration: 500,
             onComplete: () => {
               glowEffect.destroy();
-              closestSlot.setData('hasGlow', false);
+              slot.setData('hasGlow', false);
             }
           });
         }
