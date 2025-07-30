@@ -10,6 +10,7 @@ interface IntegratedPaymentUIProps {
   onDeposit: () => void;
   onWithdraw: () => void;
   entryFee: number;
+  showPDAOptions?: boolean;
 }
 
 export const IntegratedPaymentUI: React.FC<IntegratedPaymentUIProps> = ({
@@ -19,10 +20,21 @@ export const IntegratedPaymentUI: React.FC<IntegratedPaymentUIProps> = ({
   onDeposit,
   onWithdraw,
   entryFee,
+  showPDAOptions = true,
 }) => {
   const balanceInSol = pdaBalance / LAMPORTS_PER_SOL;
   const canUsePDA = pdaBalance >= entryFee;
 
+  // Simple wallet-only UI for new users
+  if (!showPDAOptions) {
+    return (
+      <div className="integrated-payment-ui flex items-center gap-2 bg-black bg-opacity-50 px-3 py-2 rounded-lg text-sm">
+        <span className="text-blue-400 font-medium">💳 Wallet Payment</span>
+      </div>
+    );
+  }
+
+  // Full UI with PDA options for experienced users
   return (
     <div className="integrated-payment-ui flex items-center gap-2 bg-black bg-opacity-50 px-3 py-2 rounded-lg text-sm">
       {/* Payment Method Toggle - Compact */}

@@ -157,10 +157,24 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       try {
         const options = await GameService.getPaymentOptions(publicKey.toString());
         setPaymentOptions(options);
-        // Set default payment method based on last used or availability
-        if (options.lastPaymentMethod === 'pda' && options.canUsePDA) {
+        
+        // Check localStorage first for last used payment method
+        const savedPaymentMethod = localStorage.getItem('lastPaymentMethod');
+        console.log('Loading payment method - saved:', savedPaymentMethod, 'canUsePDA:', options.canUsePDA);
+        
+        // Always respect the user's saved preference if it exists
+        if (savedPaymentMethod === 'pda') {
+          console.log('Setting payment method to PDA (from localStorage)');
+          setSelectedPaymentMethod('pda');
+        } else if (savedPaymentMethod === 'wallet') {
+          console.log('Setting payment method to wallet (from localStorage)');
+          setSelectedPaymentMethod('wallet');
+        } else if (options.lastPaymentMethod === 'pda' && options.canUsePDA) {
+          // Fall back to backend's last method only if no saved preference
+          console.log('Setting payment method to PDA (from backend)');
           setSelectedPaymentMethod('pda');
         } else {
+          console.log('Setting payment method to wallet (default)');
           setSelectedPaymentMethod('wallet');
         }
       } catch (error) {
@@ -213,6 +227,9 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
           // Generate and store combat ID
           const combatId = `combat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           window.localStorage.setItem('currentCombatId', combatId);
+          
+          // Save payment method to localStorage
+          localStorage.setItem('lastPaymentMethod', 'pda');
           
           // Notify game that combat can proceed
           window.dispatchEvent(new CustomEvent('combatStarted', {
@@ -275,6 +292,9 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
           // Generate and store combat ID
           const combatId = `combat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           window.localStorage.setItem('currentCombatId', combatId);
+          
+          // Save payment method to localStorage
+          localStorage.setItem('lastPaymentMethod', 'wallet');
           
           // Notify game that combat can proceed
           window.dispatchEvent(new CustomEvent('combatStarted', {
@@ -425,6 +445,11 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
               onDeposit={() => setShowDepositModal(true)}
               onWithdraw={() => setShowWithdrawModal(true)}
               entryFee={0.01 * LAMPORTS_PER_SOL}
+              showPDAOptions={
+                paymentOptions.canUsePDA || 
+                paymentOptions.pdaBalance > 0 || 
+                localStorage.getItem('lastPaymentMethod') === 'pda'
+              }
             />
           )}
           
