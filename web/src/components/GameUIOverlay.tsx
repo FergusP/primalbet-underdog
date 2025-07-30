@@ -7,7 +7,6 @@ import { HistoryPanel } from './GameUI/HistoryPanel';
 import { StatsPanel } from './GameUI/StatsPanel';
 import { FightButton } from './GameUI/FightButton';
 import { MonsterLabel } from './GameUI/MonsterLabel';
-import { getAllMonsterKeys, getMonsterDisplayName } from '../data/monsters';
 
 interface GameState {
   jackpot: number;
@@ -42,8 +41,6 @@ const UILayer = {
 
 export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({ selectedPaymentMethod = 'wallet' }) => {
   const [mounted, setMounted] = useState(false);
-  const [devMode, setDevMode] = useState(false); // Dev mode toggle
-  const [selectedMonster, setSelectedMonster] = useState('SKELETON_WARRIOR');
   const [gameState, setGameState] = useState<GameState>({
     jackpot: 0,
     monsterName: 'SKELETON WARRIOR',
@@ -139,46 +136,6 @@ export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({ selectedPaymentMet
         />
       )}
       
-      {/* Dev Mode Panel */}
-      <div className="absolute left-4 top-40 pointer-events-auto">
-        <div className="bg-purple-900/80 p-4 rounded-lg border border-purple-400 space-y-3">
-          <label className="flex items-center gap-2 text-white text-sm">
-            <input
-              type="checkbox"
-              checked={devMode}
-              onChange={(e) => setDevMode(e.target.checked)}
-              className="w-4 h-4"
-            />
-            <span className="font-mono">DEV MODE</span>
-          </label>
-          
-          {devMode && (
-            <div className="space-y-2">
-              <div className="text-purple-200 text-xs font-mono">SELECT MONSTER:</div>
-              <select
-                value={selectedMonster}
-                onChange={(e) => {
-                  setSelectedMonster(e.target.value);
-                  // Emit event to update monster
-                  window.dispatchEvent(new CustomEvent('devMonsterSelect', { 
-                    detail: { monster: e.target.value } 
-                  }));
-                }}
-                className="bg-purple-800 text-white border border-purple-600 rounded px-2 py-1 text-sm w-full"
-              >
-                {getAllMonsterKeys().map(key => (
-                  <option key={key} value={key}>
-                    {getMonsterDisplayName(key)}
-                  </option>
-                ))}
-              </select>
-              <div className="text-purple-300 text-xs">
-                Entry Fee: 0.01 SOL
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
       
     </div>
   );

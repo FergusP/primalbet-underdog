@@ -107,13 +107,18 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       // Store wallet address for vault attempts
       window.localStorage.setItem('walletAddress', publicKey.toString());
       
-      // Notify Phaser game about wallet connection
-      window.dispatchEvent(new CustomEvent('walletConnected', {
-        detail: { 
-          address: publicKey.toString(),
-          wallet: wallet?.adapter.name 
-        }
-      }));
+      // Small delay to ensure game is ready to receive the event
+      const timeoutId = setTimeout(() => {
+        // Notify Phaser game about wallet connection
+        window.dispatchEvent(new CustomEvent('walletConnected', {
+          detail: { 
+            address: publicKey.toString(),
+            wallet: wallet?.adapter.name 
+          }
+        }));
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
     } else {
       // Clear wallet address on disconnect
       window.localStorage.removeItem('walletAddress');
