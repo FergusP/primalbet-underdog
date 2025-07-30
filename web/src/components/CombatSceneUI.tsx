@@ -48,13 +48,12 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
   const [damageNumbers, setDamageNumbers] = useState<DamageNumber[]>([]);
   const [showVictoryAnimation, setShowVictoryAnimation] = useState(false);
   const [showCrackButton, setShowCrackButton] = useState(false);
-  const [devMode] = useState(true); // Development toggle
-  const [forceSuccess, setForceSuccess] = useState(false); // Dev: force success
 
   // Listen for combat state updates from Phaser
   useEffect(() => {
     const handleCombatUpdate = (event: CustomEvent) => {
       const state = event.detail;
+      console.log(`UI RECEIVED STATE UPDATE: currentSpears=${state.currentSpears}, maxSpears=${state.maxSpears}`);
       setCombatState((prev) => ({
         ...prev,
         playerHealth: {
@@ -367,14 +366,26 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
       {combatState.uiVisible && (
         <div className="absolute left-1/2 transform -translate-x-1/2 top-4">
           <div className="bg-black/70 px-6 py-2 rounded-lg border border-yellow-500/50">
-            <div
-              className="font-bold text-center"
-              style={{ 
-                color: getSpearCountColor(),
-                fontSize: 'clamp(14px, 1.8vw, 18px)'
-              }}
-            >
-              ⚔️ Spears: {combatState.spearCount}/{combatState.maxSpears} ⚔️
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <div
+                className="font-bold"
+                style={{ 
+                  color: getSpearCountColor(),
+                  fontSize: 'clamp(14px, 1.8vw, 18px)'
+                }}
+              >
+                ⚔️ Spears: {combatState.spearCount}/{combatState.maxSpears} ⚔️
+              </div>
+              
+              {/* Spear Recharge Indicator - Canvas Container */}
+              <div 
+                id="spear-recharge-canvas" 
+                style={{ 
+                  width: '50px',
+                  height: '50px',
+                  position: 'relative'
+                }}
+              />
             </div>
           </div>
         </div>
@@ -510,21 +521,6 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
                   ⚡ DEFINE YOUR DESTINY ⚡
                 </button>
 
-                <br />
-                {/* Dev Mode Toggle */}
-                {devMode && (
-                  <div className="mt-4 p-3 bg-purple-900/80 rounded-lg border border-purple-400 inline-block">
-                    <label className="flex items-center gap-3 text-white font-mono text-sm">
-                      <input
-                        type="checkbox"
-                        checked={forceSuccess}
-                        onChange={(e) => setForceSuccess(e.target.checked)}
-                        className="w-4 h-4"
-                      />
-                      DEV: Force Success ({forceSuccess ? 'ON' : 'OFF'})
-                    </label>
-                  </div>
-                )}
               </div>
             )}
 

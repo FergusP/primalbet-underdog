@@ -29,6 +29,7 @@ interface GameState {
 
 interface GameUIOverlayProps {
   selectedPaymentMethod?: 'wallet' | 'pda';
+  isPaymentOptionsReady?: boolean;
 }
 
 // UI Layer z-indexes as per UI.md
@@ -39,8 +40,9 @@ const UILayer = {
   Notifications: 9999
 };
 
-export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({ selectedPaymentMethod = 'wallet' }) => {
+export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({ selectedPaymentMethod = 'wallet', isPaymentOptionsReady = false }) => {
   const [mounted, setMounted] = useState(false);
+  const [isFightButtonDisabled, setIsFightButtonDisabled] = useState(false);
   const [gameState, setGameState] = useState<GameState>({
     jackpot: 0,
     monsterName: 'SKELETON WARRIOR',
@@ -79,6 +81,29 @@ export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({ selectedPaymentMet
     return () => {
       window.removeEventListener('gameStateUpdate', handleGameStateUpdate as EventListener);
       window.removeEventListener('monsterPositionUpdate', handleMonsterPosition as EventListener);
+    };
+  }, []);
+
+  // Listen for combat state events
+  useEffect(() => {
+    const handleCombatStarting = () => {
+      setIsFightButtonDisabled(true);
+    };
+
+    const handleCombatComplete = () => {
+      setIsFightButtonDisabled(false);
+    };
+
+    window.addEventListener('combatStarting', handleCombatStarting);
+    window.addEventListener('combatStarted', handleCombatComplete);
+    window.addEventListener('combatError', handleCombatComplete);
+    window.addEventListener('combatComplete', handleCombatComplete);
+
+    return () => {
+      window.removeEventListener('combatStarting', handleCombatStarting);
+      window.removeEventListener('combatStarted', handleCombatComplete);
+      window.removeEventListener('combatError', handleCombatComplete);
+      window.removeEventListener('combatComplete', handleCombatComplete);
     };
   }, []);
 
@@ -125,7 +150,10 @@ export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({ selectedPaymentMet
       {/* Fight Button - Bottom center */}
       <div className="absolute left-1/2 transform -translate-x-1/2 pointer-events-auto" 
            style={{ bottom: '120px' }}>
-        <FightButton onClick={handleFightClick} />
+        <FightButton 
+          onClick={handleFightClick} 
+          disabled={isFightButtonDisabled || !isPaymentOptionsReady}
+        />
       </div>
 
       {/* Dynamic Labels */}

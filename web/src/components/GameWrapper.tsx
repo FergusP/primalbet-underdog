@@ -185,6 +185,9 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
     if (!connected || !publicKey) return;
 
     const handleStartCombat = async (event: CustomEvent) => {
+      // Dispatch combat starting event to disable button
+      window.dispatchEvent(new CustomEvent('combatStarting'));
+      
       try {
         const { paymentMethod } = event.detail;
         
@@ -456,7 +459,12 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
 
       {/* UI Overlays - Scene-specific rendering */}
       {isGameReady && currentScene === 'MenuScene' && <MenuSceneUI />}
-      {isGameReady && currentScene === 'ColosseumScene' && <GameUIOverlay selectedPaymentMethod={selectedPaymentMethod} />}
+      {isGameReady && currentScene === 'ColosseumScene' && (
+        <GameUIOverlay 
+          selectedPaymentMethod={selectedPaymentMethod} 
+          isPaymentOptionsReady={!!paymentOptions}
+        />
+      )}
       {isGameReady && currentScene === 'CombatScene' && <CombatSceneUI />}
       {isGameReady && currentScene === 'VaultScene' && <VaultSceneUI />}
       
