@@ -7,7 +7,6 @@ import { HistoryPanel } from './GameUI/HistoryPanel';
 import { StatsPanel } from './GameUI/StatsPanel';
 import { FightButton } from './GameUI/FightButton';
 import { MonsterLabel } from './GameUI/MonsterLabel';
-import { getAllMonsterKeys, getMonsterDisplayName } from '../data/monsters';
 
 interface GameState {
   jackpot: number;
@@ -30,6 +29,7 @@ interface GameState {
 
 interface GameUIOverlayProps {
   selectedPaymentMethod?: 'wallet' | 'pda';
+  isPaymentOptionsReady?: boolean;
 }
 
 // UI Layer z-indexes as per UI.md
@@ -40,10 +40,9 @@ const UILayer = {
   Notifications: 9999
 };
 
-export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({ selectedPaymentMethod = 'wallet' }) => {
+export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({ selectedPaymentMethod = 'wallet', isPaymentOptionsReady = false }) => {
   const [mounted, setMounted] = useState(false);
-  const [devMode, setDevMode] = useState(false); // Dev mode toggle
-  const [selectedMonster, setSelectedMonster] = useState('SKELETON_WARRIOR');
+  const [isFightButtonDisabled, setIsFightButtonDisabled] = useState(false);
   const [gameState, setGameState] = useState<GameState>({
     jackpot: 0,
     monsterName: 'SKELETON WARRIOR',
@@ -82,6 +81,29 @@ export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({ selectedPaymentMet
     return () => {
       window.removeEventListener('gameStateUpdate', handleGameStateUpdate as EventListener);
       window.removeEventListener('monsterPositionUpdate', handleMonsterPosition as EventListener);
+    };
+  }, []);
+
+  // Listen for combat state events
+  useEffect(() => {
+    const handleCombatStarting = () => {
+      setIsFightButtonDisabled(true);
+    };
+
+    const handleCombatComplete = () => {
+      setIsFightButtonDisabled(false);
+    };
+
+    window.addEventListener('combatStarting', handleCombatStarting);
+    window.addEventListener('combatStarted', handleCombatComplete);
+    window.addEventListener('combatError', handleCombatComplete);
+    window.addEventListener('combatComplete', handleCombatComplete);
+
+    return () => {
+      window.removeEventListener('combatStarting', handleCombatStarting);
+      window.removeEventListener('combatStarted', handleCombatComplete);
+      window.removeEventListener('combatError', handleCombatComplete);
+      window.removeEventListener('combatComplete', handleCombatComplete);
     };
   }, []);
 
@@ -128,7 +150,10 @@ export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({ selectedPaymentMet
       {/* Fight Button - Bottom center */}
       <div className="absolute left-1/2 transform -translate-x-1/2 pointer-events-auto" 
            style={{ bottom: '120px' }}>
-        <FightButton onClick={handleFightClick} />
+        <FightButton 
+          onClick={handleFightClick} 
+          disabled={isFightButtonDisabled || !isPaymentOptionsReady}
+        />
       </div>
 
       {/* Dynamic Labels */}
@@ -139,46 +164,6 @@ export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({ selectedPaymentMet
         />
       )}
       
-      {/* Dev Mode Panel */}
-      <div className="absolute left-4 top-40 pointer-events-auto">
-        <div className="bg-purple-900/80 p-4 rounded-lg border border-purple-400 space-y-3">
-          <label className="flex items-center gap-2 text-white text-sm">
-            <input
-              type="checkbox"
-              checked={devMode}
-              onChange={(e) => setDevMode(e.target.checked)}
-              className="w-4 h-4"
-            />
-            <span className="font-mono">DEV MODE</span>
-          </label>
-          
-          {devMode && (
-            <div className="space-y-2">
-              <div className="text-purple-200 text-xs font-mono">SELECT MONSTER:</div>
-              <select
-                value={selectedMonster}
-                onChange={(e) => {
-                  setSelectedMonster(e.target.value);
-                  // Emit event to update monster
-                  window.dispatchEvent(new CustomEvent('devMonsterSelect', { 
-                    detail: { monster: e.target.value } 
-                  }));
-                }}
-                className="bg-purple-800 text-white border border-purple-600 rounded px-2 py-1 text-sm w-full"
-              >
-                {getAllMonsterKeys().map(key => (
-                  <option key={key} value={key}>
-                    {getMonsterDisplayName(key)}
-                  </option>
-                ))}
-              </select>
-              <div className="text-purple-300 text-xs">
-                Entry Fee: 0.01 SOL
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
       
     </div>
   );

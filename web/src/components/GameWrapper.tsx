@@ -107,13 +107,18 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       // Store wallet address for vault attempts
       window.localStorage.setItem('walletAddress', publicKey.toString());
       
-      // Notify Phaser game about wallet connection
-      window.dispatchEvent(new CustomEvent('walletConnected', {
-        detail: { 
-          address: publicKey.toString(),
-          wallet: wallet?.adapter.name 
-        }
-      }));
+      // Small delay to ensure game is ready to receive the event
+      const timeoutId = setTimeout(() => {
+        // Notify Phaser game about wallet connection
+        window.dispatchEvent(new CustomEvent('walletConnected', {
+          detail: { 
+            address: publicKey.toString(),
+            wallet: wallet?.adapter.name 
+          }
+        }));
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
     } else {
       // Clear wallet address on disconnect
       window.localStorage.removeItem('walletAddress');
@@ -180,6 +185,9 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
     if (!connected || !publicKey) return;
 
     const handleStartCombat = async (event: CustomEvent) => {
+      // Dispatch combat starting event to disable button
+      window.dispatchEvent(new CustomEvent('combatStarting'));
+      
       try {
         const { paymentMethod } = event.detail;
         
@@ -451,7 +459,12 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
 
       {/* UI Overlays - Scene-specific rendering */}
       {isGameReady && currentScene === 'MenuScene' && <MenuSceneUI />}
-      {isGameReady && currentScene === 'ColosseumScene' && <GameUIOverlay selectedPaymentMethod={selectedPaymentMethod} />}
+      {isGameReady && currentScene === 'ColosseumScene' && (
+        <GameUIOverlay 
+          selectedPaymentMethod={selectedPaymentMethod} 
+          isPaymentOptionsReady={!!paymentOptions}
+        />
+      )}
       {isGameReady && currentScene === 'CombatScene' && <CombatSceneUI />}
       {isGameReady && currentScene === 'VaultScene' && <VaultSceneUI />}
       

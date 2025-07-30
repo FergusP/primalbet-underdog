@@ -14,7 +14,6 @@ export class ColosseumScene extends BaseScene {
   private incomingGladiators: Phaser.GameObjects.Rectangle[] = []; // Track walking gladiators
   private currentGladiator?: Phaser.GameObjects.Rectangle; // Center gladiator
   private gladiatorHealth: number = 2; // Health for center gladiator
-  private selectedMonster: string = 'SKELETON_WARRIOR'; // Dev mode selected monster
 
   constructor() {
     super({ key: 'ColosseumScene' });
@@ -425,8 +424,10 @@ export class ColosseumScene extends BaseScene {
     this.createMonsterDisplay();
     this.setupFightButtonListener();
 
-    // Load initial game state
-    this.loadGameState();
+    // Load initial game state with small delay to ensure sprites are ready
+    this.time.delayedCall(100, () => {
+      this.loadGameState();
+    });
 
     // Set up polling for real-time updates (every 2 seconds as per guide)
     this.updateTimer = this.time.addEvent({
@@ -769,25 +770,15 @@ export class ColosseumScene extends BaseScene {
       // Could show error message in UI
     };
     
-    // Listen for dev monster selection
-    const handleMonsterSelect = (event: CustomEvent) => {
-      this.selectedMonster = event.detail.monster;
-      console.log('Dev: Selected monster:', this.selectedMonster);
-      // Reload state with new monster
-      this.loadGameState();
-    };
-
     window.addEventListener('fightButtonClicked', handleFightClick as EventListener);
     window.addEventListener('combatStarted', handleCombatStarted as EventListener);
     window.addEventListener('combatError', handleCombatError as EventListener);
-    window.addEventListener('devMonsterSelect', handleMonsterSelect as EventListener);
     
     // Clean up listener when scene is destroyed
     this.events.once('shutdown', () => {
       window.removeEventListener('fightButtonClicked', handleFightClick as EventListener);
       window.removeEventListener('combatStarted', handleCombatStarted as EventListener);
       window.removeEventListener('combatError', handleCombatError as EventListener);
-      window.removeEventListener('devMonsterSelect', handleMonsterSelect as EventListener);
     });
   }
 
@@ -800,7 +791,11 @@ export class ColosseumScene extends BaseScene {
         throw new Error(`HTTP ${response.status}`);
       }
       
-      this.colosseumState = await response.json();
+      const stateData = await response.json();
+      console.log('Raw API response:', stateData);
+      console.log('currentPot in response:', stateData.currentPot);
+      this.colosseumState = stateData;
+      console.log('After assignment - currentPot:', (this.colosseumState as any)['currentPot']);
       
       // Update UI via events to HTML overlay
       this.updateGameStateForUI();
@@ -817,7 +812,8 @@ export class ColosseumScene extends BaseScene {
     if (!this.colosseumState) return;
 
     console.log('ColosseumScene raw state:', this.colosseumState);
-    const jackpotValue = this.colosseumState.currentJackpot || 0;
+    // Use bracket notation to access currentPot from backend without TypeScript errors
+    const jackpotValue = (this.colosseumState as any)['currentPot'] || this.colosseumState.currentJackpot || 0;
     console.log('Sending jackpot value:', jackpotValue);
 
     // Emit event with game state for HTML UI
@@ -838,6 +834,7 @@ export class ColosseumScene extends BaseScene {
 
   private updateMonsterDisplay() {
     if (!this.colosseumState?.currentMonster) return;
+    if (!this.monsterSprite || !this.scene.isActive()) return;
 
     const monster = this.colosseumState.currentMonster;
     

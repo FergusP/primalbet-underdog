@@ -24,7 +24,7 @@ export class VaultScene extends BaseScene {
   private initialMovement?: Phaser.Tweens.Tween;
   
   // Near-miss configuration
-  private readonly NEAR_MISS_CHANCE = 0.75; // 75% chance of near miss on loss
+  private readonly NEAR_MISS_CHANCE = 0.95; // 95% chance of near miss on loss - VERY HIGH!
   private readonly STOP_OFFSET_RANGE = { min: -20, max: 20 }; // Pixel offset range
   private readonly NEAR_MISS_DISTANCE = { min: 1, max: 2 }; // Slots away from center
   
@@ -166,7 +166,7 @@ export class VaultScene extends BaseScene {
     const symbols = this.generateSpinnerSymbols();
     console.log('Generated symbols:', symbols.length, symbols); // Debug log
     const slotWidth = 120;
-    const slotSpacing = 140;
+    const slotSpacing = 125; // Reduced from 140 - boxes closer together!
     
     // Calculate visible slots based on spinner width
     this.visibleSlots = Math.ceil(spinnerWidth / slotSpacing) + 2; // Add extra for smooth edges
@@ -349,6 +349,56 @@ export class VaultScene extends BaseScene {
     return symbols;
   }
   
+  private calculateBetterNearMissOffset(): number {
+    let offset = 0;
+    const pattern = Math.random();
+    
+    if (this.nearMissOffset !== 0) {
+      // We have a win symbol nearby
+      const winDirection = this.nearMissOffset > 0 ? 1 : -1;
+      
+      // With 125px spacing and 120px boxes, optimal positions are:
+      // - Just before: -62.5px (exactly one slot before)
+      // - Just after: +62.5px (exactly one slot after)
+      // Add small variation for realism
+      
+      if (pattern < 0.5) {
+        // Pattern 1 (50%): Win box just before center - precisely positioned
+        offset = -62.5 + Phaser.Math.Between(-5, 5); // -67.5 to -57.5
+        console.log('Near-miss: Win PRECISELY before center');
+      } else if (pattern < 0.85) {
+        // Pattern 2 (35%): Win box just after center - precisely positioned
+        offset = 62.5 + Phaser.Math.Between(-5, 5); // 57.5 to 67.5
+        console.log('Near-miss: Win PRECISELY after center');
+      } else {
+        // Pattern 3 (15%): Very close (edge of winning box visible)
+        const edgeOffset = Phaser.Math.Between(0, 1) ? -35 : 35; // Just at the edge
+        offset = edgeOffset + Phaser.Math.Between(-5, 5);
+        console.log('Near-miss: Win edge barely visible');
+      }
+      
+      // Adjust based on win position for realism
+      if (winDirection < 0 && offset < 0) {
+        // If win is before and we're undershooting, enhance the effect
+        offset *= 0.9;
+      } else if (winDirection > 0 && offset > 0) {
+        // If win is after and we're overshooting, enhance the effect
+        offset *= 0.9;
+      }
+    } else {
+      // No win nearby - standard small offset
+      offset = Phaser.Math.Between(-20, 20);
+    }
+    
+    // Safety check: ensure we don't land in the gap between slots
+    const maxSafeOffset = 55; // Maximum safe offset to ensure we land on a slot
+    if (Math.abs(offset) > maxSafeOffset) {
+      offset = offset > 0 ? maxSafeOffset : -maxSafeOffset;
+    }
+    
+    return offset;
+  }
+  
   private createSlot(symbol: string, x: number, y: number): Phaser.GameObjects.Container {
     const slot = this.add.container(x, y);
     
@@ -435,7 +485,7 @@ export class VaultScene extends BaseScene {
     window.dispatchEvent(new CustomEvent('spinner-started'));
     
     // Calculate target position based on result
-    const slotSpacing = 140;
+    const slotSpacing = 125; // Must match the spacing used in createSpinner
     const currentX = slotsContainer.x;
     
     // Use the predetermined target position from generateSpinnerSymbols
@@ -444,23 +494,17 @@ export class VaultScene extends BaseScene {
     // The target position is simply the slot position times spacing
     let targetPosition = -targetSlotInBaseSymbols * slotSpacing;
     
-    // Add pixel offset for losses to create near-miss feel
+    // Add pixel offset for more realistic positioning
     let pixelOffset = 0;
     if (!this.vrfSuccess) {
-      // Random offset within range
-      pixelOffset = Phaser.Math.Between(this.STOP_OFFSET_RANGE.min, this.STOP_OFFSET_RANGE.max);
-      
-      // Bias offset toward near miss if present
-      if (this.nearMissOffset !== 0) {
-        // Make it look like we "just missed" the win
-        // If win is before (-), we want positive offset to "overshoot"
-        // If win is after (+), we want negative offset to "undershoot" 
-        const biasDirection = this.nearMissOffset > 0 ? 1 : -1;
-        pixelOffset = biasDirection * Phaser.Math.Between(10, 20);
-      }
-      
-      targetPosition += pixelOffset;
+      // Use improved near-miss calculation for losses
+      pixelOffset = this.calculateBetterNearMissOffset();
+    } else {
+      // WIN: Add larger variation so it's not always perfectly centered
+      pixelOffset = Phaser.Math.Between(-25, 25);
+      console.log('WIN offset for realism:', pixelOffset);
     }
+    targetPosition += pixelOffset;
     
     console.log('VRF Result:', this.vrfSuccess ? 'WIN' : 'LOSE');
     console.log('Target slot position:', targetSlotInBaseSymbols);
@@ -491,6 +535,7 @@ export class VaultScene extends BaseScene {
     // Store initial position for velocity calculation
     let lastX = startPosition;
     let lastTime = 0;
+    let zoomStarted = false;
     
     // Reset finale tracking
     this.inFinaleMode = false;
@@ -520,6 +565,23 @@ export class VaultScene extends BaseScene {
         // Motion blur based on velocity
         const alpha = Math.max(0.6, 1 - normalizedVelocity * 0.4);
         slotsContainer.setAlpha(alpha);
+        
+        // Calculate time remaining for zoom effect
+        const timeRemaining = (duration - currentTime) / 1000;
+        
+        // Start zoom on spinner container when 1.8 seconds remain
+        if (!zoomStarted && timeRemaining <= 1.8 && timeRemaining > 0) {
+          zoomStarted = true;
+          console.log('Starting spinner zoom, time remaining:', timeRemaining);
+          
+          // Zoom the spinner container only
+          this.tweens.add({
+            targets: this.spinnerContainer,
+            scale: { from: 1, to: 1.12 },
+            duration: timeRemaining * 1000,
+            ease: 'Sine.easeInOut'
+          });
+        }
         
         // Check for finale mode
         const remainingDistance = Math.abs(currentX - targetPosition);
@@ -551,7 +613,7 @@ export class VaultScene extends BaseScene {
   
   private updateSlotEffects(slotsContainer: Phaser.GameObjects.Container, velocity: number, slotsTillEnd: number = 999) {
     const centerX = this.cameras.main.width * 0.5;
-    const slotSpacing = 140;
+    const slotSpacing = 125; // Updated to match new spacing
     
     // Find the slot closest to center
     let closestSlot: Phaser.GameObjects.Container | null = null;
@@ -757,13 +819,22 @@ export class VaultScene extends BaseScene {
     this.inFinaleMode = false;
     this.cameras.main.zoomTo(1, 300);
     
-    // Landing bounce effect
+    // Reset spinner scale from zoom
     this.tweens.add({
       targets: this.spinnerContainer,
-      scale: { from: 1, to: 1.05 },
-      duration: 150,
-      yoyo: true,
-      ease: 'Power2.easeInOut'
+      scale: 1,
+      duration: 200,
+      ease: 'Sine.easeOut',
+      onComplete: () => {
+        // Landing bounce effect after scale reset
+        this.tweens.add({
+          targets: this.spinnerContainer,
+          scale: { from: 1, to: 1.05 },
+          duration: 150,
+          yoyo: true,
+          ease: 'Power2.easeInOut'
+        });
+      }
     });
     
     // Camera shake

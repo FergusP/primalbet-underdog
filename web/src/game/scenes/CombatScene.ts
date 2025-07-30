@@ -1,6 +1,7 @@
 // Action Combat Scene - Real-time combat with movement
 import { BaseScene } from './BaseScene';
 import { Monster } from '../../types';
+import { SpearRechargeIndicatorHTML } from '../ui/SpearRechargeIndicatorHTML';
 
 export class CombatScene extends BaseScene {
   private player!: Phaser.GameObjects.Sprite;
@@ -17,6 +18,7 @@ export class CombatScene extends BaseScene {
   private spears!: Phaser.GameObjects.Group;
   private maxSpears: number = 2;
   private currentSpears: number = 2;
+  private spearRechargeIndicator!: SpearRechargeIndicatorHTML;
 
   // Game state
   private playerHealth: number = 100;
@@ -28,7 +30,7 @@ export class CombatScene extends BaseScene {
   private lastSpearTime: number = 0;
   private meleeCooldown: number = 500; // 0.5 seconds
   private spearCooldown: number = 500; // 0.5 seconds
-  private spearRegenTime: number = 4000; // 4 seconds per spear
+  private spearRegenTime: number = 3500; // 3.5 seconds per spear
   private lastSpearRegen: number = 0;
   private isGameOver: boolean = false;
 
@@ -78,7 +80,7 @@ export class CombatScene extends BaseScene {
     // Reset spear state
     this.currentSpears = this.maxSpears;
     this.lastSpearTime = 0;
-    this.lastSpearRegen = 0;
+    this.lastSpearRegen = this.time.now;
 
     // Reset movement penalty state
     this.isSlowed = false;
@@ -203,6 +205,23 @@ export class CombatScene extends BaseScene {
 
     // Create spear texture once
     this.createSpearTexture();
+    
+    // Delay creation of HTML spear recharge indicator to ensure DOM is ready
+    this.time.delayedCall(500, () => {
+      // Create HTML spear recharge indicator
+      this.spearRechargeIndicator = new SpearRechargeIndicatorHTML(this, {
+        containerId: 'spear-recharge-canvas',
+        rechargeDuration: this.spearRegenTime
+      });
+      
+      // Remove any existing listener first to prevent duplicates
+      this.events.off('spear-recharged', this.onSpearRecharged, this);
+      
+      // Set up spear recharge event listener
+      this.events.on('spear-recharged', this.onSpearRecharged, this);
+      
+      console.log('SpearRechargeIndicatorHTML created after delay');
+    });
 
     // Emit initial game state for UI
     this.emitGameState();
@@ -247,6 +266,11 @@ export class CombatScene extends BaseScene {
   }
 
   emitGameState() {
+    // Safety clamp spears to never exceed max
+    this.currentSpears = Math.min(this.currentSpears, this.maxSpears);
+    
+    console.log(`EMITTING GAME STATE: currentSpears=${this.currentSpears}, maxSpears=${this.maxSpears}`);
+    
     window.dispatchEvent(
       new CustomEvent('combat-state-update', {
         detail: {
@@ -785,8 +809,23 @@ export class CombatScene extends BaseScene {
       spear.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
 
       // Update spear count
+      const beforeCount = this.currentSpears;
       this.currentSpears--;
       this.lastSpearTime = time;
+
+      console.log(`SPEAR THROWN: ${beforeCount} -> ${this.currentSpears}`);
+      
+      // Start recharge animation if we have spears to regenerate
+      if (this.currentSpears < this.maxSpears) {
+        if (!this.spearRechargeIndicator) {
+          console.warn('Spear recharge indicator not yet created!');
+        } else if (this.spearRechargeIndicator.getIsActive()) {
+          console.log('Spear recharge already active');
+        } else {
+          console.log('Starting spear recharge for next spear');
+          this.spearRechargeIndicator.startRecharge();
+        }
+      }
 
       // Emit updated game state
       this.emitGameState();
@@ -943,16 +982,24 @@ export class CombatScene extends BaseScene {
   }
 
   regenerateSpears(time: number) {
-    if (
-      this.currentSpears < this.maxSpears &&
-      time > this.lastSpearRegen + this.spearRegenTime
-    ) {
-      this.currentSpears++;
-      this.lastSpearRegen = time;
-
-      // Emit updated game state
-      this.emitGameState();
+    // Note: This method is now replaced by the Phaser-based recharge indicator
+    // The spear regeneration is handled by the onSpearRecharged event
+  }
+  
+  private onSpearRecharged(): void {
+    // Simple logic: add 1 spear
+    this.currentSpears++;
+    console.log(`SPEAR REGENERATED: ${this.currentSpears}/${this.maxSpears}`);
+    
+    // If still under max, start another recharge
+    if (this.currentSpears < this.maxSpears) {
+      this.spearRechargeIndicator.startRecharge();
+    } else {
+      // At max, hide indicator
+      this.spearRechargeIndicator.reset();
     }
+    
+    this.emitGameState();
   }
 
   emitSpritePositions() {

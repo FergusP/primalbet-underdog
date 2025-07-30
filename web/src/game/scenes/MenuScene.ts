@@ -19,15 +19,14 @@ export class MenuScene extends BaseScene {
     }));
 
     // Check if wallet is already connected via localStorage
-    const storedWallet = localStorage.getItem('aurelius-wallet');
+    const storedWallet = localStorage.getItem('walletAddress');
     if (storedWallet) {
       // Give wallet adapter time to auto-reconnect
       this.time.delayedCall(500, () => {
         // Check if wallet connected event hasn't been received yet
         if (!this.walletConnected) {
-          // Assume wallet will reconnect and update UI accordingly
-          this.walletConnected = true;
-          // UI update now handled by React component
+          // Wait for proper wallet connection event from React
+          console.log('Wallet address found in storage, waiting for reconnection...');
         }
       });
     }
@@ -93,9 +92,14 @@ export class MenuScene extends BaseScene {
 
   private setupEnterArenaListener() {
     window.addEventListener('enterArena', () => {
-      if (this.walletConnected) {
+      // Check both the walletConnected flag and localStorage
+      const storedWallet = localStorage.getItem('walletAddress');
+      if (this.walletConnected || storedWallet) {
+        // Use the connected wallet address or the stored one
+        const walletAddress = this.walletAddress || storedWallet || '';
+        console.log('Entering arena with wallet:', walletAddress);
         // Proceed to Colosseum scene
-        this.scene.start('ColosseumScene', { walletAddress: this.walletAddress });
+        this.scene.start('ColosseumScene', { walletAddress });
       }
     });
   }
