@@ -1,48 +1,138 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Core Colors */
+  --color-gold: #FFD700;
+  --color-light-gold: #FFF3B8;
+  --color-dark-gold: #B8860B;
+  --color-bronze: #CD7F32;
+  --color-blood: #8B0000;
+  --color-crimson: #DC143C;
+  --color-stone: #4A4A4A;
+  --color-steel: #71797E;
+  
+  /* UI Colors */
+  --background: #0A0A0A;
+  --foreground: #FFFFFF;
+  --surface: #1A1A1A;
+  --border: #2A2A2A;
+  
+  /* Typography */
+  --font-display: 'Cinzel', serif;
+  --font-body: 'Crimson Text', serif;
+  --font-system: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-system);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: #000000;
+  background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
   margin: 0;
   padding: 0;
   overflow: hidden;
+  
+  /* Add subtle texture */
+  background-image: 
+    radial-gradient(circle at 20% 50%, rgba(139, 0, 0, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 50%, rgba(205, 127, 50, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 50% 100%, rgba(255, 215, 0, 0.05) 0%, transparent 50%);
 }
 
-/* Custom scrollbar for history panel */
+/* Custom scrollbar styling */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+  background: var(--surface);
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 3px;
+  background: rgba(74, 74, 74, 0.2);
+  border-radius: 4px;
+  border: 1px solid var(--border);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
+  background: linear-gradient(180deg, var(--color-bronze) 0%, var(--color-dark-gold) 100%);
+  border-radius: 4px;
+  border: 1px solid var(--color-dark-gold);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: linear-gradient(180deg, var(--color-gold) 0%, var(--color-bronze) 100%);
+}
+
+/* Hero Entrance Animation */
+@keyframes heroEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.9);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateY(-10px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Gold Shimmer Effect */
+@keyframes goldShimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* Combat Shake */
+@keyframes combatShake {
+  0%, 100% { transform: translateX(0); }
+  10% { transform: translateX(-2px) rotateZ(-1deg); }
+  20% { transform: translateX(2px) rotateZ(1deg); }
+  30% { transform: translateX(-2px) rotateZ(-1deg); }
+  40% { transform: translateX(2px) rotateZ(1deg); }
+  50% { transform: translateX(0) rotateZ(0); }
+}
+
+/* Utility Classes */
+.text-gold {
+  color: var(--color-gold);
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+.text-blood {
+  color: var(--color-blood);
+  text-shadow: 0 0 20px rgba(139, 0, 0, 0.5);
+}
+
+.bg-stone {
+  background: linear-gradient(180deg, var(--color-stone) 0%, var(--surface) 100%);
+  border: 1px solid var(--border);
+}
+
+.animate-hero-entrance {
+  animation: heroEntrance 0.8s ease-out forwards;
+}
+
+.animate-gold-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-bronze) 0%,
+    var(--color-gold) 50%,
+    var(--color-bronze) 100%
+  );
+  background-size: 200% 100%;
+  animation: goldShimmer 3s linear infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }

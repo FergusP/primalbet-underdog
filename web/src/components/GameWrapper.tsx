@@ -14,12 +14,11 @@ import {
 import { WalletReconnect } from './WalletReconnect';
 import { ClientWalletButton } from './ClientWalletButton';
 import { GameUIOverlay } from './GameUIOverlay';
-import { MenuSceneUI } from './MenuSceneUI';
-import { CombatSceneUI } from './CombatSceneUI';
-import { VaultSceneUI } from './VaultSceneUI';
 import { IntegratedPaymentUI } from './IntegratedPaymentUI';
 import { PDADepositModal } from './PDADepositModal';
 import { PDAWithdrawModal } from './PDAWithdrawModal';
+// Import dynamic UI components
+import { MenuUI, CombatUI, VaultUI } from './UIComponentLoader';
 import { LoadingScreen } from './LoadingScreen';
 import type { PaymentOptions } from '../types';
 
@@ -35,13 +34,15 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
   const [backendStatus, setBackendStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
   const [mounted, setMounted] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingError, setLoadingError] = useState<{ message: string; canRetry: boolean } | null>(null);
   
   // Payment UI states - only for ColosseumScene
   const [paymentOptions, setPaymentOptions] = useState<PaymentOptions | null>(null);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'wallet' | 'pda'>('wallet');
+  const [isCombatProcessing, setIsCombatProcessing] = useState(false);
   
   const { 
     publicKey, 
@@ -199,6 +200,8 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
     if (!connected || !publicKey) return;
 
     const handleStartCombat = async (event: CustomEvent) => {
+      // Set loading state
+      setIsCombatProcessing(true);
       // Dispatch combat starting event to disable button
       window.dispatchEvent(new CustomEvent('combatStarting'));
       
@@ -309,6 +312,9 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       } catch (error) {
         console.error('Combat transaction failed:', error);
         
+        // Clear loading state
+        setIsCombatProcessing(false);
+        
         // Show error to user
         window.dispatchEvent(new CustomEvent('combatError', {
           detail: { 
@@ -352,12 +358,36 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       window.removeEventListener('connectWallet', handleConnectWallet);
     };
   }, []);
+  
+  // Refresh payment options when combat starts (after successful payment)
+  useEffect(() => {
+    const handleCombatStarted = () => {
+      // Clear loading state
+      setIsCombatProcessing(false);
+      
+      // Small delay to ensure payment has been processed
+      setTimeout(() => {
+        handleBalanceUpdate();
+      }, 1000);
+    };
+
+    window.addEventListener('combatStarted', handleCombatStarted);
+    
+    return () => {
+      window.removeEventListener('combatStarted', handleCombatStarted);
+    };
+  }, []);
 
   // Listen for scene changes
   useEffect(() => {
     const handleSceneChange = (event: CustomEvent) => {
       console.log('Scene changed to:', event.detail.sceneName);
       setCurrentScene(event.detail.sceneName);
+      
+      // Refresh payment options when returning to ColosseumScene
+      if (event.detail.sceneName === 'ColosseumScene' && publicKey && connected) {
+        handleBalanceUpdate();
+      }
     };
 
     window.addEventListener('sceneChanged', handleSceneChange as EventListener);
@@ -365,13 +395,14 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
     return () => {
       window.removeEventListener('sceneChanged', handleSceneChange as EventListener);
     };
-  }, []);
+  }, [publicKey, connected]);
 
   // Listen for loading events
   useEffect(() => {
     const handleLoadingStarted = () => {
       setIsLoading(true);
       setLoadingProgress(0);
+      setLoadingError(null); // Clear any previous errors
     };
 
     const handleLoadingProgress = (event: CustomEvent) => {
@@ -381,16 +412,27 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
     const handleLoadingComplete = () => {
       setIsLoading(false);
       setLoadingProgress(100);
+      setLoadingError(null);
+    };
+
+    const handleLoadingError = (event: CustomEvent) => {
+      setLoadingError({
+        message: event.detail.message,
+        canRetry: event.detail.canRetry
+      });
+      setLoadingProgress(0);
     };
 
     window.addEventListener('loadingStarted', handleLoadingStarted);
     window.addEventListener('loadingProgress', handleLoadingProgress as EventListener);
     window.addEventListener('loadingComplete', handleLoadingComplete);
+    window.addEventListener('loadingError', handleLoadingError as EventListener);
 
     return () => {
       window.removeEventListener('loadingStarted', handleLoadingStarted);
       window.removeEventListener('loadingProgress', handleLoadingProgress as EventListener);
       window.removeEventListener('loadingComplete', handleLoadingComplete);
+      window.removeEventListener('loadingError', handleLoadingError as EventListener);
     };
   }, []);
 
@@ -413,7 +455,15 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
   return (
     <div className={`relative w-full h-screen bg-gray-900 ${className || ''}`}>
       {/* Loading Screen */}
-      <LoadingScreen progress={loadingProgress} isVisible={isLoading} />
+      <LoadingScreen 
+        progress={loadingProgress} 
+        isVisible={isLoading}
+        error={loadingError}
+        onRetry={() => {
+          // Dispatch enterArena event to retry
+          window.dispatchEvent(new CustomEvent('enterArena'));
+        }}
+      />
       
       {/* Wallet reconnection helper */}
       <WalletReconnect />
@@ -481,17 +531,27 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
         className="absolute inset-0 w-full h-full"
         style={{ zIndex: 1 }}
       />
+      
+      {/* UI Root Container */}
+      <div 
+        id="game-ui-root" 
+        className="absolute inset-0 pointer-events-none"
+        style={{ zIndex: 10 }}
+      />
 
       {/* UI Overlays - Scene-specific rendering */}
-      {isGameReady && currentScene === 'MenuScene' && <MenuSceneUI />}
+      {isGameReady && currentScene === 'MenuScene' && <MenuUI />}
       {isGameReady && currentScene === 'ColosseumScene' && (
         <GameUIOverlay 
           selectedPaymentMethod={selectedPaymentMethod} 
           isPaymentOptionsReady={!!paymentOptions}
+          pdaBalance={paymentOptions?.pdaBalance || 0}
+          entryFee={0.01 * LAMPORTS_PER_SOL}
+          isLoading={isCombatProcessing}
         />
       )}
-      {isGameReady && currentScene === 'CombatScene' && <CombatSceneUI />}
-      {isGameReady && currentScene === 'VaultScene' && <VaultSceneUI />}
+      {isGameReady && currentScene === 'CombatScene' && <CombatUI />}
+      {isGameReady && currentScene === 'VaultScene' && <VaultUI />}
       
       {/* Debug: Show current scene */}
       {process.env.NODE_ENV === 'development' && (

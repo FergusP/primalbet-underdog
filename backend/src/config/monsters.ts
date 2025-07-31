@@ -53,7 +53,7 @@ export const MONSTER_TIERS: Record<number, MonsterTier> = {
     hp: 200,
     attackPower: 45,
     defenseMultiplier: 0.7,
-    vaultCrackChance: 80, // 80% chance - hardest to crack
+    vaultCrackChance: 90, // 80% chance - hardest to crack
     sprite: 'cyclops-placeholder',
   },
 };

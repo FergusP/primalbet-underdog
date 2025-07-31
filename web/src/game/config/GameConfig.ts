@@ -1,17 +1,21 @@
 // Game configuration from PHASER_INTEGRATION.md  
 import * as Phaser from 'phaser';
 
+// Fixed game dimensions
+const GAME_WIDTH = 1280;
+const GAME_HEIGHT = 720;
+
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'game-container',
-  width: window.innerWidth,
-  height: window.innerHeight,
+  width: GAME_WIDTH,
+  height: GAME_HEIGHT,
   backgroundColor: '#2a1f1a',
   scale: {
-    mode: Phaser.Scale.RESIZE,
-    autoCenter: Phaser.Scale.NO_CENTER,
-    width: window.innerWidth,
-    height: window.innerHeight
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: GAME_WIDTH,
+    height: GAME_HEIGHT
   },
   scene: [], // Will be populated with scene classes
   physics: {

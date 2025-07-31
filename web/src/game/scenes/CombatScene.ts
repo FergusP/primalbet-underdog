@@ -43,7 +43,7 @@ export class CombatScene extends BaseScene {
   private meleeRangeIndicator!: Phaser.GameObjects.Graphics;
   private meleeRange: number = 150; // Good melee range for better UX
   private debugGraphics!: Phaser.GameObjects.Graphics;
-  private debugMode: boolean = true; // Toggle for debug visualization
+  private debugMode: boolean = false; // Toggle for debug visualization
   private attackRangeIndicator!: Phaser.GameObjects.Graphics; // Shows where player can attack
 
   // Movement penalty system
@@ -51,6 +51,24 @@ export class CombatScene extends BaseScene {
   private slowedUntil: number = 0;
   private normalSpeed: number = 150;
   private slowedSpeed: number = 60;
+
+  // Performance optimizations
+  private cachedPlayerMonsterDistance: number = 0;
+  private lastDistanceCalculation: number = 0;
+  private distanceCalculationInterval: number = 50; // Calculate every 50ms
+  private lastSpritePositionEmit: number = 0;
+  private spritePositionEmitInterval: number = 100; // Emit every 100ms
+  private prevPlayerX: number = 0;
+  private prevPlayerY: number = 0;
+  private prevMonsterX: number = 0;
+  private prevMonsterY: number = 0;
+  
+  // Arena borders - stored to avoid recreating on resize
+  private borders: Phaser.GameObjects.Rectangle[] = [];
+  
+  // Store previous viewport dimensions for relative positioning
+  private previousWidth: number = 0;
+  private previousHeight: number = 0;
 
   constructor() {
     super({ key: 'CombatScene' });
@@ -85,6 +103,11 @@ export class CombatScene extends BaseScene {
     // Reset movement penalty state
     this.isSlowed = false;
     this.slowedUntil = 0;
+    
+    // Reset optimization state
+    this.cachedPlayerMonsterDistance = 0;
+    this.lastDistanceCalculation = 0;
+    this.lastSpritePositionEmit = 0;
   }
 
   protected createScene() {
@@ -102,7 +125,21 @@ export class CombatScene extends BaseScene {
       return;
     }
 
+    // Dispatch monster info to UI
+    window.dispatchEvent(
+      new CustomEvent('monster-info', {
+        detail: {
+          type: this.monsterData.type,
+          baseHealth: this.monsterData.baseHealth
+        }
+      })
+    );
+
     const { width, height } = this.cameras.main;
+    
+    // Store initial dimensions
+    this.previousWidth = width;
+    this.previousHeight = height;
 
     // Create arena background
     const bgRect = this.add.rectangle(
@@ -114,11 +151,18 @@ export class CombatScene extends BaseScene {
     );
     this.registerUIElement('bg', bgRect);
 
-    // Add arena borders
-    this.add.rectangle(width / 2, 20, width - 40, 40, 0x444444);
-    this.add.rectangle(width / 2, height - 20, width - 40, 40, 0x444444);
-    this.add.rectangle(20, height / 2, 40, height - 40, 0x444444);
-    this.add.rectangle(width - 20, height / 2, 40, height - 40, 0x444444);
+    // Add arena borders and store references
+    this.borders = [
+      this.add.rectangle(width / 2, 20, width - 40, 40, 0x444444),
+      this.add.rectangle(width / 2, height - 20, width - 40, 40, 0x444444),
+      this.add.rectangle(20, height / 2, 40, height - 40, 0x444444),
+      this.add.rectangle(width - 20, height / 2, 40, height - 40, 0x444444)
+    ];
+    
+    // Register borders for proper management
+    this.borders.forEach((border, index) => {
+      this.registerUIElement(`border${index}`, border);
+    });
 
     // Create player (blue circle for now)
     this.player = this.add.sprite(
@@ -128,6 +172,10 @@ export class CombatScene extends BaseScene {
     );
     this.player.setTint(0x4444ff);
     this.player.setScale(2);
+    
+    // Initialize position tracking
+    this.prevPlayerX = this.player.x;
+    this.prevPlayerY = this.player.y;
 
     // Create monster using tier's sprite
     const spriteKey = this.monsterData.tier.sprite;
@@ -159,6 +207,10 @@ export class CombatScene extends BaseScene {
     this.monster.setAlpha(1); // Ensure fully visible
     this.monster.setVisible(true);
     this.monster.setDepth(5); // Ensure proper rendering order
+    
+    // Initialize monster position tracking
+    this.prevMonsterX = this.monster.x;
+    this.prevMonsterY = this.monster.y;
 
     // Create vault (gold rectangle at the back)
     this.vault = this.add.sprite(
@@ -343,6 +395,21 @@ export class CombatScene extends BaseScene {
     graphics.destroy();
   }
 
+  // Cached distance calculation
+  private getPlayerMonsterDistance(): number {
+    const currentTime = this.time.now;
+    if (currentTime - this.lastDistanceCalculation > this.distanceCalculationInterval) {
+      this.cachedPlayerMonsterDistance = Phaser.Math.Distance.Between(
+        this.monster.x,
+        this.monster.y,
+        this.player.x,
+        this.player.y
+      );
+      this.lastDistanceCalculation = currentTime;
+    }
+    return this.cachedPlayerMonsterDistance;
+  }
+
   update(time: number, delta: number) {
     if (this.isGameOver) return;
 
@@ -353,7 +420,24 @@ export class CombatScene extends BaseScene {
     this.updateRangeIndicator();
     this.checkSpearCollisions(); // RE-ENABLED: Fixed spear collision
     this.checkGameOver();
-    this.emitSpritePositions();
+    
+    // Only emit sprite positions if enough time has passed AND positions changed
+    if (time - this.lastSpritePositionEmit > this.spritePositionEmitInterval) {
+      const positionThreshold = 2;
+      const playerMoved = Math.abs(this.player.x - this.prevPlayerX) > positionThreshold ||
+                         Math.abs(this.player.y - this.prevPlayerY) > positionThreshold;
+      const monsterMoved = Math.abs(this.monster.x - this.prevMonsterX) > positionThreshold ||
+                          Math.abs(this.monster.y - this.prevMonsterY) > positionThreshold;
+      
+      if (playerMoved || monsterMoved) {
+        this.emitSpritePositions();
+        this.lastSpritePositionEmit = time;
+        this.prevPlayerX = this.player.x;
+        this.prevPlayerY = this.player.y;
+        this.prevMonsterX = this.monster.x;
+        this.prevMonsterY = this.monster.y;
+      }
+    }
   }
 
   updateRangeIndicator() {
@@ -361,12 +445,7 @@ export class CombatScene extends BaseScene {
     this.meleeRangeIndicator.setPosition(this.player.x, this.player.y);
 
     // Check distance to monster
-    const distance = Phaser.Math.Distance.Between(
-      this.monster.x,
-      this.monster.y,
-      this.player.x,
-      this.player.y
-    );
+    const distance = this.getPlayerMonsterDistance();
     const inRange = distance < this.meleeRange && this.monsterHealth > 0;
 
     // Clear and redraw
@@ -479,12 +558,7 @@ export class CombatScene extends BaseScene {
       return;
     }
 
-    const distance = Phaser.Math.Distance.Between(
-      this.monster.x,
-      this.monster.y,
-      this.player.x,
-      this.player.y
-    );
+    const distance = this.getPlayerMonsterDistance();
 
     // Check if monster can attack
     if (distance <= this.monsterAttackRange && this.playerHealth > 0) {
@@ -555,50 +629,14 @@ export class CombatScene extends BaseScene {
     )
       return;
 
-    const distance = Phaser.Math.Distance.Between(
-      this.monster.x,
-      this.monster.y,
-      this.player.x,
-      this.player.y
-    );
-
-    // Must be close for melee
-    if (distance < this.meleeRange) {
-      this.performMeleeAttack();
-      this.lastMeleeTime = time;
-    } else {
-      // Emit feedback event
-      window.dispatchEvent(
-        new CustomEvent('combat-feedback', {
-          detail: {
-            type: 'too-far',
-            x: this.player.x,
-            y: this.player.y,
-            text: 'Too far!',
-          },
-        })
-      );
-    }
+    const distance = this.getPlayerMonsterDistance();
+    
+    // Always perform the swing animation
+    this.performMeleeSwing(distance < this.meleeRange);
+    this.lastMeleeTime = time;
   }
 
-  performMeleeAttack() {
-    // Don't attack if monster is already dead
-    if (this.monsterHealth <= 0) {
-      // Emit feedback event
-      window.dispatchEvent(
-        new CustomEvent('combat-feedback', {
-          detail: {
-            type: 'already-defeated',
-            x: this.monster.x,
-            y: this.monster.y,
-            text: 'Already defeated!',
-          },
-        })
-      );
-      return;
-    }
-
-    // Calculate attack angle
+  performMeleeSwing(willHit: boolean) {
     const angleToMonster = Phaser.Math.Angle.Between(
       this.player.x,
       this.player.y,
@@ -611,27 +649,55 @@ export class CombatScene extends BaseScene {
     swingGraphics.setPosition(this.player.x, this.player.y);
     swingGraphics.setDepth(10);
 
-    // Draw sword arc
-    const arcAngle = Phaser.Math.DegToRad(90); // 90 degree swing
-    swingGraphics.lineStyle(4, 0xffffff, 0.8);
+    // Draw sword arc - always same size
+    const arcAngle = Phaser.Math.DegToRad(90);
+    const swingReach = 180; // Visual reach of sword
+    
+    if (willHit) {
+      // Successful hit - bright white swing
+      swingGraphics.lineStyle(4, 0xffffff, 0.8);
+    } else {
+      // Miss - dimmer red swing  
+      swingGraphics.lineStyle(3, 0xff6666, 0.5);
+    }
+    
     swingGraphics.beginPath();
     swingGraphics.arc(
       0,
       0,
-      this.meleeRange * 0.8,
+      swingReach,
       angleToMonster - arcAngle / 2,
       angleToMonster + arcAngle / 2,
       false
     );
     swingGraphics.strokePath();
 
+    // Add whoosh effect for misses
+    if (!willHit) {
+      // Create "whoosh" lines
+      for (let i = 0; i < 3; i++) {
+        const offsetAngle = angleToMonster + (i - 1) * 0.1;
+        swingGraphics.lineStyle(2, 0xcccccc, 0.3 - i * 0.1);
+        swingGraphics.beginPath();
+        swingGraphics.arc(
+          0,
+          0,
+          swingReach + i * 10,
+          offsetAngle - arcAngle / 3,
+          offsetAngle + arcAngle / 3,
+          false
+        );
+        swingGraphics.strokePath();
+      }
+    }
+
     // Animate the swing
     this.tweens.add({
       targets: swingGraphics,
       alpha: 0,
-      scaleX: 1.2,
-      scaleY: 1.2,
-      duration: 200,
+      scaleX: willHit ? 1.2 : 1.1,
+      scaleY: willHit ? 1.2 : 1.1,
+      duration: willHit ? 200 : 300,
       onComplete: () => swingGraphics.destroy(),
     });
 
@@ -645,38 +711,86 @@ export class CombatScene extends BaseScene {
       ease: 'Power1',
     });
 
-    // Player attacks monster
-    const damage = Math.floor(Math.random() * 25) + 15; // 15-40 damage
-    this.monsterHealth = Math.max(0, this.monsterHealth - damage);
+    if (willHit) {
+      // Deal damage only on hit
+      this.dealMeleeDamage();
+    } else {
+      // Show miss feedback
+      this.showMissFeedback();
+    }
+  }
 
-    // Visual feedback
+  showMissFeedback() {
+    // Subtle miss indicators
+    const missText = this.add.text(
+      this.player.x + 50,
+      this.player.y - 30,
+      'Miss!',
+      {
+        fontSize: '18px',
+        color: '#ff9999',
+        stroke: '#000000',
+        strokeThickness: 2
+      }
+    );
+    
+    this.tweens.add({
+      targets: missText,
+      y: missText.y - 20,
+      alpha: 0,
+      duration: 500,
+      onComplete: () => missText.destroy()
+    });
+  }
+
+  dealMeleeDamage() {
+    // Don't attack if monster is already dead
+    if (this.monsterHealth <= 0) {
+      return;
+    }
+
+    // Critical hit calculation (20% chance)
+    const isCrit = Math.random() < 0.2;
+    
+    // Calculate base damage
+    let damage = Math.floor(Math.random() * 25) + 15;
+    
+    // Apply critical multiplier
+    if (isCrit) {
+      damage = Math.floor(damage * 2); // 2x damage for crits
+    }
+    
+    this.monsterHealth = Math.max(0, this.monsterHealth - damage);
+    
     this.showDamageNumber(
       this.monster.x,
       this.monster.y - 40,
       damage,
-      0xff4444
+      0xff4444,
+      isCrit
     );
-
+    
     // Emit updated game state
     this.emitGameState();
-
+    
     // Flash effect on hit
     this.monster.setTint(0xffffff);
     this.time.delayedCall(100, () => {
       if (this.monsterHealth > 0) {
         this.monster.setTint(0xff4444);
       } else {
-        this.monster.setTint(0x666666); // Grey when dead
+        this.monster.setTint(0x666666);
       }
     });
-
-    // If monster just died, stop it immediately
+    
+    // Stop monster if defeated
     if (this.monsterHealth <= 0 && this.monster.body) {
       const monsterBody = this.monster.body as Phaser.Physics.Arcade.Body;
       monsterBody.setVelocity(0, 0);
       monsterBody.enable = false;
     }
   }
+
 
   performMonsterAttack() {
     console.log('Monster attacking! Player health before:', this.playerHealth);
@@ -931,13 +1045,23 @@ export class CombatScene extends BaseScene {
 
         // Only damage if monster is alive and still exists
         if (this.monsterHealth > 0 && this.monster && this.monster.active) {
+          // Critical hit calculation (20% chance)
+          const isCrit = Math.random() < 0.2;
+          
           // Deal significantly reduced damage for ranged attack (8-12 instead of 15-40 for melee)
-          const damage = Math.floor(Math.random() * 5) + 8; // 8-12 damage
+          let damage = Math.floor(Math.random() * 5) + 8; // 8-12 damage
+          
+          // Apply critical multiplier
+          if (isCrit) {
+            damage = Math.floor(damage * 2); // 2x damage for crits
+          }
+          
           this.monsterHealth = Math.max(0, this.monsterHealth - damage);
 
           console.log(
             'Spear damage dealt:',
             damage,
+            isCrit ? '(CRITICAL!)' : '',
             'New HP:',
             this.monsterHealth
           );
@@ -947,7 +1071,8 @@ export class CombatScene extends BaseScene {
             this.monster.x,
             this.monster.y - 40,
             damage,
-            0xffaa00
+            0xffaa00,
+            isCrit
           );
 
           // Emit updated game state
@@ -1028,7 +1153,7 @@ export class CombatScene extends BaseScene {
     );
   }
 
-  showDamageNumber(x: number, y: number, damage: number, color: number) {
+  showDamageNumber(x: number, y: number, damage: number, color: number, isCrit: boolean = false) {
     // Emit damage number event for UI to display
     window.dispatchEvent(
       new CustomEvent('damage-number', {
@@ -1037,6 +1162,7 @@ export class CombatScene extends BaseScene {
           y: y,
           damage: damage,
           color: Phaser.Display.Color.IntegerToColor(color).rgba,
+          isCrit: isCrit,
         },
       })
     );
@@ -1236,12 +1362,13 @@ export class CombatScene extends BaseScene {
   showVictoryText(centerX: number, centerY: number) {
     // Keep vault visible - don't hide it
 
-    // Emit victory UI event
+    // Emit victory UI event with monster type
     window.dispatchEvent(
       new CustomEvent('victory-ui', {
         detail: {
           centerX: centerX,
           centerY: centerY - 150,
+          monsterType: this.monsterData.type,
         },
       })
     );
@@ -1308,26 +1435,47 @@ export class CombatScene extends BaseScene {
       bg.setPosition(this.centerX(width), this.centerY(height));
     }
 
-    // Update arena borders
-    // Top border
-    this.add.rectangle(width / 2, 20, width - 40, 40, 0x444444);
-    // Bottom border
-    this.add.rectangle(width / 2, height - 20, width - 40, 40, 0x444444);
-    // Left border
-    this.add.rectangle(20, height / 2, 40, height - 40, 0x444444);
-    // Right border
-    this.add.rectangle(width - 20, height / 2, 40, height - 40, 0x444444);
+    // Update existing arena borders instead of creating new ones
+    if (this.borders.length === 4) {
+      // Top border
+      this.borders[0].setPosition(width / 2, 20).setSize(width - 40, 40);
+      // Bottom border
+      this.borders[1].setPosition(width / 2, height - 20).setSize(width - 40, 40);
+      // Left border
+      this.borders[2].setPosition(20, height / 2).setSize(40, height - 40);
+      // Right border
+      this.borders[3].setPosition(width - 20, height / 2).setSize(40, height - 40);
+    }
 
-    // Reposition player, monster and vault
-    if (this.player) {
-      this.player.setPosition(width * 0.2, height * 0.5);
+    // Maintain relative positions during resize
+    if (this.previousWidth > 0 && this.previousHeight > 0) {
+      // Calculate relative positions based on previous viewport
+      if (this.player) {
+        const playerRelX = this.player.x / this.previousWidth;
+        const playerRelY = this.player.y / this.previousHeight;
+        this.player.setPosition(width * playerRelX, height * playerRelY);
+        // Update position tracking
+        this.prevPlayerX = this.player.x;
+        this.prevPlayerY = this.player.y;
+      }
+      if (this.monster && this.monster.active) {
+        const monsterRelX = this.monster.x / this.previousWidth;
+        const monsterRelY = this.monster.y / this.previousHeight;
+        this.monster.setPosition(width * monsterRelX, height * monsterRelY);
+        // Update position tracking
+        this.prevMonsterX = this.monster.x;
+        this.prevMonsterY = this.monster.y;
+      }
+      if (this.vault) {
+        const vaultRelX = this.vault.x / this.previousWidth;
+        const vaultRelY = this.vault.y / this.previousHeight;
+        this.vault.setPosition(width * vaultRelX, height * vaultRelY);
+      }
     }
-    if (this.monster) {
-      this.monster.setPosition(width * 0.7, height * 0.5);
-    }
-    if (this.vault) {
-      this.vault.setPosition(width * 0.9, height * 0.5);
-    }
+    
+    // Update stored dimensions
+    this.previousWidth = width;
+    this.previousHeight = height;
 
     // Emit resize event for UI
     window.dispatchEvent(

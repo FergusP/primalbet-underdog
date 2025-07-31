@@ -390,8 +390,13 @@ export class ColosseumScene extends BaseScene {
     });
   }
 
-  init(data: { walletAddress?: string }) {
+  init(data: { walletAddress?: string; preloadedState?: any }) {
     this.walletAddress = data?.walletAddress || 'test-wallet';
+    // If we have preloaded state, use it immediately
+    if (data?.preloadedState) {
+      this.colosseumState = data.preloadedState;
+      console.log('Using preloaded game state:', this.colosseumState);
+    }
   }
 
   protected createScene() {
@@ -424,10 +429,23 @@ export class ColosseumScene extends BaseScene {
     this.createMonsterDisplay();
     this.setupFightButtonListener();
 
-    // Load initial game state with small delay to ensure sprites are ready
-    this.time.delayedCall(100, () => {
-      this.loadGameState();
-    });
+    // If we have preloaded state, emit it immediately
+    if (this.colosseumState) {
+      // Emit the preloaded state to update UI
+      window.dispatchEvent(new CustomEvent('gameStateUpdate', {
+        detail: this.colosseumState
+      }));
+      
+      // Update monster display with preloaded data
+      if (this.colosseumState.currentMonster) {
+        this.updateMonsterDisplay(this.colosseumState.currentMonster);
+      }
+    } else {
+      // Fallback: Load initial game state if not preloaded
+      this.time.delayedCall(100, () => {
+        this.loadGameState();
+      });
+    }
 
     // Set up polling for real-time updates (every 2 seconds as per guide)
     this.updateTimer = this.time.addEvent({

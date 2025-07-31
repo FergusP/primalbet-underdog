@@ -3,33 +3,21 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { JackpotDisplay } from './GameUI/JackpotDisplay';
-import { HistoryPanel } from './GameUI/HistoryPanel';
-import { StatsPanel } from './GameUI/StatsPanel';
-import { FightButton } from './GameUI/FightButton';
+import { DynamicFightButton } from './UIComponentLoader';
 import { MonsterLabel } from './GameUI/MonsterLabel';
 
 interface GameState {
   jackpot: number;
   monsterName: string;
   monsterPosition?: { x: number; y: number };
-  recentCombats: Array<{
-    gladiator: string;
-    monster: string;
-    victory: boolean;
-    vaultCracked?: boolean;
-    vaultAttempted?: boolean;
-  }>;
-  playerStats: {
-    combats: number;
-    victories: number;
-    vaultsCracked: number;
-    totalWinnings: number;
-  };
 }
 
 interface GameUIOverlayProps {
   selectedPaymentMethod?: 'wallet' | 'pda';
   isPaymentOptionsReady?: boolean;
+  pdaBalance?: number;
+  entryFee?: number;
+  isLoading?: boolean;
 }
 
 // UI Layer z-indexes as per UI.md
@@ -40,19 +28,19 @@ const UILayer = {
   Notifications: 9999
 };
 
-export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({ selectedPaymentMethod = 'wallet', isPaymentOptionsReady = false }) => {
+export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({ 
+  selectedPaymentMethod = 'wallet', 
+  isPaymentOptionsReady = false,
+  pdaBalance = 0,
+  entryFee = 0.01,
+  isLoading = false
+}) => {
   const [mounted, setMounted] = useState(false);
   const [isFightButtonDisabled, setIsFightButtonDisabled] = useState(false);
+  const [hasReceivedGameState, setHasReceivedGameState] = useState(false);
   const [gameState, setGameState] = useState<GameState>({
     jackpot: 0,
-    monsterName: 'SKELETON WARRIOR',
-    recentCombats: [],
-    playerStats: {
-      combats: 0,
-      victories: 0,
-      vaultsCracked: 0,
-      totalWinnings: 0
-    }
+    monsterName: 'SKELETON WARRIOR'
   });
 
   // Ensure client-side mounting
@@ -65,6 +53,12 @@ export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({ selectedPaymentMet
     const handleGameStateUpdate = (event: CustomEvent) => {
       console.log('GameUIOverlay received gameState:', event.detail);
       setGameState(prev => ({ ...prev, ...event.detail }));
+      setHasReceivedGameState(true);
+      
+      // Hide loading screen now that we have real data and will render it
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('loadingComplete'));
+      }, 50); // Small delay to ensure render completes
     };
 
     const handleMonsterPosition = (event: CustomEvent) => {
@@ -116,7 +110,7 @@ export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({ selectedPaymentMet
     }));
   };
 
-  if (!mounted) return null;
+  if (!mounted || !hasReceivedGameState) return null;
 
   const uiContent = (
     <div
@@ -138,32 +132,27 @@ export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({ selectedPaymentMet
         <JackpotDisplay amount={gameState.jackpot} />
       </div>
 
-      {/* Right Sidebar - Fixed right position */}
-      <div className="absolute pointer-events-auto" 
-           style={{ right: '20px', top: '180px' }}>
-        <div className="space-y-4">
-          <HistoryPanel combats={gameState.recentCombats} />
-          <StatsPanel stats={gameState.playerStats} />
-        </div>
-      </div>
 
       {/* Fight Button - Bottom center */}
       <div className="absolute left-1/2 transform -translate-x-1/2 pointer-events-auto" 
            style={{ bottom: '120px' }}>
-        <FightButton 
+        <DynamicFightButton 
           onClick={handleFightClick} 
           disabled={isFightButtonDisabled || !isPaymentOptionsReady}
+          isLoading={isLoading || isFightButtonDisabled}
+          paymentMethod={selectedPaymentMethod}
+          pdaBalance={pdaBalance / 1e9} // Convert lamports to SOL
+          entryFee={entryFee / 1e9} // Convert lamports to SOL
         />
       </div>
 
       {/* Dynamic Labels */}
-      {gameState.monsterPosition && (
+      {hasReceivedGameState && gameState.monsterPosition && (
         <MonsterLabel 
           name={gameState.monsterName} 
           position={gameState.monsterPosition} 
         />
       )}
-      
       
     </div>
   );

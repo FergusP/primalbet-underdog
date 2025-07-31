@@ -7,20 +7,7 @@ export class PreloadScene extends Scene {
   }
 
   preload() {
-    // Emit loading started event
-    window.dispatchEvent(new CustomEvent('loadingStarted'));
-
-    // Update loading progress
-    this.load.on('progress', (value: number) => {
-      window.dispatchEvent(new CustomEvent('loadingProgress', {
-        detail: { progress: value * 100 }
-      }));
-    });
-
-    this.load.on('complete', () => {
-      window.dispatchEvent(new CustomEvent('loadingComplete'));
-    });
-
+    // Load assets without showing loading screen
     // UI elements
     this.load.image('arena-bg', '/assets/backgrounds/arena.png');
     this.load.image('ui_panel', '/assets/ui/panel.png');

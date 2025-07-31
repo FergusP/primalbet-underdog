@@ -91,15 +91,71 @@ export class MenuScene extends BaseScene {
   }
 
   private setupEnterArenaListener() {
-    window.addEventListener('enterArena', () => {
+    window.addEventListener('enterArena', async () => {
       // Check both the walletConnected flag and localStorage
       const storedWallet = localStorage.getItem('walletAddress');
       if (this.walletConnected || storedWallet) {
         // Use the connected wallet address or the stored one
         const walletAddress = this.walletAddress || storedWallet || '';
         console.log('Entering arena with wallet:', walletAddress);
-        // Proceed to Colosseum scene
-        this.scene.start('ColosseumScene', { walletAddress });
+        
+        // Show loading screen
+        window.dispatchEvent(new CustomEvent('loadingStarted'));
+        
+        // Simulate loading progress
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+          progress += 20;
+          if (progress <= 80) {
+            window.dispatchEvent(new CustomEvent('loadingProgress', {
+              detail: { progress }
+            }));
+          }
+        }, 200);
+        
+        try {
+          // Fetch game state from API
+          const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+          const response = await fetch(`${backendUrl}/state`);
+          
+          if (!response.ok) {
+            throw new Error(`Failed to connect to game server (${response.status})`);
+          }
+          
+          const gameState = await response.json();
+          console.log('Fetched game state:', gameState);
+          
+          // Clear progress interval
+          clearInterval(progressInterval);
+          
+          // Complete the progress
+          window.dispatchEvent(new CustomEvent('loadingProgress', {
+            detail: { progress: 100 }
+          }));
+          
+          // Small delay to show 100% before transitioning
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // Proceed to Colosseum scene with pre-loaded data
+          // Don't hide loading here - let the UI component hide it when ready
+          this.scene.start('ColosseumScene', { 
+            walletAddress,
+            preloadedState: gameState 
+          });
+        } catch (error) {
+          console.error('Failed to load game state:', error);
+          // Clear progress interval
+          clearInterval(progressInterval);
+          
+          // Dispatch error event to show error on loading screen
+          window.dispatchEvent(new CustomEvent('loadingError', {
+            detail: { 
+              message: 'Failed to connect to game server. Please try again.',
+              canRetry: true,
+              scene: 'menu'
+            }
+          }));
+        }
       }
     });
   }

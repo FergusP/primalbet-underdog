@@ -172,6 +172,15 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
       handleUIVisibility as EventListener
     );
     window.addEventListener('sceneChanged', handleSceneChange as EventListener);
+    
+    // Add resize listener to force UI update
+    const handleResize = () => {
+      // Force a re-render to recalculate positions
+      setCombatState(prev => ({ ...prev }));
+    };
+    
+    window.addEventListener('gameResize', handleResize);
+    window.addEventListener('combat-resize', handleResize);
 
     return () => {
       window.removeEventListener(
@@ -203,6 +212,8 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
         'sceneChanged',
         handleSceneChange as EventListener
       );
+      window.removeEventListener('gameResize', handleResize);
+      window.removeEventListener('combat-resize', handleResize);
     };
   }, []);
 
