@@ -30,7 +30,9 @@ router.get('/state', async (req: Request, res: Response) => {
       spawnedAt: Date.now(),
       defeatedBy: null,
       totalCombats: 0,
-      victories: 0
+      victories: 0,
+      // Include evolution data if this is a werewolf
+      evolution: currentMonster.name === 'Werewolf' ? MONSTER_TIERS[6] : undefined
     };
 
     res.json({

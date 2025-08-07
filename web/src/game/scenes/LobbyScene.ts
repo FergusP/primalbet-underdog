@@ -1,8 +1,8 @@
-// Main Colosseum Scene - core gameplay hub with HTML UI overlay
+// Main Lobby Scene - core gameplay hub with HTML UI overlay
 import { BaseScene } from './BaseScene';
 import { ColosseumState, Monster, CombatSummary } from '../../types';
 
-export class ColosseumScene extends BaseScene {
+export class LobbyScene extends BaseScene {
   private walletAddress!: string;
   private colosseumState!: ColosseumState;
   private monsterSprite!: Phaser.GameObjects.Sprite;
@@ -11,8 +11,8 @@ export class ColosseumScene extends BaseScene {
   
   preload() {
     // Everything should be loaded from PreloadScene
-    // Just verify skeleton texture exists
-    console.log('ColosseumScene preload - skeleton exists?', this.textures.exists('skeleton'));
+    // Just verify orc texture exists
+    console.log('LobbyScene preload - orc exists?', this.textures.exists('orc_idle'));
   }
   private gladiatorGroup: Phaser.GameObjects.Sprite[] = [];
   private spearTimer?: Phaser.Time.TimerEvent;
@@ -22,7 +22,7 @@ export class ColosseumScene extends BaseScene {
   private gladiatorHealth: number = 2; // Health for center gladiator
 
   constructor() {
-    super({ key: 'ColosseumScene' });
+    super({ key: 'LobbyScene' });
   }
   
   private checkAndSpawnGladiators() {
@@ -429,7 +429,7 @@ export class ColosseumScene extends BaseScene {
                     'soldier_arrow'
                   );
                   
-                  arrow.setScale(0.3); // Scale down the arrow
+                  arrow.setScale(0.8); // Larger arrow for better visibility
                   arrow.setDepth(2);
                   
                   // Calculate angle to monster and rotate arrow
@@ -463,11 +463,12 @@ export class ColosseumScene extends BaseScene {
                 const monsterName = this.colosseumState.currentMonster?.tier.name.toLowerCase() || '';
                 let spriteKey = 'orc';
                 
-                if (monsterName.includes('skeleton')) spriteKey = 'skeleton';
-                else if (monsterName.includes('goblin')) spriteKey = 'goblin';
+                if (monsterName.includes('werebear')) spriteKey = 'werebear';
+                else if (monsterName.includes('werewolf')) spriteKey = 'werewolf';
+                else if (monsterName.includes('orc rider')) spriteKey = 'orc_rider';
+                else if (monsterName.includes('elite orc')) spriteKey = 'elite_orc';
+                else if (monsterName.includes('armored orc')) spriteKey = 'armored_orc';
                 else if (monsterName.includes('orc')) spriteKey = 'orc';
-                else if (monsterName.includes('minotaur')) spriteKey = 'minotaur';
-                else if (monsterName.includes('cyclops')) spriteKey = 'cyclops';
                 
                 const hurtKey = `${spriteKey}_hurt`;
                 if (this.anims.exists(hurtKey)) {
@@ -526,7 +527,7 @@ export class ColosseumScene extends BaseScene {
                 'soldier_arrow'
               );
               
-              arrow.setScale(0.3);
+              arrow.setScale(0.8); // Larger arrow for better visibility
               arrow.setDepth(2);
               arrow.setRotation(Math.PI); // Point backwards
               
@@ -569,7 +570,7 @@ export class ColosseumScene extends BaseScene {
 
     // Emit scene change event
     window.dispatchEvent(new CustomEvent('sceneChanged', { 
-      detail: { sceneName: 'ColosseumScene' } 
+      detail: { sceneName: 'LobbyScene' } 
     }));
 
     // Clean up any existing timers
@@ -581,13 +582,29 @@ export class ColosseumScene extends BaseScene {
     this.events.on('wake', this.handleSceneWake, this);
     this.events.on('resume', this.handleSceneResume, this);
     
-    // Background - darker and more subtle
-    const bgRect = this.add.rectangle(width/2, height/2, width, height, 0x1a1a1a);
+    // Background - dark base layer to prevent white gaps
+    const bgRect = this.add.rectangle(width/2, height/2, width * 1.2, height * 1.2, 0x0a0a0a);
+    bgRect.setDepth(-1);
     this.registerUIElement('bgRect', bgRect);
     
-    this.bgImage = this.add.image(width * 0.5, height * 0.5, 'arena-bg-placeholder');
-    this.bgImage.setDisplaySize(width, height);
-    this.bgImage.setAlpha(0.3);
+    // Load the colosseum background image
+    this.bgImage = this.add.image(width * 0.5, height * 0.5, 'colosseum-bg');
+    
+    // Calculate aspect ratio to cover the screen properly with extra margin
+    const scaleX = (width * 1.1) / this.bgImage.width;
+    const scaleY = (height * 1.1) / this.bgImage.height;
+    const scale = Math.max(scaleX, scaleY); // Use max to ensure it covers the entire screen
+    
+    this.bgImage.setScale(scale);
+    this.bgImage.setAlpha(0.35); // Much more transparent to focus on sprites
+    this.bgImage.setDepth(0); // Ensure it's behind everything
+    
+    // Add a subtle dark overlay to further dim the background
+    const overlay = this.add.rectangle(width/2, height/2, width * 1.2, height * 1.2, 0x000000);
+    overlay.setAlpha(0.3);
+    overlay.setDepth(1);
+    this.registerUIElement('overlay', overlay);
+    
     this.registerUIElement('bg', this.bgImage);
 
     // Create game elements only (UI is handled by HTML overlay)
@@ -642,16 +659,18 @@ export class ColosseumScene extends BaseScene {
       const monsterName = monster.tier.name.toLowerCase();
       let actualSpriteKey: string | null = null;
       
-      if (monsterName.includes('skeleton')) {
-        actualSpriteKey = 'skeleton';
-      } else if (monsterName.includes('goblin')) {
-        actualSpriteKey = 'goblin';
+      if (monsterName.includes('werebear')) {
+        actualSpriteKey = 'werebear';
+      } else if (monsterName.includes('werewolf')) {
+        actualSpriteKey = 'werewolf';
+      } else if (monsterName.includes('orc rider')) {
+        actualSpriteKey = 'orc_rider';
+      } else if (monsterName.includes('elite orc')) {
+        actualSpriteKey = 'elite_orc';
+      } else if (monsterName.includes('armored orc')) {
+        actualSpriteKey = 'armored_orc';
       } else if (monsterName.includes('orc')) {
         actualSpriteKey = 'orc';
-      } else if (monsterName.includes('minotaur')) {
-        actualSpriteKey = 'minotaur';
-      } else if (monsterName.includes('cyclops')) {
-        actualSpriteKey = 'cyclops';
       }
       
       // Debug logging
@@ -666,17 +685,19 @@ export class ColosseumScene extends BaseScene {
         const monsterX = this.getRelativePosition(0.80, width);  // Further right
         const monsterY = this.getRelativePosition(0.45, height);
         
-        // Create the monster sprite using orc texture
-        this.monsterSprite = this.add.sprite(monsterX, monsterY, 'orc', 0);
+        // Create the monster sprite using the correct texture
+        const idleTexture = `${actualSpriteKey}_idle`;
+        this.monsterSprite = this.add.sprite(monsterX, monsterY, idleTexture, 0);
         this.monsterSprite.setFlipX(true); // Flip to face left toward soldiers
         
         // Scale based on monster tier - 2-3x bigger for better visibility without blur
         const scales: Record<string, number> = {
-          'skeleton': 8.0,
-          'goblin': 7.0,
-          'orc': 9.0,
-          'minotaur': 10.0,
-          'cyclops': 11.0
+          'orc': 8.0,
+          'armored_orc': 8.5,
+          'elite_orc': 9.0,
+          'orc_rider': 10.0,
+          'werewolf': 11.0,
+          'werebear': 12.0
         };
         
         this.monsterSprite.setScale(this.scaleValue(scales[actualSpriteKey] || 6.0, width));
@@ -729,11 +750,12 @@ export class ColosseumScene extends BaseScene {
           const monsterName = this.colosseumState.currentMonster?.tier.name.toLowerCase() || '';
           let spriteKey = 'orc';
           
-          if (monsterName.includes('skeleton')) spriteKey = 'skeleton';
-          else if (monsterName.includes('goblin')) spriteKey = 'goblin';
+          if (monsterName.includes('werebear')) spriteKey = 'werebear';
+          else if (monsterName.includes('werewolf')) spriteKey = 'werewolf';
+          else if (monsterName.includes('orc rider')) spriteKey = 'orc_rider';
+          else if (monsterName.includes('elite orc')) spriteKey = 'elite_orc';
+          else if (monsterName.includes('armored orc')) spriteKey = 'armored_orc';
           else if (monsterName.includes('orc')) spriteKey = 'orc';
-          else if (monsterName.includes('minotaur')) spriteKey = 'minotaur';
-          else if (monsterName.includes('cyclops')) spriteKey = 'cyclops';
           
           // Randomly choose between attack01 and attack02
           const attackAnim = Phaser.Math.Between(1, 2) === 1 ? 
@@ -1055,7 +1077,7 @@ export class ColosseumScene extends BaseScene {
   private updateGameStateForUI() {
     if (!this.colosseumState) return;
 
-    console.log('ColosseumScene raw state:', this.colosseumState);
+    console.log('LobbyScene raw state:', this.colosseumState);
     // Use bracket notation to access currentPot from backend without TypeScript errors
     const jackpotValue = (this.colosseumState as any)['currentPot'] || this.colosseumState.currentJackpot || 0;
     console.log('Sending jackpot value:', jackpotValue);
@@ -1196,10 +1218,33 @@ export class ColosseumScene extends BaseScene {
   }
 
   protected repositionUI(width: number, height: number) {
-    // Update background
+    // Update background rect
+    const bgRect = this.getUIElement('bgRect');
+    if (bgRect && 'setPosition' in bgRect) {
+      bgRect.setPosition(this.centerX(width), this.centerY(height));
+      if ('setSize' in bgRect) {
+        (bgRect as any).setSize(width * 1.2, height * 1.2);
+      }
+    }
+    
+    // Update background image
     if (this.bgImage) {
       this.bgImage.setPosition(this.centerX(width), this.centerY(height));
-      this.bgImage.setDisplaySize(width, height);
+      
+      // Recalculate scale to maintain aspect ratio and cover the screen with margin
+      const scaleX = (width * 1.1) / this.bgImage.width;
+      const scaleY = (height * 1.1) / this.bgImage.height;
+      const scale = Math.max(scaleX, scaleY);
+      this.bgImage.setScale(scale);
+    }
+    
+    // Update overlay
+    const overlay = this.getUIElement('overlay');
+    if (overlay && 'setPosition' in overlay) {
+      overlay.setPosition(this.centerX(width), this.centerY(height));
+      if ('setSize' in overlay) {
+        (overlay as any).setSize(width * 1.2, height * 1.2);
+      }
     }
 
     // Reposition game elements

@@ -40,9 +40,13 @@ export class CombatScene extends BaseScene {
   private lastMonsterAttackTime: number = 0;
   private isMonsterAttacking: boolean = false; // Track if monster is currently attacking
 
+  // Evolution state for werewolf -> werebear
+  private isEvolved: boolean = false;
+  private isEvolving: boolean = false; // During evolution animation
+
   // Range indicators (for development)
   private meleeRangeIndicator!: Phaser.GameObjects.Graphics;
-  private meleeRange: number = 150; // Good melee range for better UX
+  private meleeRange: number = 100; // Tighter range requiring closer positioning
   private debugGraphics!: Phaser.GameObjects.Graphics;
   private debugMode: boolean = false; // Toggle for debug visualization
   private attackRangeIndicator!: Phaser.GameObjects.Graphics; // Shows where player can attack
@@ -63,18 +67,18 @@ export class CombatScene extends BaseScene {
   private prevPlayerY: number = 0;
   private prevMonsterX: number = 0;
   private prevMonsterY: number = 0;
-  
+
   // Arena borders - stored to avoid recreating on resize
   private borders: Phaser.GameObjects.Rectangle[] = [];
-  
+
   // Store previous viewport dimensions for relative positioning
   private previousWidth: number = 0;
   private previousHeight: number = 0;
-  
+
   // Player animation states
   private isPlayerMoving: boolean = false;
   private currentPlayerAnimation: string = 'soldier_idle';
-  
+
   // Monster animation states
   private isMonsterMoving: boolean = false;
   private currentMonsterAnimation: string = '';
@@ -89,8 +93,8 @@ export class CombatScene extends BaseScene {
 
     if (!data || !data.monster) {
       console.error('No monster data provided to CombatScene');
-      // Return to colosseum if no monster data
-      this.scene.start('ColosseumScene');
+      // Return to lobby if no monster data
+      this.scene.start('LobbyScene');
       return;
     }
 
@@ -98,6 +102,10 @@ export class CombatScene extends BaseScene {
     console.log('CombatScene received monster data:', this.monsterData);
     this.monsterHealth = this.monsterData.baseHealth;
     this.monsterMaxHealth = this.monsterData.baseHealth;
+
+    // Reset evolution flags for new combat
+    this.isEvolved = false;
+    this.isEvolving = false;
 
     // Reset other game state
     this.playerHealth = this.playerMaxHealth;
@@ -113,7 +121,7 @@ export class CombatScene extends BaseScene {
     // Reset movement penalty state
     this.isSlowed = false;
     this.slowedUntil = 0;
-    
+
     // Reset optimization state
     this.cachedPlayerMonsterDistance = 0;
     this.lastDistanceCalculation = 0;
@@ -131,7 +139,7 @@ export class CombatScene extends BaseScene {
     // Safety check - ensure we have monster data
     if (!this.monsterData) {
       console.error('CombatScene create: No monster data available');
-      this.scene.start('ColosseumScene');
+      this.scene.start('LobbyScene');
       return;
     }
 
@@ -140,17 +148,17 @@ export class CombatScene extends BaseScene {
       console.log('Dispatching monster-info with:', {
         type: this.monsterData.tier.name,
         baseHealth: this.monsterData.baseHealth,
-        fullMonsterData: this.monsterData
+        fullMonsterData: this.monsterData,
       });
       window.dispatchEvent(
         new CustomEvent('monster-info', {
           detail: {
             type: this.monsterData.tier.name, // Use tier.name for the actual monster name
-            baseHealth: this.monsterData.baseHealth
-          }
+            baseHealth: this.monsterData.baseHealth,
+          },
         })
       );
-      
+
       // Also emit game state
       this.emitGameState();
       this.emitMonsterInfo();
@@ -161,9 +169,9 @@ export class CombatScene extends BaseScene {
       window.removeEventListener('combat-ui-ready', handleUIReady);
       sendMonsterInfo();
     };
-    
+
     window.addEventListener('combat-ui-ready', handleUIReady);
-    
+
     // Fallback: send after 100ms if UI doesn't signal ready
     this.time.delayedCall(100, () => {
       window.removeEventListener('combat-ui-ready', handleUIReady);
@@ -171,7 +179,7 @@ export class CombatScene extends BaseScene {
     });
 
     const { width, height } = this.cameras.main;
-    
+
     // Store initial dimensions
     this.previousWidth = width;
     this.previousHeight = height;
@@ -191,72 +199,62 @@ export class CombatScene extends BaseScene {
       this.add.rectangle(width / 2, 20, width - 40, 40, 0x444444),
       this.add.rectangle(width / 2, height - 20, width - 40, 40, 0x444444),
       this.add.rectangle(20, height / 2, 40, height - 40, 0x444444),
-      this.add.rectangle(width - 20, height / 2, 40, height - 40, 0x444444)
+      this.add.rectangle(width - 20, height / 2, 40, height - 40, 0x444444),
     ];
-    
+
     // Register borders for proper management
     this.borders.forEach((border, index) => {
       this.registerUIElement(`border${index}`, border);
     });
 
     // Create player with soldier sprite
-    this.player = this.add.sprite(
-      width * 0.2,
-      height * 0.5,
-      'soldier_idle',
-      0
-    );
+    this.player = this.add.sprite(width * 0.2, height * 0.5, 'soldier_idle', 0);
     this.player.setOrigin(0.5, 0.5);
     this.player.setScale(2.0); // Scale up the soldier sprite
-    
+
     // Don't play idle animation to avoid constant movement
     // Just show static frame 0
-    
+
     // Initialize position tracking
     this.prevPlayerX = this.player.x;
     this.prevPlayerY = this.player.y;
 
     // Create monster using Orc sprite for all monster types
     const monsterName = this.monsterData.tier.name.toLowerCase();
-    
-    // Determine sprite key for animations
+
+    // Determine sprite key for animations based on new monster names
     let spriteKey = 'orc';
-    if (monsterName.includes('skeleton')) {
-      spriteKey = 'skeleton';
-    } else if (monsterName.includes('goblin')) {
-      spriteKey = 'goblin';
-    } else if (monsterName.includes('orc')) {
+    if (monsterName.toLowerCase().includes('werewolf')) {
+      spriteKey = 'werewolf';
+    } else if (monsterName.toLowerCase().includes('orc rider')) {
+      spriteKey = 'orc_rider';
+    } else if (monsterName.toLowerCase().includes('elite orc')) {
+      spriteKey = 'elite_orc';
+    } else if (monsterName.toLowerCase().includes('armored orc')) {
+      spriteKey = 'armored_orc';
+    } else if (monsterName.toLowerCase().includes('orc')) {
       spriteKey = 'orc';
-    } else if (monsterName.includes('minotaur')) {
-      spriteKey = 'minotaur';
-    } else if (monsterName.includes('cyclops')) {
-      spriteKey = 'cyclops';
     }
-    
+
     // Store sprite key for animations
     this.monsterSpriteKey = spriteKey;
-    
+
     // Create monster sprite using orc texture
-    this.monster = this.add.sprite(
-      width * 0.7,
-      height * 0.5,
-      'orc',
-      0
-    );
-    
+    this.monster = this.add.sprite(width * 0.7, height * 0.5, 'orc', 0);
+
     // Set the origin to center for proper positioning
     this.monster.setOrigin(0.5, 0.5);
-    
+
     // Scale based on monster type
     const scales: Record<string, number> = {
-      'skeleton': 2.0,
-      'goblin': 1.8,
-      'orc': 2.5,
-      'minotaur': 3.0,
-      'cyclops': 3.5
+      orc: 2.0,
+      armored_orc: 2.2,
+      elite_orc: 2.5,
+      orc_rider: 3.0,
+      werewolf: 2.8,
     };
     this.monster.setScale(scales[spriteKey] || 2.0);
-    
+
     // Play idle animation
     const idleAnimKey = `${spriteKey}_idle`;
     this.currentMonsterAnimation = idleAnimKey;
@@ -266,7 +264,7 @@ export class CombatScene extends BaseScene {
     this.monster.setAlpha(1); // Ensure fully visible
     this.monster.setVisible(true);
     this.monster.setDepth(5); // Ensure proper rendering order
-    
+
     // Initialize monster position tracking
     this.prevMonsterX = this.monster.x;
     this.prevMonsterY = this.monster.y;
@@ -277,16 +275,12 @@ export class CombatScene extends BaseScene {
     vaultGraphics.fillRect(-40, -30, 80, 60);
     vaultGraphics.lineStyle(3, 0x8b7500, 1);
     vaultGraphics.strokeRect(-40, -30, 80, 60);
-    
+
     // Convert to texture and create sprite
     vaultGraphics.generateTexture('vault-texture', 80, 60);
     vaultGraphics.destroy();
-    
-    this.vault = this.add.sprite(
-      width * 0.9,
-      height * 0.5,
-      'vault-texture'
-    );
+
+    this.vault = this.add.sprite(width * 0.9, height * 0.5, 'vault-texture');
     this.vault.setOrigin(0.5, 0.5);
     this.vault.setScale(1.5);
 
@@ -326,21 +320,21 @@ export class CombatScene extends BaseScene {
 
     // Create spear texture once
     this.createSpearTexture();
-    
+
     // Delay creation of HTML spear recharge indicator to ensure DOM is ready
     this.time.delayedCall(500, () => {
       // Create HTML spear recharge indicator
       this.spearRechargeIndicator = new SpearRechargeIndicatorHTML(this, {
         containerId: 'spear-recharge-canvas',
-        rechargeDuration: this.spearRegenTime
+        rechargeDuration: this.spearRegenTime,
       });
-      
+
       // Remove any existing listener first to prevent duplicates
       this.events.off('spear-recharged', this.onSpearRecharged, this);
-      
+
       // Set up spear recharge event listener
       this.events.on('spear-recharged', this.onSpearRecharged, this);
-      
+
       console.log('SpearRechargeIndicatorHTML created after delay');
     });
 
@@ -348,7 +342,7 @@ export class CombatScene extends BaseScene {
     this.emitGameState();
     this.emitMonsterInfo();
     this.emitInstructions();
-    
+
     // Re-emit monster info after a short delay to ensure UI is ready
     this.time.delayedCall(100, () => {
       this.emitMonsterInfo();
@@ -389,9 +383,11 @@ export class CombatScene extends BaseScene {
   emitGameState() {
     // Safety clamp spears to never exceed max
     this.currentSpears = Math.min(this.currentSpears, this.maxSpears);
-    
-    console.log(`EMITTING GAME STATE: currentSpears=${this.currentSpears}, maxSpears=${this.maxSpears}`);
-    
+
+    console.log(
+      `EMITTING GAME STATE: currentSpears=${this.currentSpears}, maxSpears=${this.maxSpears}`
+    );
+
     window.dispatchEvent(
       new CustomEvent('combat-state-update', {
         detail: {
@@ -467,7 +463,10 @@ export class CombatScene extends BaseScene {
   // Cached distance calculation
   private getPlayerMonsterDistance(): number {
     const currentTime = this.time.now;
-    if (currentTime - this.lastDistanceCalculation > this.distanceCalculationInterval) {
+    if (
+      currentTime - this.lastDistanceCalculation >
+      this.distanceCalculationInterval
+    ) {
       this.cachedPlayerMonsterDistance = Phaser.Math.Distance.Between(
         this.monster.x,
         this.monster.y,
@@ -489,15 +488,17 @@ export class CombatScene extends BaseScene {
     this.updateRangeIndicator();
     this.checkSpearCollisions(); // RE-ENABLED: Fixed spear collision
     this.checkGameOver();
-    
+
     // Only emit sprite positions if enough time has passed AND positions changed
     if (time - this.lastSpritePositionEmit > this.spritePositionEmitInterval) {
       const positionThreshold = 2;
-      const playerMoved = Math.abs(this.player.x - this.prevPlayerX) > positionThreshold ||
-                         Math.abs(this.player.y - this.prevPlayerY) > positionThreshold;
-      const monsterMoved = Math.abs(this.monster.x - this.prevMonsterX) > positionThreshold ||
-                          Math.abs(this.monster.y - this.prevMonsterY) > positionThreshold;
-      
+      const playerMoved =
+        Math.abs(this.player.x - this.prevPlayerX) > positionThreshold ||
+        Math.abs(this.player.y - this.prevPlayerY) > positionThreshold;
+      const monsterMoved =
+        Math.abs(this.monster.x - this.prevMonsterX) > positionThreshold ||
+        Math.abs(this.monster.y - this.prevMonsterY) > positionThreshold;
+
       if (playerMoved || monsterMoved) {
         this.emitSpritePositions();
         this.lastSpritePositionEmit = time;
@@ -538,17 +539,21 @@ export class CombatScene extends BaseScene {
       }
 
       if (inRange) {
-        // IN RANGE: Show bright green circle pulsing
-        const pulse = Math.sin(this.time.now * 0.005) * 0.3 + 0.7;
-        this.meleeRangeIndicator.lineStyle(4, 0x00ff00, pulse);
-        this.meleeRangeIndicator.strokeCircle(0, 0, 50); // Your attack indicator
+        // IN RANGE: Show bright green circle pulsing with stronger visibility
+        const pulse = Math.sin(this.time.now * 0.008) * 0.4 + 0.6;
+        this.meleeRangeIndicator.lineStyle(6, 0x00ff00, pulse);
+        this.meleeRangeIndicator.strokeCircle(0, 0, 60); // Larger, more visible indicator
 
-        // Show attack zone
-        this.meleeRangeIndicator.fillStyle(0x00ff00, 0.1);
-        this.meleeRangeIndicator.fillCircle(0, 0, 50);
+        // Show attack zone with brighter fill
+        this.meleeRangeIndicator.fillStyle(0x00ff00, 0.2);
+        this.meleeRangeIndicator.fillCircle(0, 0, 60);
+
+        // Add inner circle for better visibility
+        this.meleeRangeIndicator.lineStyle(3, 0x00ff00, pulse * 0.7);
+        this.meleeRangeIndicator.strokeCircle(0, 0, 40);
       } else if (monsterDistance > this.monsterAttackRange) {
-        // OUT OF RANGE: Show distance to get in range
-        this.meleeRangeIndicator.lineStyle(2, 0xff0000, 0.5);
+        // OUT OF RANGE: Show distance to get in range with better visibility
+        this.meleeRangeIndicator.lineStyle(3, 0xffaa00, 0.6); // Orange color for warning
 
         // Draw a line from player to monster
         const angle = Phaser.Math.Angle.Between(
@@ -599,7 +604,7 @@ export class CombatScene extends BaseScene {
 
     // Reset velocity
     playerBody.setVelocity(0);
-    
+
     let isMoving = false;
 
     // Handle input
@@ -620,29 +625,44 @@ export class CombatScene extends BaseScene {
       playerBody.setVelocityY(speed);
       isMoving = true;
     }
-    
+
     // Handle soldier animations based on movement
     if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
       this.player.setFlipX(true); // Face left
     } else if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
       this.player.setFlipX(false); // Face right
     }
-    
+
     // Update animation based on movement state
+    // Don't override attack animations
+    const isAttacking =
+      this.currentPlayerAnimation === 'soldier_attack01' ||
+      this.currentPlayerAnimation === 'soldier_attack02' ||
+      this.currentPlayerAnimation === 'soldier_attack03';
+
     if (isMoving) {
-      if (!this.isPlayerMoving || this.currentPlayerAnimation !== 'soldier_walk') {
+      if (
+        !this.isPlayerMoving ||
+        this.currentPlayerAnimation !== 'soldier_walk'
+      ) {
         this.isPlayerMoving = true;
-        this.currentPlayerAnimation = 'soldier_walk';
-        if (this.anims.exists('soldier_walk')) {
-          this.player.play('soldier_walk');
+        // Only change to walk animation if not currently attacking
+        if (!isAttacking) {
+          this.currentPlayerAnimation = 'soldier_walk';
+          if (this.anims.exists('soldier_walk')) {
+            this.player.play('soldier_walk');
+          }
         }
       }
     } else {
       if (this.isPlayerMoving) {
         this.isPlayerMoving = false;
-        this.currentPlayerAnimation = 'idle';
-        // Stop animation to show static frame
-        this.player.stop();
+        // Only change to idle if not currently attacking
+        if (!isAttacking) {
+          this.currentPlayerAnimation = 'idle';
+          // Stop animation to show static frame
+          this.player.stop();
+        }
       }
     }
   }
@@ -653,10 +673,12 @@ export class CombatScene extends BaseScene {
 
     const monsterBody = this.monster.body as Phaser.Physics.Arcade.Body;
 
-    // If dead, ensure monster stops moving
-    if (this.monsterHealth <= 0) {
+    // If dead or evolving, ensure monster stops moving
+    if (this.monsterHealth <= 0 || this.isEvolving) {
       monsterBody.setVelocity(0, 0);
-      monsterBody.enable = false; // Disable physics completely when dead
+      if (this.monsterHealth <= 0 && !this.isEvolving) {
+        monsterBody.enable = false; // Disable physics completely when dead (but not during evolution)
+      }
       return;
     }
 
@@ -666,9 +688,14 @@ export class CombatScene extends BaseScene {
     if (distance <= this.monsterAttackRange && this.playerHealth > 0) {
       // Stop moving when in attack range
       monsterBody.setVelocity(0);
-      
-      // Play idle animation when stopped (but not if currently attacking)
-      if (!this.isMonsterAttacking && (!this.isMonsterMoving || this.currentMonsterAnimation !== `${this.monsterSpriteKey}_idle`)) {
+
+      // Play idle animation when stopped (but not if currently attacking or dead)
+      if (
+        !this.isMonsterAttacking &&
+        this.monsterHealth > 0 &&
+        (!this.isMonsterMoving ||
+          this.currentMonsterAnimation !== `${this.monsterSpriteKey}_idle`)
+      ) {
         this.isMonsterMoving = false;
         this.currentMonsterAnimation = `${this.monsterSpriteKey}_idle`;
         if (this.anims.exists(this.currentMonsterAnimation)) {
@@ -681,11 +708,8 @@ export class CombatScene extends BaseScene {
       // Adjust cooldown based on monster difficulty (harder monsters attack faster)
       const cooldownMultiplier = this.monsterData.tier.defenseMultiplier;
       const adjustedCooldown = this.monsterAttackCooldown * cooldownMultiplier;
-      
-      if (
-        currentTime >
-        this.lastMonsterAttackTime + adjustedCooldown
-      ) {
+
+      if (currentTime > this.lastMonsterAttackTime + adjustedCooldown) {
         console.log(
           'Monster in range! Distance:',
           distance,
@@ -708,16 +732,20 @@ export class CombatScene extends BaseScene {
       const speedMultiplier = 1.5 - this.monsterData.tier.defenseMultiplier; // Inverse relationship
       const speed = baseSpeed * (1 + speedMultiplier);
       monsterBody.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
-      
-      // Play walk animation
-      if (this.isMonsterMoving === false || this.currentMonsterAnimation !== `${this.monsterSpriteKey}_walk`) {
+
+      // Play walk animation (only if alive)
+      if (
+        this.monsterHealth > 0 &&
+        (this.isMonsterMoving === false ||
+          this.currentMonsterAnimation !== `${this.monsterSpriteKey}_walk`)
+      ) {
         this.isMonsterMoving = true;
         this.currentMonsterAnimation = `${this.monsterSpriteKey}_walk`;
         if (this.anims.exists(this.currentMonsterAnimation)) {
           this.monster.play(this.currentMonsterAnimation);
         }
       }
-      
+
       // Face the player
       if (this.player.x < this.monster.x) {
         this.monster.setFlipX(true); // Face left
@@ -757,7 +785,7 @@ export class CombatScene extends BaseScene {
       return;
 
     const distance = this.getPlayerMonsterDistance();
-    
+
     // Always perform the swing animation
     this.performMeleeSwing(distance < this.meleeRange);
     this.lastMeleeTime = time;
@@ -770,13 +798,17 @@ export class CombatScene extends BaseScene {
       this.monster.x,
       this.monster.y
     );
-    
+
+    // Store initial attack state for grace zone
+    const attackStartDistance = this.getPlayerMonsterDistance();
+
     // Play random melee attack animation (Attack01 or Attack02)
-    const attackAnim = Phaser.Math.Between(1, 2) === 1 ? 'soldier_attack01' : 'soldier_attack02';
+    const attackAnim =
+      Phaser.Math.Between(1, 2) === 1 ? 'soldier_attack01' : 'soldier_attack02';
     if (this.anims.exists(attackAnim)) {
       this.currentPlayerAnimation = attackAnim;
       this.player.play(attackAnim);
-      
+
       // Return to idle after attack completes
       this.player.once('animationcomplete', () => {
         if (!this.isPlayerMoving) {
@@ -800,15 +832,15 @@ export class CombatScene extends BaseScene {
     // Draw sword arc - always same size
     const arcAngle = Phaser.Math.DegToRad(90);
     const swingReach = 180; // Visual reach of sword
-    
+
     if (willHit) {
       // Successful hit - bright white swing
       swingGraphics.lineStyle(4, 0xffffff, 0.8);
     } else {
-      // Miss - dimmer red swing  
+      // Miss - dimmer red swing
       swingGraphics.lineStyle(3, 0xff6666, 0.5);
     }
-    
+
     swingGraphics.beginPath();
     swingGraphics.arc(
       0,
@@ -862,9 +894,11 @@ export class CombatScene extends BaseScene {
     if (willHit) {
       // Delay damage to sync with animation (6 frames at 12fps = 500ms, hit at frame 3 = ~250ms)
       this.time.delayedCall(250, () => {
-        // Re-check distance in case monster moved
+        // Re-check distance with a smaller grace zone
         const currentDistance = this.getPlayerMonsterDistance();
-        if (currentDistance <= this.meleeRange * 1.2) { // Slightly more forgiving
+        // Small grace zone: 1.2x range for slight movement tolerance
+        const graceRange = this.meleeRange * 1.2;
+        if (currentDistance <= graceRange) {
           this.dealMeleeDamage();
         } else {
           console.log('Attack missed - monster moved out of range');
@@ -887,16 +921,16 @@ export class CombatScene extends BaseScene {
         fontSize: '18px',
         color: '#ff9999',
         stroke: '#000000',
-        strokeThickness: 2
+        strokeThickness: 2,
       }
     );
-    
+
     this.tweens.add({
       targets: missText,
       y: missText.y - 20,
       alpha: 0,
       duration: 500,
-      onComplete: () => missText.destroy()
+      onComplete: () => missText.destroy(),
     });
   }
 
@@ -908,17 +942,50 @@ export class CombatScene extends BaseScene {
 
     // Critical hit calculation (20% chance)
     const isCrit = Math.random() < 0.2;
-    
+
     // Calculate base damage
     let damage = Math.floor(Math.random() * 25) + 15;
-    
+
     // Apply critical multiplier
     if (isCrit) {
       damage = Math.floor(damage * 2); // 2x damage for crits
     }
-    
+
+    // For werewolf, check evolution threshold and cap damage
+    if (
+      this.monsterData.tier.name === 'Werewolf' &&
+      !this.isEvolved &&
+      !this.isEvolving
+    ) {
+      const evolutionThreshold = Math.floor(this.monsterMaxHealth * 0.25); // 25% health
+      if (
+        this.monsterHealth > evolutionThreshold &&
+        this.monsterHealth - damage <= evolutionThreshold
+      ) {
+        // Cap damage to exactly reach threshold
+        damage = this.monsterHealth - evolutionThreshold;
+        this.monsterHealth = evolutionThreshold;
+
+        // Show capped damage
+        this.showDamageNumber(
+          this.monster.x,
+          this.monster.y - 40,
+          damage,
+          0xff4444,
+          isCrit
+        );
+
+        // Emit updated game state before evolution
+        this.emitGameState();
+
+        // Trigger evolution and return early
+        this.evolveToWerebear();
+        return;
+      }
+    }
+
     this.monsterHealth = Math.max(0, this.monsterHealth - damage);
-    
+
     this.showDamageNumber(
       this.monster.x,
       this.monster.y - 40,
@@ -926,28 +993,39 @@ export class CombatScene extends BaseScene {
       0xff4444,
       isCrit
     );
-    
+
     // Emit updated game state
     this.emitGameState();
-    
+
     // Play hurt or death animation
     if (this.monsterHealth <= 0) {
-      // Monster died - play death animation
-      const deathKey = `${this.monsterSpriteKey}_death`;
-      if (this.anims.exists(deathKey)) {
-        this.currentMonsterAnimation = deathKey;
-        this.monster.play(deathKey);
-        // Don't return to idle after death - stay on last frame
-      }
-      
-      // Fade to grey
-      this.monster.setTint(0x666666);
-      
-      // Stop monster movement
-      if (this.monster.body) {
-        const monsterBody = this.monster.body as Phaser.Physics.Arcade.Body;
-        monsterBody.setVelocity(0, 0);
-        monsterBody.enable = false;
+      // Check if this is a werewolf that should evolve (safety check, shouldn't reach here)
+      if (
+        this.monsterData.tier.name === 'Werewolf' &&
+        !this.isEvolved &&
+        !this.isEvolving
+      ) {
+        // This shouldn't happen with threshold check, but keep as safety
+        this.evolveToWerebear();
+      } else {
+        // Monster died - play death animation
+        // Use the current sprite key which is 'werebear' if evolved
+        const deathKey = `${this.monsterSpriteKey}_death`;
+        if (this.anims.exists(deathKey)) {
+          this.currentMonsterAnimation = deathKey;
+          this.monster.play(deathKey);
+          // Don't return to idle after death - stay on last frame
+        }
+
+        // Fade to grey
+        this.monster.setTint(0x666666);
+
+        // Stop monster movement
+        if (this.monster.body) {
+          const monsterBody = this.monster.body as Phaser.Physics.Arcade.Body;
+          monsterBody.setVelocity(0, 0);
+          monsterBody.enable = false;
+        }
       }
     } else {
       // Monster hurt - play hurt animation
@@ -955,10 +1033,11 @@ export class CombatScene extends BaseScene {
       if (this.anims.exists(hurtKey)) {
         this.currentMonsterAnimation = hurtKey;
         this.monster.play(hurtKey);
-        
+
         // Return to idle after hurt animation
         this.monster.once('animationcomplete', () => {
-          if (this.monsterHealth > 0) {  // Only return to idle if still alive
+          if (this.monsterHealth > 0) {
+            // Only return to idle if still alive
             this.currentMonsterAnimation = `${this.monsterSpriteKey}_idle`;
             if (this.anims.exists(this.currentMonsterAnimation)) {
               this.monster.play(this.currentMonsterAnimation);
@@ -967,7 +1046,7 @@ export class CombatScene extends BaseScene {
           }
         });
       }
-      
+
       // Flash effect
       this.monster.setTint(0xffffff);
       this.time.delayedCall(100, () => {
@@ -975,7 +1054,6 @@ export class CombatScene extends BaseScene {
       });
     }
   }
-
 
   performMonsterAttack() {
     console.log('Monster attacking! Player health before:', this.playerHealth);
@@ -991,19 +1069,21 @@ export class CombatScene extends BaseScene {
     this.isMonsterMoving = false;
 
     // Play attack animation (randomly choose between attack01 and attack02)
-    const attackAnim = Phaser.Math.Between(1, 2) === 1 ? 
-      `${this.monsterSpriteKey}_attack01` : `${this.monsterSpriteKey}_attack02`;
-    
+    const attackAnim =
+      Phaser.Math.Between(1, 2) === 1
+        ? `${this.monsterSpriteKey}_attack01`
+        : `${this.monsterSpriteKey}_attack02`;
+
     if (this.anims.exists(attackAnim)) {
       this.currentMonsterAnimation = attackAnim;
       this.monster.play(attackAnim);
-      
+
       // Delay damage to sync with animation impact (halfway through animation)
       // Animation is 6 frames at 12fps = 500ms total, so impact at ~250ms
       this.time.delayedCall(250, () => {
         this.applyMonsterDamage();
       });
-      
+
       // Return to idle after attack
       this.monster.once('animationcomplete', () => {
         this.isMonsterAttacking = false; // Clear attacking flag
@@ -1024,9 +1104,9 @@ export class CombatScene extends BaseScene {
         ease: 'Power1',
         onComplete: () => {
           this.isMonsterAttacking = false; // Clear attacking flag after tween
-        }
+        },
       });
-      
+
       // For fallback, apply damage immediately
       this.applyMonsterDamage();
     }
@@ -1065,7 +1145,8 @@ export class CombatScene extends BaseScene {
 
     // Deal damage to player based on monster's attack power
     const baseDamage = this.monsterData.tier.attackPower;
-    const damage = Math.floor(Math.random() * baseDamage) + Math.floor(baseDamage / 2);
+    const damage =
+      Math.floor(Math.random() * baseDamage) + Math.floor(baseDamage / 2);
     this.playerHealth = Math.max(0, this.playerHealth - damage);
 
     console.log(
@@ -1096,10 +1177,11 @@ export class CombatScene extends BaseScene {
       // Player still alive, play hurt animation
       this.currentPlayerAnimation = 'soldier_hurt';
       this.player.play('soldier_hurt');
-      
+
       // Return to idle after hurt animation completes
       this.player.once('animationcomplete', () => {
-        if (this.playerHealth > 0) {  // Only return to idle if still alive
+        if (this.playerHealth > 0) {
+          // Only return to idle if still alive
           if (!this.isPlayerMoving) {
             this.currentPlayerAnimation = 'idle';
             // Stop animation to show static frame
@@ -1113,10 +1195,10 @@ export class CombatScene extends BaseScene {
         }
       });
     }
-    
+
     // Flash red tint
     this.player.setTint(0xff0000);
-    
+
     // Clear tint after a short delay
     this.time.delayedCall(200, () => {
       this.player.clearTint();
@@ -1166,12 +1248,48 @@ export class CombatScene extends BaseScene {
       console.error('Spear group not initialized!');
       return;
     }
-    
+
+    // Check if player is facing toward the target
+    const angleToMonster = Phaser.Math.Angle.Between(
+      this.player.x,
+      this.player.y,
+      this.monster.x,
+      this.monster.y
+    );
+
+    // Determine player's facing direction based on flipX
+    // flipX = true means facing left (angle = π or -π)
+    // flipX = false means facing right (angle = 0)
+    const playerFacingAngle = this.player.flipX ? Math.PI : 0;
+
+    // Calculate the difference between where player is facing and where monster is
+    let angleDifference = Math.abs(angleToMonster - playerFacingAngle);
+
+    // Normalize angle difference to be within -π to π
+    if (angleDifference > Math.PI) {
+      angleDifference = 2 * Math.PI - angleDifference;
+    }
+
+    // Check if angle is within 90 degrees (π/2 radians) cone
+    const maxAllowedAngle = Math.PI / 2; // 90 degrees
+    const willMiss = angleDifference > maxAllowedAngle;
+
+    console.log(
+      'Spear throw - Facing:',
+      this.player.flipX ? 'left' : 'right',
+      'Angle to monster:',
+      angleToMonster,
+      'Difference:',
+      angleDifference,
+      'Will miss:',
+      willMiss
+    );
+
     // Play spear throw animation (Attack03)
     if (this.anims.exists('soldier_attack03')) {
       this.currentPlayerAnimation = 'soldier_attack03';
       this.player.play('soldier_attack03');
-      
+
       // Return to idle after attack completes
       this.player.once('animationcomplete', () => {
         if (!this.isPlayerMoving) {
@@ -1206,11 +1324,52 @@ export class CombatScene extends BaseScene {
         return;
       }
 
-      spear.rotation = angle;
+      // If the spear will miss, alter its trajectory
+      let actualAngle = angle;
+      if (willMiss) {
+        // Spear goes off in the wrong direction (add random offset)
+        const missOffset = ((Math.random() - 0.5) * Math.PI) / 3; // Random offset up to 60 degrees
+        actualAngle =
+          angle + missOffset + (this.player.flipX ? -Math.PI / 4 : Math.PI / 4);
+
+        // Mark spear as a miss so it won't deal damage
+        spear.setData('willMiss', true);
+
+        // Visual feedback - tint the spear red to show it's a bad throw
+        spear.setTint(0xff6666);
+
+        // Show feedback text
+        const feedbackText = this.add.text(
+          this.player.x,
+          this.player.y - 50,
+          'Wrong Direction!',
+          {
+            fontSize: '14px',
+            color: '#ff6666',
+            stroke: '#000000',
+            strokeThickness: 2,
+          }
+        );
+
+        this.tweens.add({
+          targets: feedbackText,
+          y: feedbackText.y - 30,
+          alpha: 0,
+          duration: 800,
+          onComplete: () => feedbackText.destroy(),
+        });
+      } else {
+        spear.setData('willMiss', false);
+      }
+
+      spear.rotation = actualAngle;
 
       // Set spear velocity
-      const speed = 400;
-      spear.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+      const speed = willMiss ? 350 : 400; // Slightly slower for misses
+      spear.setVelocity(
+        Math.cos(actualAngle) * speed,
+        Math.sin(actualAngle) * speed
+      );
 
       // Update spear count
       const beforeCount = this.currentSpears;
@@ -1218,7 +1377,7 @@ export class CombatScene extends BaseScene {
       this.lastSpearTime = time;
 
       console.log(`SPEAR THROWN: ${beforeCount} -> ${this.currentSpears}`);
-      
+
       // Start recharge animation if we have spears to regenerate
       if (this.currentSpears < this.maxSpears) {
         if (!this.spearRechargeIndicator) {
@@ -1326,6 +1485,37 @@ export class CombatScene extends BaseScene {
 
       // Check if collision occurred (within 40 pixels)
       if (distance < 40) {
+        // Check if this spear is marked as a miss
+        const willMiss = spear.getData('willMiss');
+
+        if (willMiss) {
+          console.log('Spear hit but was a bad throw - no damage!');
+          // Show miss feedback at impact point
+          const missText = this.add.text(
+            this.monster.x,
+            this.monster.y - 60,
+            'Bad Angle!',
+            {
+              fontSize: '16px',
+              color: '#ff6666',
+              stroke: '#000000',
+              strokeThickness: 2,
+            }
+          );
+
+          this.tweens.add({
+            targets: missText,
+            y: missText.y - 20,
+            alpha: 0,
+            duration: 600,
+            onComplete: () => missText.destroy(),
+          });
+
+          // Destroy the spear
+          spear.destroy();
+          return; // Skip damage calculation
+        }
+
         console.log(
           'COLLISION! Distance:',
           distance,
@@ -1337,15 +1527,51 @@ export class CombatScene extends BaseScene {
         if (this.monsterHealth > 0 && this.monster && this.monster.active) {
           // Critical hit calculation (20% chance)
           const isCrit = Math.random() < 0.2;
-          
+
           // Deal significantly reduced damage for ranged attack (8-12 instead of 15-40 for melee)
           let damage = Math.floor(Math.random() * 5) + 8; // 8-12 damage
-          
+
           // Apply critical multiplier
           if (isCrit) {
             damage = Math.floor(damage * 2); // 2x damage for crits
           }
-          
+
+          // For werewolf, check evolution threshold and cap damage
+          if (
+            this.monsterData.tier.name === 'Werewolf' &&
+            !this.isEvolved &&
+            !this.isEvolving
+          ) {
+            const evolutionThreshold = Math.floor(this.monsterMaxHealth * 0.25); // 25% health
+            if (
+              this.monsterHealth > evolutionThreshold &&
+              this.monsterHealth - damage <= evolutionThreshold
+            ) {
+              // Cap damage to exactly reach threshold
+              damage = this.monsterHealth - evolutionThreshold;
+              this.monsterHealth = evolutionThreshold;
+
+              console.log('Werewolf evolution triggered at 25% health');
+
+              // Show capped damage
+              this.showDamageNumber(
+                this.monster.x,
+                this.monster.y - 40,
+                damage,
+                0xffaa00,
+                isCrit
+              );
+
+              // Emit updated game state before evolution
+              this.emitGameState();
+
+              // Destroy spear and trigger evolution
+              spear.destroy();
+              this.evolveToWerebear();
+              return; // Exit early from collision handler
+            }
+          }
+
           this.monsterHealth = Math.max(0, this.monsterHealth - damage);
 
           console.log(
@@ -1371,15 +1597,26 @@ export class CombatScene extends BaseScene {
           // Play hurt or death animation (ensure monster still exists)
           if (this.monster && this.monster.active) {
             if (this.monsterHealth <= 0) {
-              // Monster died - play death animation
-              const deathKey = `${this.monsterSpriteKey}_death`;
-              if (this.anims.exists(deathKey)) {
-                this.currentMonsterAnimation = deathKey;
-                this.monster.play(deathKey);
-                // Don't return to idle after death
+              // Check if this is a werewolf that should evolve (safety check, shouldn't reach here)
+              if (
+                this.monsterData.tier.name === 'Werewolf' &&
+                !this.isEvolved &&
+                !this.isEvolving
+              ) {
+                // This shouldn't happen with threshold check, but keep as safety
+                this.evolveToWerebear();
               } else {
-                // Fallback for placeholder sprites
-                this.monster.setTint(0x666666);
+                // Monster died - play death animation
+                // Use the current sprite key which is 'werebear' if evolved
+                const deathKey = `${this.monsterSpriteKey}_death`;
+                if (this.anims.exists(deathKey)) {
+                  this.currentMonsterAnimation = deathKey;
+                  this.monster.play(deathKey);
+                  // Don't return to idle after death
+                } else {
+                  // Fallback for placeholder sprites
+                  this.monster.setTint(0x666666);
+                }
               }
             } else {
               // Monster hurt - play hurt animation
@@ -1387,10 +1624,11 @@ export class CombatScene extends BaseScene {
               if (this.anims.exists(hurtKey)) {
                 this.currentMonsterAnimation = hurtKey;
                 this.monster.play(hurtKey);
-                
+
                 // Return to idle after hurt animation
                 this.monster.once('animationcomplete', () => {
-                  if (this.monsterHealth > 0) {  // Only return to idle if still alive
+                  if (this.monsterHealth > 0) {
+                    // Only return to idle if still alive
                     this.currentMonsterAnimation = `${this.monsterSpriteKey}_idle`;
                     if (this.anims.exists(this.currentMonsterAnimation)) {
                       this.monster.play(this.currentMonsterAnimation);
@@ -1399,7 +1637,7 @@ export class CombatScene extends BaseScene {
                   }
                 });
               }
-              
+
               // Flash effect
               this.monster.setTint(0xffffaa);
               this.time.delayedCall(100, () => {
@@ -1430,12 +1668,12 @@ export class CombatScene extends BaseScene {
     // Note: This method is now replaced by the Phaser-based recharge indicator
     // The spear regeneration is handled by the onSpearRecharged event
   }
-  
+
   private onSpearRecharged(): void {
     // Simple logic: add 1 spear
     this.currentSpears++;
     console.log(`SPEAR REGENERATED: ${this.currentSpears}/${this.maxSpears}`);
-    
+
     // If still under max, start another recharge
     if (this.currentSpears < this.maxSpears) {
       this.spearRechargeIndicator.startRecharge();
@@ -1443,7 +1681,7 @@ export class CombatScene extends BaseScene {
       // At max, hide indicator
       this.spearRechargeIndicator.reset();
     }
-    
+
     this.emitGameState();
   }
 
@@ -1473,7 +1711,13 @@ export class CombatScene extends BaseScene {
     );
   }
 
-  showDamageNumber(x: number, y: number, damage: number, color: number, isCrit: boolean = false) {
+  showDamageNumber(
+    x: number,
+    y: number,
+    damage: number,
+    color: number,
+    isCrit: boolean = false
+  ) {
     // Emit damage number event for UI to display
     window.dispatchEvent(
       new CustomEvent('damage-number', {
@@ -1497,14 +1741,351 @@ export class CombatScene extends BaseScene {
     if (this.playerHealth <= 0) {
       this.gameOver(false); // Player died
     } else if (this.monsterHealth <= 0) {
-      this.gameOver(true); // Player won
+      this.gameOver(true); // Player won - werewolf won't reach 0 due to threshold
     }
+  }
+
+  private evolveToWerebear() {
+    this.isEvolving = true;
+
+    // Store initial positions for reset
+    const { width, height } = this.cameras.main;
+    const initialPlayerX = width * 0.3;
+    const initialPlayerY = height * 0.5;
+    const initialMonsterX = width * 0.7;
+    const initialMonsterY = height * 0.5;
+
+    // Disable player input during evolution
+    this.isPlayerMoving = false;
+
+    // Phase 1: Monster Roar (0-500ms)
+    const hurtKey = `${this.monsterSpriteKey}_hurt`;
+    if (this.anims.exists(hurtKey)) {
+      this.currentMonsterAnimation = hurtKey;
+      this.monster.play(hurtKey);
+    }
+
+    // Roar text that expands
+    const roarText = this.add.text(
+      this.monster.x,
+      this.monster.y - 80,
+      'ROAAAAR!',
+      {
+        fontSize: '36px',
+        color: '#ff6600',
+        stroke: '#000000',
+        strokeThickness: 5,
+      }
+    );
+    roarText.setOrigin(0.5);
+    roarText.setDepth(101);
+    roarText.setScale(0.5);
+
+    // Animate roar text expanding
+    this.tweens.add({
+      targets: roarText,
+      scale: 2,
+      alpha: 0,
+      duration: 800,
+      ease: 'Power2',
+      onComplete: () => roarText.destroy(),
+    });
+
+    // Monster scales up slightly during roar
+    this.tweens.add({
+      targets: this.monster,
+      scaleX: this.monster.scaleX * 1.2,
+      scaleY: this.monster.scaleY * 1.2,
+      duration: 300,
+      yoyo: true,
+      ease: 'Power2',
+    });
+
+    // Play roar sound if available
+    if (this.sound.get('monster_roar')) {
+      this.sound.play('monster_roar', { volume: 0.8 });
+    }
+
+    // Phase 2: Shockwave & Knockback (500-1200ms)
+    this.time.delayedCall(500, () => {
+      // Create expanding shockwave
+      const shockwave = this.add.graphics();
+      shockwave.setDepth(50);
+      shockwave.lineStyle(4, 0xffffff, 1);
+      shockwave.strokeCircle(this.monster.x, this.monster.y, 10);
+
+      // Animate shockwave expanding
+      let radius = 10;
+      const shockwaveTween = this.tweens.add({
+        targets: { radius: 10 },
+        radius: 300,
+        duration: 700,
+        ease: 'Power2',
+        onUpdate: (tween) => {
+          const value = tween.getValue();
+          shockwave.clear();
+          shockwave.lineStyle(4, 0xffffff, 1 - value / 300);
+          shockwave.strokeCircle(this.monster.x, this.monster.y, value);
+        },
+        onComplete: () => shockwave.destroy(),
+      });
+
+      // Knockback player
+      const knockbackDistance = 200;
+      const angle = Phaser.Math.Angle.Between(
+        this.monster.x,
+        this.monster.y,
+        this.player.x,
+        this.player.y
+      );
+
+      // Calculate knockback position
+      const knockbackX = this.player.x + Math.cos(angle) * knockbackDistance;
+      const knockbackY = this.player.y + Math.sin(angle) * knockbackDistance;
+
+      // Play player hurt animation
+      if (this.anims.exists('soldier_hurt')) {
+        this.player.play('soldier_hurt');
+      }
+
+      // Knockback tween with rotation
+      this.tweens.add({
+        targets: this.player,
+        x: knockbackX,
+        y: knockbackY,
+        rotation: this.player.rotation + Math.PI / 4, // Slight tumble
+        duration: 400,
+        ease: 'Power2.Out',
+        onComplete: () => {
+          // Reset rotation
+          this.player.rotation = 0;
+        },
+      });
+
+      // Dust particles at player feet
+      const dustParticles = this.add.particles(
+        this.player.x,
+        this.player.y + 20,
+        'spark',
+        {
+          lifespan: 600,
+          speed: { min: 50, max: 150 },
+          scale: { start: 0.5, end: 0 },
+          blendMode: 'NORMAL',
+          tint: 0x8b7355,
+          quantity: 15,
+          gravityY: 100,
+        }
+      );
+
+      this.time.delayedCall(800, () => dustParticles.destroy());
+
+      // Camera shake
+      this.cameras.main.shake(700, 0.015);
+    });
+
+    // Phase 3: Transformation Build-up (1200-1800ms)
+    this.time.delayedCall(1200, () => {
+      // Transforming text
+      const evolutionText = this.add.text(
+        this.monster.x,
+        this.monster.y - 100,
+        'TRANSFORMING!',
+        {
+          fontSize: '32px',
+          color: '#ff00ff',
+          stroke: '#000000',
+          strokeThickness: 4,
+        }
+      );
+      evolutionText.setOrigin(0.5);
+      evolutionText.setDepth(100);
+
+      // Purple energy particles gathering
+      const energyParticles = this.add.particles(
+        this.monster.x,
+        this.monster.y,
+        'spark',
+        {
+          lifespan: 600,
+          speed: { min: 0, max: 50 },
+          scale: { start: 0.8, end: 0.3 },
+          blendMode: 'ADD',
+          tint: [0xff00ff, 0x9900ff],
+          quantity: 5,
+          frequency: 50,
+          emitZone: {
+            type: 'random',
+            source: new Phaser.Geom.Circle(0, 0, 100),
+          },
+        }
+      );
+
+      // Scene darkens
+      const darkenOverlay = this.add.rectangle(
+        width / 2,
+        height / 2,
+        width,
+        height,
+        0x000000,
+        0.3
+      );
+      darkenOverlay.setDepth(49);
+
+      // Clean up after phase
+      this.time.delayedCall(600, () => {
+        evolutionText.destroy();
+        energyParticles.destroy();
+        darkenOverlay.destroy();
+      });
+    });
+
+    // Phase 4: Flash & Evolution (1800-2300ms)
+    this.time.delayedCall(1800, () => {
+      // Flash effect
+      this.cameras.main.flash(500, 255, 0, 255);
+
+      // Explosion particles
+      const explosionParticles = this.add.particles(
+        this.monster.x,
+        this.monster.y,
+        'spark',
+        {
+          lifespan: 1000,
+          speed: { min: 200, max: 400 },
+          scale: { start: 1, end: 0 },
+          blendMode: 'ADD',
+          tint: [0xff00ff, 0xff00ff, 0xffff00],
+          quantity: 50,
+          gravityY: -50,
+        }
+      );
+
+      // Update monster data to werebear using evolution data from backend
+      if (this.monsterData.evolution) {
+        this.monsterData.tier = this.monsterData.evolution;
+        this.monsterData.type = 'Werebear'; // Update the type for victory screen
+        this.monsterSpriteKey = 'werebear';
+        this.isEvolved = true;
+
+        // Reset health to werebear's max from evolution data
+        this.monsterHealth = this.monsterData.evolution.hp;
+        this.monsterMaxHealth = this.monsterData.evolution.hp;
+      } else {
+        console.error('No evolution data found for werewolf!');
+        // Fallback values if evolution data is missing
+        this.monsterData.type = 'Werebear'; // Update the type for victory screen
+        this.monsterSpriteKey = 'werebear';
+        this.isEvolved = true;
+        this.monsterHealth = 100;
+        this.monsterMaxHealth = 100;
+      }
+
+      // Clear tint and play werebear idle
+      this.monster.clearTint();
+      this.currentMonsterAnimation = 'werebear_idle';
+      if (this.anims.exists('werebear_idle')) {
+        this.monster.play('werebear_idle');
+      }
+
+      // Re-enable physics
+      if (this.monster.body) {
+        const monsterBody = this.monster.body as Phaser.Physics.Arcade.Body;
+        monsterBody.enable = true;
+      }
+
+      // Intense camera shake
+      this.cameras.main.shake(500, 0.02);
+
+      // Clean up explosion particles after delay
+      this.time.delayedCall(1200, () => explosionParticles.destroy());
+    });
+
+    // Phase 5: Enraged Message & Position Reset (2300-3000ms)
+    this.time.delayedCall(2300, () => {
+      // Reset positions - both player and monster return to initial spots
+      this.tweens.add({
+        targets: this.player,
+        x: initialPlayerX,
+        y: initialPlayerY,
+        duration: 500,
+        ease: 'Power2.InOut',
+        onComplete: () => {
+          // Return to idle animation
+          if (this.anims.exists('soldier_idle')) {
+            this.player.play('soldier_idle');
+          }
+        },
+      });
+
+      this.tweens.add({
+        targets: this.monster,
+        x: initialMonsterX,
+        y: initialMonsterY,
+        duration: 500,
+        ease: 'Power2.InOut',
+      });
+
+      // Show enraged message
+      const enragedText = this.add.text(
+        this.cameras.main.width / 2,
+        100,
+        'THE BEAST IS ENRAGED!',
+        {
+          fontSize: '48px',
+          color: '#ff0000',
+          stroke: '#000000',
+          strokeThickness: 6,
+        }
+      );
+      enragedText.setOrigin(0.5);
+      enragedText.setDepth(100);
+      enragedText.setScale(0);
+
+      // Animate enraged text appearing
+      this.tweens.add({
+        targets: enragedText,
+        scale: 1,
+        duration: 300,
+        ease: 'Back.out',
+        onComplete: () => {
+          // Pulse animation
+          this.tweens.add({
+            targets: enragedText,
+            scale: 1.1,
+            duration: 400,
+            yoyo: true,
+            repeat: 2,
+            onComplete: () => {
+              // Fade out
+              this.tweens.add({
+                targets: enragedText,
+                alpha: 0,
+                y: enragedText.y - 30,
+                duration: 500,
+                onComplete: () => enragedText.destroy(),
+              });
+            },
+          });
+        },
+      });
+
+      // Update UI
+      this.emitGameState();
+
+      // Re-enable player control after positions are reset
+      this.time.delayedCall(500, () => {
+        this.isEvolving = false;
+        this.isMonsterMoving = false;
+        this.isPlayerMoving = false;
+      });
+    });
   }
 
   gameOver(victory: boolean) {
     this.isGameOver = true;
     const { width, height } = this.cameras.main;
-    
+
     // Play death animation if player died
     if (!victory && this.playerHealth <= 0) {
       if (this.anims.exists('soldier_death')) {
@@ -1753,19 +2334,19 @@ export class CombatScene extends BaseScene {
     const handleReturn = (event: any) => {
       window.removeEventListener('return-to-colosseum', handleReturn);
       const walletAddress = event.detail?.walletAddress || 'test-wallet';
-      
+
       // Return to Colosseum scene
-      this.scene.start('ColosseumScene', {
+      this.scene.start('LobbyScene', {
         walletAddress: walletAddress,
       });
     };
-    
+
     window.addEventListener('return-to-colosseum', handleReturn);
 
     // Also allow clicking anywhere to return (fallback)
     this.input.once('pointerdown', () => {
       window.removeEventListener('return-to-colosseum', handleReturn);
-      this.scene.start('ColosseumScene', {
+      this.scene.start('LobbyScene', {
         walletAddress: 'test-wallet',
       });
     });
@@ -1784,11 +2365,15 @@ export class CombatScene extends BaseScene {
       // Top border
       this.borders[0].setPosition(width / 2, 20).setSize(width - 40, 40);
       // Bottom border
-      this.borders[1].setPosition(width / 2, height - 20).setSize(width - 40, 40);
+      this.borders[1]
+        .setPosition(width / 2, height - 20)
+        .setSize(width - 40, 40);
       // Left border
       this.borders[2].setPosition(20, height / 2).setSize(40, height - 40);
       // Right border
-      this.borders[3].setPosition(width - 20, height / 2).setSize(40, height - 40);
+      this.borders[3]
+        .setPosition(width - 20, height / 2)
+        .setSize(40, height - 40);
     }
 
     // Maintain relative positions during resize
@@ -1816,7 +2401,7 @@ export class CombatScene extends BaseScene {
         this.vault.setPosition(width * vaultRelX, height * vaultRelY);
       }
     }
-    
+
     // Update stored dimensions
     this.previousWidth = width;
     this.previousHeight = height;

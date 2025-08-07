@@ -3,7 +3,7 @@ import * as Phaser from 'phaser';
 import { gameConfig, MobileOptimizations } from './config/GameConfig';
 import { PreloadScene } from './scenes/PreloadScene';
 import { MenuScene } from './scenes/MenuScene';
-import { ColosseumScene } from './scenes/ColosseumScene';
+import { LobbyScene } from './scenes/LobbyScene';
 import { CombatScene } from './scenes/CombatScene';
 import { VaultScene } from './scenes/VaultScene';
 
@@ -15,7 +15,7 @@ export class AureliusGame {
     gameConfig.scene = [
       PreloadScene,
       MenuScene, 
-      ColosseumScene,
+      LobbyScene,
       CombatScene,
       VaultScene
     ];
@@ -55,9 +55,9 @@ export class AureliusGame {
 
     // Handle combat completion from React
     window.addEventListener('combatComplete', ((event: CustomEvent) => {
-      const colosseumScene = this.game?.scene.getScene('ColosseumScene') as ColosseumScene;
-      if (colosseumScene && colosseumScene.scene.isActive()) {
-        colosseumScene.processCombat(event.detail.txSignature, event.detail.combatId);
+      const lobbyScene = this.game?.scene.getScene('LobbyScene') as LobbyScene;
+      if (lobbyScene && lobbyScene.scene.isActive()) {
+        lobbyScene.processCombat(event.detail.txSignature, event.detail.combatId);
       }
     }) as EventListener);
 

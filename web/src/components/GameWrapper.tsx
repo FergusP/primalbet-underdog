@@ -37,7 +37,7 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingError, setLoadingError] = useState<{ message: string; canRetry: boolean } | null>(null);
   
-  // Payment UI states - only for ColosseumScene
+  // Payment UI states - only for LobbyScene
   const [paymentOptions, setPaymentOptions] = useState<PaymentOptions | null>(null);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -147,10 +147,10 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
     return () => clearInterval(interval);
   }, []);
   
-  // Fetch payment options when wallet connects and we're in ColosseumScene
+  // Fetch payment options when wallet connects and we're in LobbyScene
   useEffect(() => {
     const fetchPaymentOptions = async () => {
-      if (!publicKey || !connected || currentScene !== 'ColosseumScene') {
+      if (!publicKey || !connected || currentScene !== 'LobbyScene') {
         setPaymentOptions(null);
         return;
       }
@@ -188,7 +188,7 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
   
   const handleBalanceUpdate = () => {
     // Refresh payment options after deposit/withdraw
-    if (publicKey && connected && currentScene === 'ColosseumScene') {
+    if (publicKey && connected && currentScene === 'LobbyScene') {
       GameService.getPaymentOptions(publicKey.toString())
         .then(setPaymentOptions)
         .catch(console.error);
@@ -384,8 +384,8 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       console.log('Scene changed to:', event.detail.sceneName);
       setCurrentScene(event.detail.sceneName);
       
-      // Refresh payment options when returning to ColosseumScene
-      if (event.detail.sceneName === 'ColosseumScene' && publicKey && connected) {
+      // Refresh payment options when returning to LobbyScene
+      if (event.detail.sceneName === 'LobbyScene' && publicKey && connected) {
         handleBalanceUpdate();
       }
     };
@@ -486,8 +486,8 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       {/* Header with wallet button - Top right - Hide during combat and vault scenes */}
       {currentScene !== 'CombatScene' && currentScene !== 'VaultScene' && (
         <div className="absolute top-4 right-4 flex items-center gap-4" style={{ zIndex: 9999 }}>
-          {/* Integrated Payment UI - only show in ColosseumScene when wallet connected */}
-          {currentScene === 'ColosseumScene' && connected && publicKey && paymentOptions && (
+          {/* Integrated Payment UI - only show in LobbyScene when wallet connected */}
+          {currentScene === 'LobbyScene' && connected && publicKey && paymentOptions && (
             <IntegratedPaymentUI
               pdaBalance={paymentOptions.pdaBalance}
               selectedMethod={selectedPaymentMethod}
@@ -541,7 +541,7 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
 
       {/* UI Overlays - Scene-specific rendering */}
       {isGameReady && currentScene === 'MenuScene' && <MenuUI />}
-      {isGameReady && currentScene === 'ColosseumScene' && (
+      {isGameReady && currentScene === 'LobbyScene' && (
         <GameUIOverlay 
           selectedPaymentMethod={selectedPaymentMethod} 
           isPaymentOptionsReady={!!paymentOptions}
@@ -590,8 +590,8 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
         </div>
       )}
       
-      {/* Deposit Modal - only for ColosseumScene */}
-      {currentScene === 'ColosseumScene' && showDepositModal && (
+      {/* Deposit Modal - only for LobbyScene */}
+      {currentScene === 'LobbyScene' && showDepositModal && (
         <PDADepositModal
           isOpen={showDepositModal}
           onClose={() => setShowDepositModal(false)}
@@ -599,8 +599,8 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
         />
       )}
       
-      {/* Withdraw Modal - only for ColosseumScene */}
-      {currentScene === 'ColosseumScene' && showWithdrawModal && paymentOptions && (
+      {/* Withdraw Modal - only for LobbyScene */}
+      {currentScene === 'LobbyScene' && showWithdrawModal && paymentOptions && (
         <PDAWithdrawModal
           isOpen={showWithdrawModal}
           onClose={() => setShowWithdrawModal(false)}

@@ -2,16 +2,17 @@
 import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
 import { ColosseumState } from '../../../types';
-import { MONSTER_TIERS } from '../../../data/monsters';
+import { MONSTER_TIERS } from '../../../mockedData/monsters';
 
 export async function GET(request: NextRequest) {
   // Get selected monster from query params (for dev mode)
   const searchParams = request.nextUrl.searchParams;
   const selectedMonster = searchParams.get('monster') || 'SKELETON_WARRIOR';
-  
+
   // Get monster tier data
-  const monsterTier = MONSTER_TIERS[selectedMonster] || MONSTER_TIERS.SKELETON_WARRIOR;
-  
+  const monsterTier =
+    MONSTER_TIERS[selectedMonster] || MONSTER_TIERS.SKELETON_WARRIOR;
+
   // Mock colosseum state matching INTERFACE_CONTRACT.md v6.0
   const mockState: ColosseumState = {
     currentMonster: {
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
       spawnedAt: Date.now() - 300000, // 5 minutes ago
       defeatedBy: null,
       totalCombats: 3,
-      victories: 1
+      victories: 1,
     },
     currentJackpot: 2450000000, // 2.45 SOL in lamports
     lastWinner: null,
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
         victory: true,
         vaultAttempted: true,
         vaultCracked: false,
-        timestamp: Date.now() - 30000
+        timestamp: Date.now() - 30000,
       },
       {
         gladiator: '4mN2...8kL7',
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
         victory: false,
         vaultAttempted: false,
         vaultCracked: false,
-        timestamp: Date.now() - 120000
+        timestamp: Date.now() - 120000,
       },
       {
         gladiator: '9qR5...3vW6',
@@ -51,9 +52,9 @@ export async function GET(request: NextRequest) {
         victory: true,
         vaultAttempted: true,
         vaultCracked: true,
-        timestamp: Date.now() - 180000
-      }
-    ]
+        timestamp: Date.now() - 180000,
+      },
+    ],
   };
 
   return NextResponse.json(mockState);

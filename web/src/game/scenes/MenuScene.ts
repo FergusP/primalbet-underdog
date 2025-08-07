@@ -136,9 +136,9 @@ export class MenuScene extends BaseScene {
           // Small delay to show 100% before transitioning
           await new Promise(resolve => setTimeout(resolve, 300));
           
-          // Proceed to Colosseum scene with pre-loaded data
+          // Proceed to Lobby scene with pre-loaded data
           // Don't hide loading here - let the UI component hide it when ready
-          this.scene.start('ColosseumScene', { 
+          this.scene.start('LobbyScene', { 
             walletAddress,
             preloadedState: gameState 
           });

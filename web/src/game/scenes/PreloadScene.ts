@@ -10,12 +10,13 @@ export class PreloadScene extends Scene {
     // Load assets without showing loading screen
     // UI elements
     this.load.image('arena-bg', '/assets/backgrounds/arena.png');
+    this.load.image('colosseum-bg', '/assets/backgrounds/Load Image 1.jpg');
     this.load.image('ui_panel', '/assets/ui/panel.png');
     this.load.image('gold_coin', '/assets/particles/coin.png');
     this.load.image('vault_closed', '/assets/sprites/vault_closed.png');
     this.load.image('vault_open', '/assets/sprites/vault_open.png');
     
-    // Gladiator - Using Jiwatron atlas (for ColosseumScene)
+    // Gladiator - Using Jiwatron atlas (for LobbyScene)
     this.load.atlas('gladiator', '/assets/sprites/Jiwatron.png', '/assets/sprites/Jiwatron.json');
     
     // Soldier sprites for player in CombatScene
@@ -64,85 +65,196 @@ export class PreloadScene extends Scene {
     // Arrow sprite for soldier ranged attacks
     this.load.image('soldier_arrow', '/assets/sprites/soldier/Arrow01.png');
     
-    // Orc sprites for all monsters
-    // Main spritesheet
-    this.load.spritesheet('orc', '/assets/sprites/orc/Orc.png', {
-      frameWidth: 64,
-      frameHeight: 64
-    });
-    
-    // Individual animation spritesheets
+    // Load all monster sprites
+    // ORC (Tier 1)
     this.load.spritesheet('orc_idle', '/assets/sprites/orc/Orc-Idle.png', {
       frameWidth: 100,
       frameHeight: 100
     });
-    
     this.load.spritesheet('orc_walk', '/assets/sprites/orc/Orc-Walk.png', {
       frameWidth: 100,
       frameHeight: 100
     });
-    
     this.load.spritesheet('orc_attack01', '/assets/sprites/orc/Orc-Attack01.png', {
       frameWidth: 100,
       frameHeight: 100
     });
-    
     this.load.spritesheet('orc_attack02', '/assets/sprites/orc/Orc-Attack02.png', {
       frameWidth: 100,
       frameHeight: 100
     });
-    
     this.load.spritesheet('orc_hurt', '/assets/sprites/orc/Orc-Hurt.png', {
       frameWidth: 100,
       frameHeight: 100
     });
-    
     this.load.spritesheet('orc_death', '/assets/sprites/orc/Orc-Death.png', {
       frameWidth: 100,
       frameHeight: 100
     });
     
-    // Create aliases for all monster types to use orc texture temporarily
-    // This allows easy swapping when real sprites are ready
-    this.load.on('complete', () => {
-      if (this.textures.exists('orc')) {
-        // All monster types will use the orc texture for now
-        const monsterTypes = ['skeleton', 'goblin', 'minotaur', 'cyclops'];
-        monsterTypes.forEach(type => {
-          if (!this.textures.exists(type)) {
-            // Use the orc texture for all monster types temporarily
-            const orcTexture = this.textures.get('orc');
-            if (orcTexture && orcTexture.source && orcTexture.source[0]) {
-              this.textures.addSpriteSheet(type, 
-                orcTexture.source[0].source as HTMLImageElement,
-                {
-                  frameWidth: 64,
-                  frameHeight: 64
-                }
-              );
-            }
-          }
-        });
-      }
+    // ARMORED ORC (Tier 2)
+    this.load.spritesheet('armored_orc_idle', '/assets/sprites/armored-orc/Armored Orc-Idle.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('armored_orc_walk', '/assets/sprites/armored-orc/Armored Orc-Walk.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('armored_orc_attack01', '/assets/sprites/armored-orc/Armored Orc-Attack01.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('armored_orc_attack02', '/assets/sprites/armored-orc/Armored Orc-Attack02.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('armored_orc_attack03', '/assets/sprites/armored-orc/Armored Orc-Attack03.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('armored_orc_block', '/assets/sprites/armored-orc/Armored Orc-Block.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('armored_orc_hurt', '/assets/sprites/armored-orc/Armored Orc-Hurt.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('armored_orc_death', '/assets/sprites/armored-orc/Armored Orc-Death.png', {
+      frameWidth: 100,
+      frameHeight: 100
     });
     
-    // Add load event listeners to debug
-    this.load.on('filecomplete-atlas-skeleton', () => {
-      console.log('Skeleton atlas loaded successfully');
+    // ELITE ORC (Tier 3)
+    this.load.spritesheet('elite_orc_idle', '/assets/sprites/elite-orc/Elite Orc-Idle.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('elite_orc_walk', '/assets/sprites/elite-orc/Elite Orc-Walk.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('elite_orc_attack01', '/assets/sprites/elite-orc/Elite Orc-Attack01.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('elite_orc_attack02', '/assets/sprites/elite-orc/Elite Orc-Attack02.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('elite_orc_attack03', '/assets/sprites/elite-orc/Elite Orc-Attack03.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('elite_orc_hurt', '/assets/sprites/elite-orc/Elite Orc-Hurt.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('elite_orc_death', '/assets/sprites/elite-orc/Elite Orc-Death.png', {
+      frameWidth: 100,
+      frameHeight: 100
     });
     
+    // ORC RIDER (Tier 4) - might need larger framesize
+    this.load.spritesheet('orc_rider_idle', '/assets/sprites/orc-rider/Orc rider-Idle.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('orc_rider_walk', '/assets/sprites/orc-rider/Orc rider-Walk.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('orc_rider_attack01', '/assets/sprites/orc-rider/Orc rider-Attack01.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('orc_rider_attack02', '/assets/sprites/orc-rider/Orc rider-Attack02.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('orc_rider_attack03', '/assets/sprites/orc-rider/Orc rider-Attack03.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('orc_rider_block', '/assets/sprites/orc-rider/Orc rider-Block.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('orc_rider_hurt', '/assets/sprites/orc-rider/Orc rider-Hurt.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('orc_rider_death', '/assets/sprites/orc-rider/Orc rider-Death.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    
+    // WEREWOLF (Tier 5)
+    this.load.spritesheet('werewolf_idle', '/assets/sprites/werewolf/Werewolf-Idle.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('werewolf_walk', '/assets/sprites/werewolf/Werewolf-Walk.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('werewolf_attack01', '/assets/sprites/werewolf/Werewolf-Attack01.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('werewolf_attack02', '/assets/sprites/werewolf/Werewolf-Attack02.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('werewolf_attack03', '/assets/sprites/werewolf/Werewolf-Attack03.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('werewolf_hurt', '/assets/sprites/werewolf/Werewolf-Hurt.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('werewolf_death', '/assets/sprites/werewolf/Werewolf-Death.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    
+    // WEREBEAR (Evolution of Werewolf)
+    this.load.spritesheet('werebear_idle', '/assets/sprites/werebear/Werebear-Idle.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('werebear_walk', '/assets/sprites/werebear/Werebear-Walk.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('werebear_attack01', '/assets/sprites/werebear/Werebear-Attack01.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('werebear_attack02', '/assets/sprites/werebear/Werebear-Attack02.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('werebear_attack03', '/assets/sprites/werebear/Werebear-Attack03.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('werebear_hurt', '/assets/sprites/werebear/Werebear-Hurt.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('werebear_death', '/assets/sprites/werebear/Werebear-Death.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    
+    // No texture aliases needed - we have all the real sprites now
+    
+    // Add load error listener
     this.load.on('loaderror', (file: any) => {
       console.error('Failed to load file:', file.key, file.url);
-    });
-    
-    this.load.spritesheet('goblin', '/assets/sprites/goblin.png', {
-      frameWidth: 64,
-      frameHeight: 64
-    });
-    
-    this.load.spritesheet('minotaur', '/assets/sprites/minotaur.png', {
-      frameWidth: 96,
-      frameHeight: 96
     });
     
     // Only 5 monsters exist in backend - removed hydra, dragon, titan
@@ -195,14 +307,11 @@ export class PreloadScene extends Scene {
     // Soldier animations for player
     this.createSoldierAnimations();
     
-    // Orc animations for all monsters
-    this.createOrcAnimations();
+    // All monster animations (Orc, Armored Orc, Elite Orc, Orc Rider, Werewolf)
+    this.createAllMonsterAnimations();
     
     // Gladiator animations - special handling for Jiwatron atlas
     this.createJiwatronAnimations();
-    
-    // Monster animations (all use Orc sprite now)
-    this.createMonsterAnimations();
 
     // Impact animation
     if (this.textures.exists('impact')) {
@@ -270,8 +379,8 @@ export class PreloadScene extends Scene {
     }
   }
 
-  private createOrcAnimations() {
-    // Orc Idle animation (looping)
+  private createAllMonsterAnimations() {
+    // ORC ANIMATIONS
     if (this.textures.exists('orc_idle')) {
       this.anims.create({
         key: 'orc_idle',
@@ -280,8 +389,6 @@ export class PreloadScene extends Scene {
         repeat: -1
       });
     }
-    
-    // Orc Walk animation (looping)
     if (this.textures.exists('orc_walk')) {
       this.anims.create({
         key: 'orc_walk',
@@ -290,8 +397,6 @@ export class PreloadScene extends Scene {
         repeat: -1
       });
     }
-    
-    // Orc Attack01
     if (this.textures.exists('orc_attack01')) {
       this.anims.create({
         key: 'orc_attack01',
@@ -300,8 +405,6 @@ export class PreloadScene extends Scene {
         repeat: 0
       });
     }
-    
-    // Orc Attack02
     if (this.textures.exists('orc_attack02')) {
       this.anims.create({
         key: 'orc_attack02',
@@ -310,8 +413,6 @@ export class PreloadScene extends Scene {
         repeat: 0
       });
     }
-    
-    // Orc Hurt animation
     if (this.textures.exists('orc_hurt')) {
       this.anims.create({
         key: 'orc_hurt',
@@ -320,14 +421,71 @@ export class PreloadScene extends Scene {
         repeat: 0
       });
     }
-    
-    // Orc Death animation
     if (this.textures.exists('orc_death')) {
       this.anims.create({
         key: 'orc_death',
         frames: this.anims.generateFrameNumbers('orc_death', { start: 0, end: 3 }),
         frameRate: 8,
         repeat: 0
+      });
+    }
+    
+    // ARMORED ORC ANIMATIONS
+    this.createMonsterAnimation('armored_orc', 'idle', 0, 5, 8, -1);
+    this.createMonsterAnimation('armored_orc', 'walk', 0, 7, 10, -1);
+    this.createMonsterAnimation('armored_orc', 'attack01', 0, 5, 12, 0);
+    this.createMonsterAnimation('armored_orc', 'attack02', 0, 5, 12, 0);
+    this.createMonsterAnimation('armored_orc', 'attack03', 0, 5, 12, 0);
+    this.createMonsterAnimation('armored_orc', 'block', 0, 3, 10, 0);
+    this.createMonsterAnimation('armored_orc', 'hurt', 0, 3, 10, 0);
+    this.createMonsterAnimation('armored_orc', 'death', 0, 3, 8, 0);
+    
+    // ELITE ORC ANIMATIONS
+    this.createMonsterAnimation('elite_orc', 'idle', 0, 5, 8, -1);
+    this.createMonsterAnimation('elite_orc', 'walk', 0, 7, 10, -1);
+    this.createMonsterAnimation('elite_orc', 'attack01', 0, 5, 12, 0);
+    this.createMonsterAnimation('elite_orc', 'attack02', 0, 5, 12, 0);
+    this.createMonsterAnimation('elite_orc', 'attack03', 0, 5, 12, 0);
+    this.createMonsterAnimation('elite_orc', 'hurt', 0, 3, 10, 0);
+    this.createMonsterAnimation('elite_orc', 'death', 0, 3, 8, 0);
+    
+    // ORC RIDER ANIMATIONS
+    this.createMonsterAnimation('orc_rider', 'idle', 0, 5, 8, -1);
+    this.createMonsterAnimation('orc_rider', 'walk', 0, 7, 10, -1);
+    this.createMonsterAnimation('orc_rider', 'attack01', 0, 5, 12, 0);
+    this.createMonsterAnimation('orc_rider', 'attack02', 0, 5, 12, 0);
+    this.createMonsterAnimation('orc_rider', 'attack03', 0, 5, 12, 0);
+    this.createMonsterAnimation('orc_rider', 'block', 0, 3, 10, 0);
+    this.createMonsterAnimation('orc_rider', 'hurt', 0, 3, 10, 0);
+    this.createMonsterAnimation('orc_rider', 'death', 0, 3, 8, 0);
+    
+    // WEREWOLF ANIMATIONS
+    this.createMonsterAnimation('werewolf', 'idle', 0, 5, 8, -1);
+    this.createMonsterAnimation('werewolf', 'walk', 0, 7, 10, -1);
+    this.createMonsterAnimation('werewolf', 'attack01', 0, 5, 12, 0);
+    this.createMonsterAnimation('werewolf', 'attack02', 0, 5, 12, 0);
+    this.createMonsterAnimation('werewolf', 'attack03', 0, 5, 12, 0);
+    this.createMonsterAnimation('werewolf', 'hurt', 0, 3, 10, 0);
+    this.createMonsterAnimation('werewolf', 'death', 0, 3, 8, 0);
+    
+    // WEREBEAR ANIMATIONS (Evolution)
+    this.createMonsterAnimation('werebear', 'idle', 0, 5, 8, -1);
+    this.createMonsterAnimation('werebear', 'walk', 0, 7, 10, -1);
+    this.createMonsterAnimation('werebear', 'attack01', 0, 5, 12, 0);
+    this.createMonsterAnimation('werebear', 'attack02', 0, 5, 12, 0);
+    this.createMonsterAnimation('werebear', 'attack03', 0, 5, 12, 0);
+    this.createMonsterAnimation('werebear', 'hurt', 0, 3, 10, 0);
+    this.createMonsterAnimation('werebear', 'death', 0, 3, 8, 0);
+  }
+  
+  private createMonsterAnimation(monster: string, anim: string, start: number, end: number, fps: number, repeat: number) {
+    const key = `${monster}_${anim}`;
+    if (this.textures.exists(key)) {
+      this.anims.create({
+        key: key,
+        frames: this.anims.generateFrameNumbers(key, { start, end }),
+        frameRate: fps,
+        repeat: repeat
       });
     }
   }
@@ -498,86 +656,4 @@ export class PreloadScene extends Scene {
     });
   }
 
-  private createMonsterAnimations() {
-    // Create animations for all monster types using Orc animations
-    const monsterTypes = ['skeleton', 'goblin', 'orc', 'minotaur', 'cyclops'];
-    
-    monsterTypes.forEach(type => {
-      // For orc, the animations are already created
-      if (type === 'orc') return;
-      
-      // Create animations using orc texture frames for all other monster types
-      // Since all monsters use the orc sprite, we can use orc_idle, orc_walk, etc directly
-      
-      // Idle animation
-      if (this.textures.exists('orc_idle') && !this.anims.exists(`${type}_idle`)) {
-        this.anims.create({
-          key: `${type}_idle`,
-          frames: this.anims.generateFrameNumbers('orc_idle', { start: 0, end: 5 }),
-          frameRate: 8,
-          repeat: -1
-        });
-      }
-      
-      // Walk animation
-      if (this.textures.exists('orc_walk') && !this.anims.exists(`${type}_walk`)) {
-        this.anims.create({
-          key: `${type}_walk`,
-          frames: this.anims.generateFrameNumbers('orc_walk', { start: 0, end: 7 }),
-          frameRate: 10,
-          repeat: -1
-        });
-      }
-      
-      // Attack01 animation
-      if (this.textures.exists('orc_attack01') && !this.anims.exists(`${type}_attack01`)) {
-        this.anims.create({
-          key: `${type}_attack01`,
-          frames: this.anims.generateFrameNumbers('orc_attack01', { start: 0, end: 5 }),
-          frameRate: 12,
-          repeat: 0
-        });
-      }
-      
-      // Attack02 animation
-      if (this.textures.exists('orc_attack02') && !this.anims.exists(`${type}_attack02`)) {
-        this.anims.create({
-          key: `${type}_attack02`,
-          frames: this.anims.generateFrameNumbers('orc_attack02', { start: 0, end: 5 }),
-          frameRate: 12,
-          repeat: 0
-        });
-      }
-      
-      // Generic attack (uses attack01)
-      if (this.textures.exists('orc_attack01') && !this.anims.exists(`${type}_attack`)) {
-        this.anims.create({
-          key: `${type}_attack`,
-          frames: this.anims.generateFrameNumbers('orc_attack01', { start: 0, end: 5 }),
-          frameRate: 12,
-          repeat: 0
-        });
-      }
-      
-      // Hurt animation
-      if (this.textures.exists('orc_hurt') && !this.anims.exists(`${type}_hurt`)) {
-        this.anims.create({
-          key: `${type}_hurt`,
-          frames: this.anims.generateFrameNumbers('orc_hurt', { start: 0, end: 3 }),
-          frameRate: 10,
-          repeat: 0
-        });
-      }
-      
-      // Death animation
-      if (this.textures.exists('orc_death') && !this.anims.exists(`${type}_death`)) {
-        this.anims.create({
-          key: `${type}_death`,
-          frames: this.anims.generateFrameNumbers('orc_death', { start: 0, end: 3 }),
-          frameRate: 8,
-          repeat: 0
-        });
-      }
-    });
-  }
 }

@@ -1171,7 +1171,7 @@ export class VaultScene extends BaseScene {
     
     // Small delay to ensure cleanup completes
     this.time.delayedCall(100, () => {
-      this.scene.start('ColosseumScene', {
+      this.scene.start('LobbyScene', {
         walletAddress: this.walletAddress
       });
     });
