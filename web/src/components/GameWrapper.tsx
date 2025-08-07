@@ -458,7 +458,7 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       <LoadingScreen 
         progress={loadingProgress} 
         isVisible={isLoading}
-        error={loadingError}
+        error={loadingError || undefined}
         onRetry={() => {
           // Dispatch enterArena event to retry
           window.dispatchEvent(new CustomEvent('enterArena'));

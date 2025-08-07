@@ -127,18 +127,13 @@ export class GameService {
 
   // Get monster emoji by name
   static getMonsterEmoji(monsterName: string): string {
+    // Emoji map for the 5 real monsters only (matching backend exactly)
     const emojiMap: { [key: string]: string } = {
-      'skeleton': '💀',
       'skeleton warrior': '💀',
-      'goblin': '👹',
-      'goblin berserker': '👹',
-      'minotaur': '🐂',
-      'minotaur guardian': '🐂',
-      'hydra': '🐍',
-      'dragon': '🐉',
-      'ancient dragon': '🐉',
-      'titan': '⚡',
-      'titan of sol': '⚡'
+      'goblin archer': '👹',
+      'orc gladiator': '🛡️',
+      'minotaur champion': '🐂',
+      'cyclops titan': '👁️'
     };
     
     return emojiMap[monsterName.toLowerCase()] || '👹';

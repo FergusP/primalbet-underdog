@@ -8,11 +8,17 @@ export class ColosseumScene extends BaseScene {
   private monsterSprite!: Phaser.GameObjects.Sprite;
   private updateTimer!: Phaser.Time.TimerEvent;
   private bgImage!: Phaser.GameObjects.Image;
-  private gladiatorGroup: Phaser.GameObjects.Rectangle[] = [];
+  
+  preload() {
+    // Everything should be loaded from PreloadScene
+    // Just verify skeleton texture exists
+    console.log('ColosseumScene preload - skeleton exists?', this.textures.exists('skeleton'));
+  }
+  private gladiatorGroup: Phaser.GameObjects.Sprite[] = [];
   private spearTimer?: Phaser.Time.TimerEvent;
   private minGladiators: number = 15; // Fixed at 15 gladiators
-  private incomingGladiators: Phaser.GameObjects.Rectangle[] = []; // Track walking gladiators
-  private currentGladiator?: Phaser.GameObjects.Rectangle; // Center gladiator
+  private incomingGladiators: Phaser.GameObjects.Sprite[] = []; // Track walking gladiators
+  private currentGladiator?: Phaser.GameObjects.Sprite; // Center gladiator
   private gladiatorHealth: number = 2; // Health for center gladiator
 
   constructor() {
@@ -82,17 +88,21 @@ export class ColosseumScene extends BaseScene {
       attempts++;
     }
     
-    // Create gladiator at entry point
-    const boxSize = this.scaleValue(25, width);
-    const gladiator = this.add.rectangle(entry.x, entry.y, boxSize, boxSize);
-    
-    // Store the actual box size for collision detection
-    gladiator.setData('boxSize', boxSize);
-    
-    gladiator.setFillStyle(0x8b7355);
-    gladiator.setStrokeStyle(2, 0xcd853f);
+    // Create gladiator sprite at entry point
+    const gladiator = this.add.sprite(entry.x, entry.y, 'soldier_idle', 0);
+    gladiator.setOrigin(0.5, 0.5);
+    gladiator.setScale(2.0);
+    gladiator.setFlipX(false); // Don't flip - face right toward monster
     gladiator.setAlpha(0);
     gladiator.setDepth(3);
+    
+    // Add color tint variation
+    const colorVariation = Phaser.Math.Between(0, 2);
+    const tints = [0xffffff, 0xffdddd, 0xddffdd];
+    gladiator.setTint(tints[colorVariation]);
+    
+    // Play idle animation
+    gladiator.play('soldier_idle');
     
     // Track as incoming
     this.incomingGladiators.push(gladiator);
@@ -115,6 +125,10 @@ export class ColosseumScene extends BaseScene {
       y: finalY,
       duration: 2500,
       ease: 'Power2',
+      onStart: () => {
+        // Play walking animation
+        gladiator.play('soldier_walk');
+      },
       onComplete: () => {
         // Remove from incoming list
         const index = this.incomingGladiators.indexOf(gladiator);
@@ -124,31 +138,42 @@ export class ColosseumScene extends BaseScene {
         
         // Add to main group
         this.gladiatorGroup.push(gladiator);
+        
+        // Return to idle animation
+        gladiator.play('soldier_idle');
+        
+        // Mark as not moving (ready to attack)
+        gladiator.setData('isMoving', false);
       }
     });
   }
   
-  private killSupportingGladiator(gladiator: Phaser.GameObjects.Rectangle) {
+  private killSupportingGladiator(gladiator: Phaser.GameObjects.Sprite) {
     // Remove from group
     const index = this.gladiatorGroup.indexOf(gladiator);
     if (index > -1) {
       this.gladiatorGroup.splice(index, 1);
     }
     
-    // Death animation - fade and fall
-    this.tweens.add({
-      targets: gladiator,
-      alpha: 0,
-      y: gladiator.y + 30,
-      scaleX: 0.7,
-      scaleY: 0.7,
-      duration: 600,
-      ease: 'Power2',
-      onComplete: () => {
-        gladiator.destroy();
-        
-        // Don't spawn immediately - let checkAndSpawnGladiators handle it
-      }
+    // Play death animation
+    gladiator.play('soldier_death');
+    
+    // Death animation - fade and fall after death animation plays
+    gladiator.once('animationcomplete', () => {
+      this.tweens.add({
+        targets: gladiator,
+        alpha: 0,
+        y: gladiator.y + 30,
+        scaleX: 0.7,
+        scaleY: 0.7,
+        duration: 400,
+        ease: 'Power2',
+        onComplete: () => {
+          gladiator.destroy();
+          
+          // Don't spawn immediately - let checkAndSpawnGladiators handle it
+        }
+      });
     });
   }
   
@@ -171,7 +196,7 @@ export class ColosseumScene extends BaseScene {
     let finalX = 0, finalY = 0, angle = 0, radius = 0;
     
     while (!validPosition && attempts < 50) {
-      angle = Phaser.Math.Between(-90, 90);
+      angle = Phaser.Math.Between(90, 270);
       const radian = (angle * Math.PI) / 180;
       radius = Phaser.Math.Between(this.scaleValue(120, width), this.scaleValue(200, width));
       
@@ -192,16 +217,21 @@ export class ColosseumScene extends BaseScene {
       attempts++;
     }
     
-    // Create gladiator at entry point
-    const boxSize = this.scaleValue(30, width);
-    const gladiator = this.add.rectangle(entry.x, entry.y, boxSize, boxSize);
-    
-    const colorVariation = Phaser.Math.Between(0, 2);
-    const colors = [0x8b7355, 0x9b8365, 0x7b6345];
-    gladiator.setFillStyle(colors[colorVariation]);
-    gladiator.setStrokeStyle(3, 0xcd853f);
+    // Create gladiator sprite at entry point
+    const gladiator = this.add.sprite(entry.x, entry.y, 'soldier_idle', 0);
+    gladiator.setOrigin(0.5, 0.5);
+    gladiator.setScale(2.0);
+    gladiator.setFlipX(false); // Don't flip - face right toward monster
     gladiator.setAlpha(0);
     gladiator.setDepth(3);
+    
+    // Add color tint variation
+    const colorVariation = Phaser.Math.Between(0, 2);
+    const tints = [0xffffff, 0xffdddd, 0xddffdd];
+    gladiator.setTint(tints[colorVariation]);
+    
+    // Play idle animation
+    gladiator.play('soldier_idle');
     
     // Store position data
     gladiator.setData('originalAngle', angle);
@@ -229,24 +259,29 @@ export class ColosseumScene extends BaseScene {
   private killCurrentGladiator() {
     if (!this.currentGladiator) return;
     
-    // Death animation - fade and fall
-    this.tweens.add({
-      targets: this.currentGladiator,
-      alpha: 0,
-      y: this.currentGladiator.y + 50,
-      scaleX: 0.5,
-      scaleY: 0.5,
-      duration: 800,
-      ease: 'Power2',
-      onComplete: () => {
-        // Destroy the dead gladiator
-        if (this.currentGladiator) {
-          this.currentGladiator.destroy();
+    // Play death animation
+    this.currentGladiator.play('soldier_death');
+    
+    // Death animation - fade and fall after death animation plays
+    this.currentGladiator.once('animationcomplete', () => {
+      this.tweens.add({
+        targets: this.currentGladiator,
+        alpha: 0,
+        y: this.currentGladiator.y + 50,
+        scaleX: 0.5,
+        scaleY: 0.5,
+        duration: 600,
+        ease: 'Power2',
+        onComplete: () => {
+          // Destroy the dead gladiator
+          if (this.currentGladiator) {
+            this.currentGladiator.destroy();
+          }
+          
+          // Bring in next gladiator from queue
+          this.bringNextGladiator();
         }
-        
-        // Bring in next gladiator from queue
-        this.bringNextGladiator();
-      }
+      });
     });
     
     // Create death particles
@@ -267,7 +302,6 @@ export class ColosseumScene extends BaseScene {
   
   private bringNextGladiator() {
     const { centerX, centerY, width, height } = this.cameras.main;
-    const boxSize = this.scaleValue(40, width);
     
     // Define possible entry points with more variation
     const entryPoints = [
@@ -281,18 +315,20 @@ export class ColosseumScene extends BaseScene {
     // Randomly select entry point
     const entryPoint = entryPoints[Math.floor(Math.random() * entryPoints.length)];
     
-    // Create new current gladiator at entry point
-    this.currentGladiator = this.add.rectangle(
-      entryPoint.x,
-      entryPoint.y,
-      boxSize,
-      boxSize
-    );
-    
-    this.currentGladiator.setFillStyle(0x8b0000);
-    this.currentGladiator.setStrokeStyle(4, 0xff0000);
+    // Create new current gladiator sprite at entry point
+    this.currentGladiator = this.add.sprite(entryPoint.x, entryPoint.y, 'soldier_idle', 0);
+    this.currentGladiator.setOrigin(0.5, 0.5);
+    this.currentGladiator.setScale(2.5);
+    this.currentGladiator.setFlipX(true); // Flip to face correct direction
     this.currentGladiator.setAlpha(0);
     this.currentGladiator.setDepth(4);
+    this.currentGladiator.setTint(0xff8888); // Red tint for current gladiator
+    
+    // Start with idle animation
+    this.currentGladiator.play('soldier_idle');
+    
+    // Mark as moving since they're walking to center
+    this.currentGladiator.setData('isMoving', true);
     
     // Fade in as gladiator enters
     this.tweens.add({
@@ -308,8 +344,19 @@ export class ColosseumScene extends BaseScene {
       y: centerY,
       duration: 1500,
       ease: 'Power2',
+      onStart: () => {
+        // Play walking animation
+        if (this.currentGladiator) {
+          this.currentGladiator.play('soldier_walk');
+        }
+      },
       onComplete: () => {
-        // No breathing animation - keep gladiator static
+        // Return to idle animation
+        if (this.currentGladiator) {
+          this.currentGladiator.play('soldier_idle');
+          // Mark as not moving (ready to be attacked)
+          this.currentGladiator.setData('isMoving', false);
+        }
       }
     });
     
@@ -330,60 +377,178 @@ export class ColosseumScene extends BaseScene {
     this.spearTimer = this.time.addEvent({
       delay: Phaser.Math.Between(1200, 2000), // Random intervals
       callback: () => {
-        // Randomly select 2-3 gladiators to throw spears
-        const throwers = Phaser.Utils.Array.Shuffle([...this.gladiatorGroup]).slice(0, Phaser.Math.Between(2, 3));
+        // Filter out gladiators that are still moving
+        const availableGladiators = this.gladiatorGroup.filter(g => 
+          g && g.active && !g.getData('isMoving')
+        );
+        
+        // If not enough gladiators are ready, skip this attack round
+        if (availableGladiators.length < 2) return;
+        
+        // Randomly select 2-3 gladiators to throw arrows
+        const throwers = Phaser.Utils.Array.Shuffle([...availableGladiators]).slice(0, Phaser.Math.Between(2, Math.min(3, availableGladiators.length)));
         
         throwers.forEach((gladiator, i) => {
           if (!gladiator || !gladiator.active) return;
           
-          // Create spear projectile
-          const spear = this.add.rectangle(
-            gladiator.x,
-            gladiator.y,
-            this.scaleValue(20, this.cameras.main.width),
-            this.scaleValue(3, this.cameras.main.height)
-          );
-          
-          spear.setFillStyle(0x8b7355);
-          spear.setAlpha(0.8);
-          spear.setDepth(2);
-          
-          // Calculate angle to monster
-          const angle = Phaser.Math.Angle.Between(
-            gladiator.x, gladiator.y,
-            this.monsterSprite.x, this.monsterSprite.y
-          );
-          spear.setRotation(angle);
-          
-          // Animate spear flying toward monster - slower and more realistic
-          this.tweens.add({
-            targets: spear,
-            x: this.monsterSprite.x + Phaser.Math.Between(-30, 30),
-            y: this.monsterSprite.y + Phaser.Math.Between(-30, 30),
-            duration: 1200, // Slower travel time
-            delay: i * 150,
-            ease: 'Cubic.easeOut', // More realistic arc
-            onComplete: () => {
-              // Create small impact effect
-              this.tweens.add({
-                targets: spear,
-                alpha: 0,
-                scaleX: 0.5,
-                scaleY: 0.5,
-                duration: 300,
-                onComplete: () => spear.destroy()
+          // Use static frames for attack instead of animation to avoid movement
+          if (gladiator && gladiator.active) {
+            // Store original position and check facing
+            const originalX = gladiator.x;
+            const isFacingBackwards = gladiator.flipX === true; // True means facing left (backwards from target)
+            
+            // Only animate and shoot if facing forward (toward monster)
+            if (!isFacingBackwards) {
+              // Switch to attack03 texture and set to bow drawn frame
+              gladiator.setTexture('soldier_attack03');
+              gladiator.setFrame(3); // Start at frame 3 (beginning of draw)
+              gladiator.x = originalX + 4; // Small forward adjustment to counter backward lean
+              
+              // Progress through animation frames
+              this.time.delayedCall(100, () => {
+                if (gladiator && gladiator.active) {
+                  gladiator.setFrame(4); // Drawing bow
+                }
               });
+              
+              this.time.delayedCall(200, () => {
+                if (gladiator && gladiator.active) {
+                  gladiator.setFrame(5); // Bow fully drawn
+                }
+              });
+              
+              // Release arrow at frame 6
+              this.time.delayedCall(300, () => {
+                if (gladiator && gladiator.active) {
+                  gladiator.setFrame(6); // Arrow release
+                  
+                  // Create arrow sprite at release
+                  const arrow = this.add.sprite(
+                    gladiator.x + 10, // Slightly forward from gladiator
+                    gladiator.y - 10, // Start at bow height
+                    'soldier_arrow'
+                  );
+                  
+                  arrow.setScale(0.3); // Scale down the arrow
+                  arrow.setDepth(2);
+                  
+                  // Calculate angle to monster and rotate arrow
+                  const angle = Phaser.Math.Angle.Between(
+                    gladiator.x, gladiator.y,
+                    this.monsterSprite.x, this.monsterSprite.y
+                  );
+                  arrow.setRotation(angle);
+                  
+                  // Animate arrow flying toward monster - faster than spear
+                  this.tweens.add({
+                    targets: arrow,
+                    x: this.monsterSprite.x + Phaser.Math.Between(-30, 30),
+                    y: this.monsterSprite.y + Phaser.Math.Between(-30, 30),
+                    duration: 600, // Faster for arrow
+                    ease: 'Cubic.easeOut',
+                    onComplete: () => {
+                  // Create small impact effect
+                  this.tweens.add({
+                    targets: arrow,
+                    alpha: 0,
+                    scaleX: 0.5,
+                    scaleY: 0.5,
+                    duration: 300,
+                    onComplete: () => arrow.destroy()
+                  });
+              
+              // Play hurt animation and effect
+              if (this.monsterSprite) {
+                // Play hurt animation
+                const monsterName = this.colosseumState.currentMonster?.tier.name.toLowerCase() || '';
+                let spriteKey = 'orc';
+                
+                if (monsterName.includes('skeleton')) spriteKey = 'skeleton';
+                else if (monsterName.includes('goblin')) spriteKey = 'goblin';
+                else if (monsterName.includes('orc')) spriteKey = 'orc';
+                else if (monsterName.includes('minotaur')) spriteKey = 'minotaur';
+                else if (monsterName.includes('cyclops')) spriteKey = 'cyclops';
+                
+                const hurtKey = `${spriteKey}_hurt`;
+                if (this.anims.exists(hurtKey)) {
+                  // Only play hurt if not already playing it
+                  if (!this.monsterSprite.anims.isPlaying || this.monsterSprite.anims.currentAnim?.key !== hurtKey) {
+                    this.monsterSprite.play(hurtKey);
+                    
+                    // Return to idle after hurt animation
+                    this.monsterSprite.once('animationcomplete', () => {
+                      const idleKey = `${spriteKey}_idle`;
+                      if (this.anims.exists(idleKey)) {
+                        this.monsterSprite.play(idleKey);
+                      }
+                    });
+                  }
+                }
+                
+                // Flash red tint
+                this.monsterSprite.setTint(0xff0000);
+                this.time.delayedCall(200, () => {
+                  this.monsterSprite.clearTint();
+                });
+              }
             }
           });
-          
-          // Add slight arc to spear trajectory
-          this.tweens.add({
-            targets: spear,
-            y: spear.y - 20,
-            duration: 600,
-            yoyo: true,
-            ease: 'Sine.easeOut'
-          });
+              
+              // Add slight arc to arrow trajectory
+              this.tweens.add({
+                targets: arrow,
+                y: arrow.y - 15,
+                duration: 400,
+                yoyo: true,
+                ease: 'Sine.easeOut'
+              });
+                }
+              });
+              
+              // Return to idle after attack completes
+              this.time.delayedCall(500, () => {
+                if (gladiator && gladiator.active) {
+                  // Return to idle texture and frame
+                  gladiator.setTexture('soldier_idle');
+                  gladiator.setFrame(0);
+                  gladiator.x = originalX; // Restore original position
+                }
+              });
+            } else {
+              // Facing backwards - shoot arrow that misses
+              gladiator.setTexture('soldier_attack03');
+              gladiator.setFrame(6); // Just show release frame
+              
+              // Create arrow that shoots backwards/sideways and misses
+              const arrow = this.add.sprite(
+                gladiator.x - 10, // Behind gladiator
+                gladiator.y - 10,
+                'soldier_arrow'
+              );
+              
+              arrow.setScale(0.3);
+              arrow.setDepth(2);
+              arrow.setRotation(Math.PI); // Point backwards
+              
+              // Arrow flies backwards and disappears
+              this.tweens.add({
+                targets: arrow,
+                x: gladiator.x - 200, // Fly backwards
+                y: gladiator.y + Phaser.Math.Between(-50, 50),
+                duration: 600,
+                ease: 'Cubic.easeOut',
+                onComplete: () => arrow.destroy()
+              });
+              
+              // Return to idle quickly since attack failed
+              this.time.delayedCall(300, () => {
+                if (gladiator && gladiator.active) {
+                  gladiator.setTexture('soldier_idle');
+                  gladiator.setFrame(0);
+                }
+              });
+            }
+          }
         });
       },
       loop: true
@@ -426,19 +591,26 @@ export class ColosseumScene extends BaseScene {
     this.registerUIElement('bg', this.bgImage);
 
     // Create game elements only (UI is handled by HTML overlay)
-    this.createMonsterDisplay();
+    // Delay monster display creation to ensure textures are loaded
+    this.time.delayedCall(100, () => {
+      this.createMonsterDisplay();
+    });
     this.setupFightButtonListener();
 
     // If we have preloaded state, emit it immediately
     if (this.colosseumState) {
+      // Store current monster type for combat scene
+      if (this.colosseumState.currentMonster?.tier?.name) {
+        window.localStorage.setItem('currentMonsterType', this.colosseumState.currentMonster.tier.name);
+      }
+      
       // Emit the preloaded state to update UI
-      window.dispatchEvent(new CustomEvent('gameStateUpdate', {
-        detail: this.colosseumState
-      }));
+      // Send properly formatted game state to UI
+      this.updateGameStateForUI();
       
       // Update monster display with preloaded data
       if (this.colosseumState.currentMonster) {
-        this.updateMonsterDisplay(this.colosseumState.currentMonster);
+        this.updateMonsterDisplay();
       }
     } else {
       // Fallback: Load initial game state if not preloaded
@@ -463,49 +635,73 @@ export class ColosseumScene extends BaseScene {
 
   private createMonsterDisplay() {
     const { width, height } = this.cameras.main;
+    const monster = this.colosseumState?.currentMonster;
 
-    // Monster sprite - larger and more imposing
-    this.monsterSprite = this.add.sprite(0, 0, 'skeleton');
-    this.monsterSprite.setScale(this.scaleValue(5, width));
-    this.monsterSprite.play('skeleton_idle');
-    this.monsterSprite.setFlipX(true); // Face left towards gladiator
-    this.monsterSprite.setDepth(5); // Ensure it appears above background
-    this.registerUIElement('monsterSprite', this.monsterSprite);
-    
-    // Add shadow under monster
-    const monsterShadow = this.add.ellipse(0, 0, 
-      this.scaleValue(150, width), 
-      this.scaleValue(40, height), 
-      0x000000, 0.5
-    );
-    monsterShadow.setDepth(4);
-    this.registerUIElement('monsterShadow', monsterShadow);
-    
-    // Add red aura effect around monster
-    const auraGlow = this.add.graphics();
-    auraGlow.setDepth(3);
-    this.registerUIElement('auraGlow', auraGlow);
-    
-    // Add pulsing aura animation
-    this.tweens.add({
-      targets: { radius: 100 },
-      radius: 120,
-      duration: 2000,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-      onUpdate: (tween) => {
-        const radius = tween.getValue();
-        if (typeof radius === 'number') {
-          auraGlow.clear();
-          auraGlow.setAlpha(0.5);
-          for (let i = 3; i > 0; i--) {
-            auraGlow.fillStyle(0xff0000, 0.1 * i);
-            auraGlow.fillCircle(0, 0, radius / i);
+    if (monster) {
+      // Determine actual sprite based on monster name
+      const monsterName = monster.tier.name.toLowerCase();
+      let actualSpriteKey: string | null = null;
+      
+      if (monsterName.includes('skeleton')) {
+        actualSpriteKey = 'skeleton';
+      } else if (monsterName.includes('goblin')) {
+        actualSpriteKey = 'goblin';
+      } else if (monsterName.includes('orc')) {
+        actualSpriteKey = 'orc';
+      } else if (monsterName.includes('minotaur')) {
+        actualSpriteKey = 'minotaur';
+      } else if (monsterName.includes('cyclops')) {
+        actualSpriteKey = 'cyclops';
+      }
+      
+      // Debug logging
+      console.log('Monster name:', monsterName);
+      console.log('Actual sprite key:', actualSpriteKey);
+      console.log('Texture exists in scene?', actualSpriteKey ? this.textures.exists(actualSpriteKey) : false);
+      console.log('Available textures:', this.textures.getTextureKeys());
+      
+      // Create monster with Orc sprite
+      if (actualSpriteKey) {
+        // Position monster to the left, further from soldiers
+        const monsterX = this.getRelativePosition(0.80, width);  // Further right
+        const monsterY = this.getRelativePosition(0.45, height);
+        
+        // Create the monster sprite using orc texture
+        this.monsterSprite = this.add.sprite(monsterX, monsterY, 'orc', 0);
+        this.monsterSprite.setFlipX(true); // Flip to face left toward soldiers
+        
+        // Scale based on monster tier - 2-3x bigger for better visibility without blur
+        const scales: Record<string, number> = {
+          'skeleton': 8.0,
+          'goblin': 7.0,
+          'orc': 9.0,
+          'minotaur': 10.0,
+          'cyclops': 11.0
+        };
+        
+        this.monsterSprite.setScale(this.scaleValue(scales[actualSpriteKey] || 6.0, width));
+        this.monsterSprite.setOrigin(0.5, 0.5);
+        this.monsterSprite.setDepth(5);
+        
+        // Start with idle animation
+        const idleKey = `${actualSpriteKey}_idle`;
+        if (this.anims.exists(idleKey)) {
+          try {
+            const anim = this.anims.get(idleKey);
+            if (anim && anim.frames && anim.frames.length > 0) {
+              this.monsterSprite.play(idleKey);
+            }
+          } catch (e) {
+            console.warn(`Could not play animation ${idleKey}:`, e);
           }
         }
+        
+        this.registerUIElement('monsterSprite', this.monsterSprite);
       }
-    });
+    }
+    // else: No monster data - don't create anything
+    
+    // Removed shadow and aura effects completely
 
     // Create small gladiator indicators
     this.createDefeatedGladiators(width, height);
@@ -518,138 +714,159 @@ export class ColosseumScene extends BaseScene {
       this.emitSpritePositions();
     });
     
+    // Re-emit after a longer delay to ensure positioning is complete
+    this.time.delayedCall(500, () => {
+      this.emitSpritePositions();
+    });
+    
     // Add periodic attack animation
     this.time.addEvent({
       delay: 4000, // Attack every 4 seconds
+      loop: true,
       callback: () => {
         if (this.monsterSprite && this.monsterSprite.active) {
-          const spriteKey = this.monsterSprite.texture.key;
+          // Play random attack animation (Attack01 or Attack02)
+          const monsterName = this.colosseumState.currentMonster?.tier.name.toLowerCase() || '';
+          let spriteKey = 'orc';
           
-          // Play attack animation
-          if (this.anims.exists(`${spriteKey}_attack`)) {
-            this.monsterSprite.play(`${spriteKey}_attack`);
-            
-            this.monsterSprite.once('animationcomplete', () => {
-              this.monsterSprite.play(`${spriteKey}_idle`);
-            });
-          } else {
-            // Fallback attack animation - lunge forward
-            this.tweens.add({
-              targets: this.monsterSprite,
-              x: this.monsterSprite.x + 50,
-              duration: 200,
-              yoyo: true,
-              ease: 'Power2'
-            });
-          }
+          if (monsterName.includes('skeleton')) spriteKey = 'skeleton';
+          else if (monsterName.includes('goblin')) spriteKey = 'goblin';
+          else if (monsterName.includes('orc')) spriteKey = 'orc';
+          else if (monsterName.includes('minotaur')) spriteKey = 'minotaur';
+          else if (monsterName.includes('cyclops')) spriteKey = 'cyclops';
           
-          // Show attack line
-          const attackLine = this.getUIElement('attackLine') as Phaser.GameObjects.Graphics;
-          if (attackLine && 'setAlpha' in attackLine) {
-            attackLine.setAlpha(1);
-            this.tweens.add({
-              targets: attackLine,
-              alpha: 0,
-              duration: 600,
-              ease: 'Power2'
-            });
-          }
+          // Randomly choose between attack01 and attack02
+          const attackAnim = Phaser.Math.Between(1, 2) === 1 ? 
+            `${spriteKey}_attack01` : `${spriteKey}_attack02`;
           
-          // Hit a random gladiator from the group
-          const allGladiators = this.gladiatorGroup.filter(g => g && g.active);
-          
-          if (allGladiators.length > 0) {
-            // Pick random target
-            const target = Phaser.Utils.Array.GetRandom(allGladiators);
-            
-            // Update attack line to point to target
-            const attackLine = this.getUIElement('attackLine') as Phaser.GameObjects.Graphics;
-            if (attackLine && target) {
-              attackLine.clear();
-              attackLine.lineStyle(4, 0xff0000, 0.8);
-              attackLine.beginPath();
-              attackLine.moveTo(this.monsterSprite.x + this.scaleValue(50, this.cameras.main.width), this.monsterSprite.y);
-              attackLine.lineTo(target.x, target.y);
-              attackLine.strokePath();
-            }
-            
-            // Flash red on hit
-            this.tweens.add({
-              targets: target,
-              fillColor: 0xff0000,
-              duration: 200,
-              yoyo: true,
-              onComplete: () => {
-                target.setFillStyle(0x8b7355);
-              }
-            });
-            
-            // Create impact particles
-            const particles = this.add.particles(target.x, target.y, 'spark-placeholder', {
-              lifespan: 500,
-              speed: { min: 100, max: 200 },
-              scale: { start: 0.5, end: 0 },
-              blendMode: 'ADD',
-              tint: [0xff0000, 0xff6600, 0xffaa00],
-              quantity: 10
-            });
-            
-            this.time.delayedCall(600, () => {
-              particles.destroy();
-            });
-            
-            // Each gladiator has a chance to die when hit
-            if (Phaser.Math.Between(1, 2) === 1) { // 50% chance to die
-              this.killSupportingGladiator(target);
+          if (this.anims.exists(attackAnim)) {
+            // Only play if not already playing an animation
+            if (!this.monsterSprite.anims.isPlaying || this.monsterSprite.anims.currentAnim?.key === `${spriteKey}_idle`) {
+              console.log('Monster attack triggered, current position:', this.monsterSprite.x);
+              this.monsterSprite.play(attackAnim);
               
-              // Check if we need to spawn new gladiators
-              this.checkAndSpawnGladiators();
+              // Return to idle after attack animation
+              this.monsterSprite.once('animationcomplete', () => {
+                const idleKey = `${spriteKey}_idle`;
+                if (this.anims.exists(idleKey)) {
+                  this.monsterSprite.play(idleKey);
+                }
+              });
+              
+              // Add lunge animation for visual effect
+              const originalX = this.monsterSprite.x;
+              this.tweens.add({
+                targets: this.monsterSprite,
+                x: originalX - 30,  // Lunge left toward soldiers
+                duration: 300,
+                yoyo: true,
+                ease: 'Power2',
+                onComplete: () => {
+                  // Ensure sprite returns to exact original position
+                  this.monsterSprite.x = originalX;
+                }
+              });
+              
+              // ONLY show attack indicators when animation actually plays
+              // Show attack line
+              const attackLine = this.getUIElement('attackLine') as Phaser.GameObjects.Graphics;
+              if (attackLine && 'setAlpha' in attackLine) {
+                attackLine.setAlpha(1);
+                this.tweens.add({
+                  targets: attackLine,
+                  alpha: 0,
+                  duration: 600,
+                  ease: 'Power2'
+                });
+              }
+              
+              // Hit a random gladiator from the group
+              const allGladiators = this.gladiatorGroup.filter(g => g && g.active);
+              
+              if (allGladiators.length > 0) {
+                // Pick random target
+                const target = Phaser.Utils.Array.GetRandom(allGladiators);
+                
+                // Update attack line to point to target
+                const attackLineTarget = this.getUIElement('attackLine') as Phaser.GameObjects.Graphics;
+                if (attackLineTarget && target) {
+                  attackLineTarget.clear();
+                  attackLineTarget.lineStyle(4, 0xff0000, 0.8);
+                  attackLineTarget.beginPath();
+                  attackLineTarget.moveTo(this.monsterSprite.x + this.scaleValue(50, this.cameras.main.width), this.monsterSprite.y);
+                  attackLineTarget.lineTo(target.x, target.y);
+                  attackLineTarget.strokePath();
+                }
+                
+                // Flash red on hit - delay to sync with animation
+                this.time.delayedCall(150, () => {
+                  // Flash red tint on hit and play hurt animation
+                  if (target && target.play) {
+                    // Play hurt animation
+                    target.play('soldier_hurt');
+                    
+                    // Flash red tint
+                    target.setTint(0xff0000);
+                    this.time.delayedCall(200, () => {
+                      // Return to original tint
+                      target.clearTint();
+                    });
+                  }
+                  
+                  // Create impact particles
+                  const particles = this.add.particles(target.x, target.y, 'spark-placeholder', {
+                    lifespan: 500,
+                    speed: { min: 100, max: 200 },
+                    scale: { start: 0.5, end: 0 },
+                    blendMode: 'ADD',
+                    tint: [0xff0000, 0xff6600, 0xffaa00],
+                    quantity: 10
+                  });
+                  
+                  this.time.delayedCall(600, () => {
+                    particles.destroy();
+                  });
+                  
+                  // Each gladiator has a chance to die when hit
+                  if (Phaser.Math.Between(1, 2) === 1) { // 50% chance to die
+                    this.killSupportingGladiator(target);
+                    
+                    // Check if we need to spawn new gladiators
+                    this.checkAndSpawnGladiators();
+                  }
+                });
+              }
             }
           }
         }
-      },
-      loop: true
+      }
     });
     
     // Add separate roar animation with screen shake
     this.time.addEvent({
       delay: 9000, // Roar every 9 seconds (avoids sync with 4s attacks)
+      loop: true,
       callback: () => {
         if (this.monsterSprite && this.monsterSprite.active) {
-          const spriteKey = this.monsterSprite.texture.key;
+          // Roar effect - scale up with screen shake (smaller multiplier for huge sprite)
+          this.tweens.add({
+            targets: this.monsterSprite,
+            scaleX: this.monsterSprite.scaleX * 1.1,  // Reduced from 1.4 for huge sprite
+            scaleY: this.monsterSprite.scaleY * 1.1,
+            duration: 600,
+            yoyo: true,
+            ease: 'Power2'
+          });
           
-          // Play roar animation
-          if (this.anims.exists(`${spriteKey}_roar`)) {
-            this.monsterSprite.play(`${spriteKey}_roar`);
-            
-            // Enhanced screen shake for roar - more intense
-            this.cameras.main.shake(800, 0.02);
-            
-            // Play roar sound if available
-            if (this.sound.get('monster_roar')) {
-              this.sound.play('monster_roar', { volume: 0.7 });
-            }
-            
-            this.monsterSprite.once('animationcomplete', () => {
-              this.monsterSprite.play(`${spriteKey}_idle`);
-            });
-          } else {
-            // Fallback roar effect - scale up with screen shake
-            this.tweens.add({
-              targets: this.monsterSprite,
-              scaleX: this.monsterSprite.scaleX * 1.4,
-              scaleY: this.monsterSprite.scaleY * 1.4,
-              duration: 600,
-              yoyo: true,
-              ease: 'Power2'
-            });
-            
-            // Enhanced screen shake for fallback roar - more intense
-            this.cameras.main.shake(800, 0.02);
+          // Enhanced screen shake for roar
+          this.cameras.main.shake(800, 0.02);
+          
+          // Play roar sound if available
+          if (this.sound.get('monster_roar')) {
+            this.sound.play('monster_roar', { volume: 0.7 });
           }
         }
-      },
-      loop: true
+      }
     });
   }
   
@@ -672,8 +889,8 @@ export class ColosseumScene extends BaseScene {
       
       // Try to find a position that's not too close to existing gladiators
       while (!validPosition && attempts < 100) {
-        // Random angle for each gladiator, avoiding left side (monster side)
-        const angle = Phaser.Math.Between(-90, 90);
+        // Random angle for each gladiator, on left side facing right (toward monster)
+        const angle = Phaser.Math.Between(90, 270);
         const radian = (angle * Math.PI) / 180;
         
         // Random distance from center
@@ -682,8 +899,8 @@ export class ColosseumScene extends BaseScene {
         gladX = centerX + radius * Math.cos(radian) + Phaser.Math.Between(-20, 20);
         gladY = centerY + radius * Math.sin(radian) + Phaser.Math.Between(-20, 20);
         
-        // Skip if too far left (monster side)
-        if (gladX < centerX - this.scaleValue(50, width)) {
+        // Skip if too far right (monster side now)
+        if (gladX > centerX + this.scaleValue(50, width)) {
           attempts++;
           continue;
         }
@@ -709,17 +926,21 @@ export class ColosseumScene extends BaseScene {
       
       positions.push({ x: gladX, y: gladY, angle: 0, radius: 0 });
       
-      const boxSize = this.scaleValue(25, width); // Slightly smaller
-      const gladiator = this.add.rectangle(gladX, gladY, boxSize, boxSize);
-      
-      // Store the actual box size for collision detection
-      gladiator.setData('boxSize', boxSize);
-      
-      // All gladiators same bronze color since no center focus
-      gladiator.setFillStyle(0x8b7355);
-      gladiator.setStrokeStyle(2, 0xcd853f);
+      // Create gladiator sprite
+      const gladiator = this.add.sprite(gladX, gladY, 'soldier_idle', 0);
+      gladiator.setOrigin(0.5, 0.5);
+      gladiator.setScale(2.0);
+      gladiator.setFlipX(false); // Don't flip - face right toward monster
       gladiator.setAlpha(0.9);
       gladiator.setDepth(3);
+      
+      // Add color tint variation
+      const colorVariation = Phaser.Math.Between(0, 2);
+      const tints = [0xffffff, 0xffdddd, 0xddffdd];
+      gladiator.setTint(tints[colorVariation]);
+      
+      // Play idle animation
+      gladiator.play('soldier_idle');
       
       // Store original position for repositioning
       gladiator.setData('originalX', gladX - centerX);
@@ -815,6 +1036,11 @@ export class ColosseumScene extends BaseScene {
       this.colosseumState = stateData;
       console.log('After assignment - currentPot:', (this.colosseumState as any)['currentPot']);
       
+      // Store current monster type for combat scene
+      if (this.colosseumState.currentMonster?.tier?.name) {
+        window.localStorage.setItem('currentMonsterType', this.colosseumState.currentMonster.tier.name);
+      }
+      
       // Update UI via events to HTML overlay
       this.updateGameStateForUI();
       this.updateMonsterDisplay();
@@ -838,7 +1064,7 @@ export class ColosseumScene extends BaseScene {
     window.dispatchEvent(new CustomEvent('gameStateUpdate', {
       detail: {
         jackpot: jackpotValue,
-        monsterName: this.colosseumState.currentMonster?.type || 'SKELETON WARRIOR',
+        monsterName: this.colosseumState.currentMonster?.tier?.name || 'SKELETON WARRIOR',
         recentCombats: this.colosseumState.recentCombats || [],
         playerStats: {
           combats: 0, // TODO: Get from player state
@@ -854,36 +1080,13 @@ export class ColosseumScene extends BaseScene {
     if (!this.colosseumState?.currentMonster) return;
     if (!this.monsterSprite || !this.scene.isActive()) return;
 
-    const monster = this.colosseumState.currentMonster;
+    // Since we now create the correct sprite in createMonsterDisplay,
+    // this method only needs to handle updates when the monster changes
+    // (e.g., when a new monster is loaded from the backend)
     
-    // Update monster sprite using tier's sprite key
-    const spriteKey = monster.tier.sprite;
-    if (this.textures.exists(spriteKey)) {
-      this.monsterSprite.setTexture(spriteKey);
-      
-      // Set appropriate tint based on monster type
-      const tints: Record<string, number> = {
-        'skeleton-placeholder': 0xff4444,  // Red
-        'goblin-placeholder': 0x44ff44,    // Green
-        'orc-placeholder': 0xff8844,       // Orange
-        'minotaur-placeholder': 0x8844ff,  // Purple
-        'cyclops-placeholder': 0x880000    // Dark Red
-      };
-      this.monsterSprite.setTint(tints[spriteKey] || 0xff4444);
-      
-      // Scale based on difficulty
-      const scales: Record<string, number> = {
-        'skeleton-placeholder': 2.5,
-        'goblin-placeholder': 2.5,
-        'orc-placeholder': 3.0,
-        'minotaur-placeholder': 3.5,
-        'cyclops-placeholder': 4.0
-      };
-      this.monsterSprite.setScale(scales[spriteKey] || 2.5);
-    }
-    
-    // Ensure monster faces left towards gladiator
-    this.monsterSprite.setFlipX(true);
+    // For now, just emit the position for HTML overlay
+    // In the future, if we need to change monsters dynamically,
+    // we can destroy and recreate the sprite here
 
     // Emit monster position for HTML label
     this.emitSpritePositions();
@@ -1009,28 +1212,16 @@ export class ColosseumScene extends BaseScene {
   private positionMonsterDisplay(width: number, height: number) {
     if (!this.monsterSprite) return;
     
-    // Monster positioned left side - more centered vertically
-    const monsterX = this.getRelativePosition(0.22, width);
-    const monsterY = this.getRelativePosition(0.48, height);
+    // Monster positioned below the text label, centered horizontally
+    const monsterX = this.getRelativePosition(0.80, width);
+    const monsterY = this.getRelativePosition(0.45, height);
 
     // Position monster sprite - LARGER and more prominent
     this.monsterSprite.setPosition(monsterX, monsterY);
-    this.monsterSprite.setScale(this.scaleValue(5, width)); // Increased from 3.5 to 5
+    // Rectangles don't have texture property, so skip the texture check
     this.monsterSprite.setDepth(5);
     
-    // Position shadow under monster - larger shadow
-    const monsterShadow = this.getUIElement('monsterShadow') as Phaser.GameObjects.Ellipse;
-    if (monsterShadow && 'setPosition' in monsterShadow) {
-      monsterShadow.setPosition(monsterX, monsterY + this.scaleValue(100, height));
-      if ('setScale' in monsterShadow) monsterShadow.setScale(1.5, 0.5);
-      if ('setAlpha' in monsterShadow) monsterShadow.setAlpha(0.6);
-    }
-    
-    // Position aura around monster
-    const auraGlow = this.getUIElement('auraGlow') as Phaser.GameObjects.Graphics;
-    if (auraGlow && 'setPosition' in auraGlow) {
-      auraGlow.setPosition(monsterX, monsterY);
-    }
+    // Removed shadow and aura positioning
 
     // No center gladiator to position anymore
     

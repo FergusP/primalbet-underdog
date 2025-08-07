@@ -40,7 +40,7 @@ export const CombatSceneUIRoman: React.FC<CombatSceneUIRomanProps> = () => {
   const [combatState, setCombatState] = useState<CombatState>({
     playerHealth: { current: 100, max: 100 },
     monsterHealth: { current: 100, max: 100 },
-    monsterName: 'Monster',
+    monsterName: window.localStorage.getItem('currentMonsterType') || 'Loading...',
     spearCount: 2,
     maxSpears: 2,
     gameState: 'playing',
@@ -58,6 +58,8 @@ export const CombatSceneUIRoman: React.FC<CombatSceneUIRomanProps> = () => {
 
   // Event listeners for combat state
   useEffect(() => {
+    // Notify the game that the UI is ready to receive events
+    window.dispatchEvent(new CustomEvent('combat-ui-ready'));
 
     const handleCombatUpdate = (event: CustomEvent) => {
       const state = event.detail;
@@ -504,6 +506,71 @@ export const CombatSceneUIRoman: React.FC<CombatSceneUIRomanProps> = () => {
           >
             {isLoadingVault ? 'LOADING...' : '⚡ DEFINE YOUR DESTINY ⚡'}
           </RomanFightButton>
+        </div>
+      )}
+
+      {/* Defeat Screen */}
+      {combatState.gameState === 'defeat' && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            pointerEvents: 'auto',
+            zIndex: 9999,
+            textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.95), rgba(0, 0, 0, 0.95))',
+              border: `3px solid ${RomanDesignSystem.colors.crimson}`,
+              borderRadius: RomanDesignSystem.borderRadius.lg,
+              padding: '40px 60px',
+              boxShadow: '0 20px 60px rgba(139, 0, 0, 0.8)',
+            }}
+          >
+            <h2
+              style={{
+                fontSize: '48px',
+                fontWeight: 'bold',
+                color: '#ff6b6b',
+                marginBottom: '20px',
+                textShadow: '0 0 20px rgba(255, 0, 0, 0.5)',
+                letterSpacing: '4px',
+              }}
+            >
+              DEFEATED IN BATTLE
+            </h2>
+            <p
+              style={{
+                fontSize: '20px',
+                color: '#ffaaaa',
+                marginBottom: '30px',
+                fontStyle: 'italic',
+              }}
+            >
+              The {combatState.monsterName} has proven victorious...
+            </p>
+            <RomanFightButton
+              onClick={() => {
+                // Return to Colosseum via event
+                window.dispatchEvent(new CustomEvent('return-to-colosseum', {
+                  detail: {
+                    walletAddress: window.localStorage.getItem('walletAddress') || 'test-wallet'
+                  }
+                }));
+              }}
+              size="large"
+              style={{
+                background: 'linear-gradient(135deg, #8b0000, #dc143c)',
+                borderColor: '#ff6b6b',
+              }}
+            >
+              ⚔️ RETURN TO COLOSSEUM ⚔️
+            </RomanFightButton>
+          </div>
         </div>
       )}
 

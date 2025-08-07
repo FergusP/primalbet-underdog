@@ -69,7 +69,7 @@ export const RomanButton: React.FC<RomanButtonProps> = ({
         ${RomanDesignSystem.colors.goldDeep} 0%, 
         ${RomanDesignSystem.colors.goldAntique} 100%)`,
       border: `3px solid ${RomanDesignSystem.colors.goldDeep}`,
-      color: RomanDesignSystem.colors.obsidianBlack,
+      color: '#1a1a1a',
       textShadow: '1px 1px 0px rgba(255, 255, 255, 0.8)',
       hoverBackground: `linear-gradient(135deg, 
         ${RomanDesignSystem.colors.goldLeaf} 0%, 
@@ -122,8 +122,8 @@ export const RomanButton: React.FC<RomanButtonProps> = ({
     // Appearance - avoid mixing background shorthand with backgroundImage
     ...(variant === 'marble' ? {
       backgroundImage: isHovered && !disabled 
-        ? `${currentVariant.hoverBackground}, ${currentVariant.backgroundImage}`
-        : `${currentVariant.background}, ${currentVariant.backgroundImage}`,
+        ? `${currentVariant.hoverBackground}, ${(currentVariant as any).backgroundImage || ''}`
+        : `${currentVariant.background}, ${(currentVariant as any).backgroundImage || ''}`,
       backgroundColor: 'transparent',
     } : {
       background: isHovered && !disabled ? currentVariant.hoverBackground : currentVariant.background,

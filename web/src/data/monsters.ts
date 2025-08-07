@@ -1,89 +1,89 @@
 import { MonsterTier } from '../types';
 
-// Roman-themed monsters with increasing difficulty
+// Monster data matching backend exactly (5 monsters only)
 export const MONSTER_TIERS: Record<string, MonsterTier> = {
   SKELETON_WARRIOR: {
     name: 'Skeleton Warrior',
-    sprite: 'skeleton-placeholder',
-    poolRange: [1, 10],
+    sprite: 'skeleton-placeholder', // Match backend sprite key
+    poolRange: [0, 0.02], // Match backend: 0 to 0.02 SOL
     baseHealth: 80,
     attackPower: 15,
     defenseMultiplier: 0.9,
-    vaultCrackChance: 0.3, // 30% - Easy
-    entryFee: 10000000, // 0.01 SOL - flat fee for all monsters
+    vaultCrackChance: 10, // Match backend: 10 (not 0.3)
+    entryFee: 10000000, // 0.01 SOL
     animations: {
-      idle: 'skeleton-idle',
-      attack: 'skeleton-attack',
-      hurt: 'skeleton-hurt',
-      death: 'skeleton-death'
+      idle: 'skeleton_idle',
+      attack: 'skeleton_attack',
+      hurt: 'skeleton_hurt',
+      death: 'skeleton_death'
     }
   },
   
   GOBLIN_ARCHER: {
     name: 'Goblin Archer',
     sprite: 'goblin-placeholder',
-    poolRange: [5, 20],
+    poolRange: [0.02, 0.04], // Match backend: 0.02 to 0.04 SOL
     baseHealth: 100,
     attackPower: 20,
     defenseMultiplier: 0.85,
-    vaultCrackChance: 0.25, // 25%
-    entryFee: 100000000, // 0.1 SOL
+    vaultCrackChance: 90, // Match backend: 90 (not 0.25)
+    entryFee: 10000000, // 0.01 SOL
     animations: {
-      idle: 'goblin-idle',
-      attack: 'goblin-attack',
-      hurt: 'goblin-hurt',
-      death: 'goblin-death'
+      idle: 'goblin_idle',
+      attack: 'goblin_attack',
+      hurt: 'goblin_hurt',
+      death: 'goblin_death'
     }
   },
   
   ORC_GLADIATOR: {
     name: 'Orc Gladiator',
     sprite: 'orc-placeholder',
-    poolRange: [10, 50],
+    poolRange: [0.04, 0.06], // Match backend: 0.04 to 0.06 SOL
     baseHealth: 130,
     attackPower: 25,
     defenseMultiplier: 0.8,
-    vaultCrackChance: 0.2, // 20%
-    entryFee: 10000000, // 0.01 SOL - flat fee for all monsters
+    vaultCrackChance: 20, // Match backend: 20 (not 0.2)
+    entryFee: 10000000, // 0.01 SOL
     animations: {
-      idle: 'orc-idle',
-      attack: 'orc-attack', 
-      hurt: 'orc-hurt',
-      death: 'orc-death'
+      idle: 'orc_idle',
+      attack: 'orc_attack', 
+      hurt: 'orc_hurt',
+      death: 'orc_death'
     }
   },
   
   MINOTAUR_CHAMPION: {
     name: 'Minotaur Champion',
     sprite: 'minotaur-placeholder',
-    poolRange: [25, 100],
+    poolRange: [0.06, 0.08], // Match backend: 0.06 to 0.08 SOL
     baseHealth: 170,
     attackPower: 35,
     defenseMultiplier: 0.75,
-    vaultCrackChance: 0.15, // 15%
-    entryFee: 10000000, // 0.01 SOL - flat fee for all monsters
+    vaultCrackChance: 70, // Match backend: 70 (not 0.15)
+    entryFee: 10000000, // 0.01 SOL
     animations: {
-      idle: 'minotaur-idle',
-      attack: 'minotaur-attack',
-      hurt: 'minotaur-hurt',
-      death: 'minotaur-death'
+      idle: 'minotaur_idle',
+      attack: 'minotaur_attack',
+      hurt: 'minotaur_hurt',
+      death: 'minotaur_death'
     }
   },
   
   CYCLOPS_TITAN: {
     name: 'Cyclops Titan',
     sprite: 'cyclops-placeholder',
-    poolRange: [50, 200],
+    poolRange: [0.08, Infinity], // Match backend: 0.08 to Infinity
     baseHealth: 200,
     attackPower: 45,
     defenseMultiplier: 0.7,
-    vaultCrackChance: 0.1, // 10% - Hardest
-    entryFee: 10000000, // 0.01 SOL - flat fee for all monsters
+    vaultCrackChance: 90, // Match backend: 90 (not 0.1)
+    entryFee: 10000000, // 0.01 SOL
     animations: {
-      idle: 'cyclops-idle',
-      attack: 'cyclops-attack',
-      hurt: 'cyclops-hurt',
-      death: 'cyclops-death'
+      idle: 'cyclops_idle',
+      attack: 'cyclops_attack',
+      hurt: 'cyclops_hurt',
+      death: 'cyclops_death'
     }
   }
 };

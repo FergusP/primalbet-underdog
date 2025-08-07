@@ -38,6 +38,7 @@ export class CombatScene extends BaseScene {
   private monsterAttackRange: number = 80; // Monster attacks when this close
   private monsterAttackCooldown: number = 1500; // Base cooldown, adjusted per monster
   private lastMonsterAttackTime: number = 0;
+  private isMonsterAttacking: boolean = false; // Track if monster is currently attacking
 
   // Range indicators (for development)
   private meleeRangeIndicator!: Phaser.GameObjects.Graphics;
@@ -69,6 +70,15 @@ export class CombatScene extends BaseScene {
   // Store previous viewport dimensions for relative positioning
   private previousWidth: number = 0;
   private previousHeight: number = 0;
+  
+  // Player animation states
+  private isPlayerMoving: boolean = false;
+  private currentPlayerAnimation: string = 'soldier_idle';
+  
+  // Monster animation states
+  private isMonsterMoving: boolean = false;
+  private currentMonsterAnimation: string = '';
+  private monsterSpriteKey: string = 'orc';
 
   constructor() {
     super({ key: 'CombatScene' });
@@ -125,15 +135,40 @@ export class CombatScene extends BaseScene {
       return;
     }
 
-    // Dispatch monster info to UI
-    window.dispatchEvent(
-      new CustomEvent('monster-info', {
-        detail: {
-          type: this.monsterData.type,
-          baseHealth: this.monsterData.baseHealth
-        }
-      })
-    );
+    // Wait for UI to be ready before sending monster info
+    const sendMonsterInfo = () => {
+      console.log('Dispatching monster-info with:', {
+        type: this.monsterData.tier.name,
+        baseHealth: this.monsterData.baseHealth,
+        fullMonsterData: this.monsterData
+      });
+      window.dispatchEvent(
+        new CustomEvent('monster-info', {
+          detail: {
+            type: this.monsterData.tier.name, // Use tier.name for the actual monster name
+            baseHealth: this.monsterData.baseHealth
+          }
+        })
+      );
+      
+      // Also emit game state
+      this.emitGameState();
+      this.emitMonsterInfo();
+    };
+
+    // Listen for UI ready signal
+    const handleUIReady = () => {
+      window.removeEventListener('combat-ui-ready', handleUIReady);
+      sendMonsterInfo();
+    };
+    
+    window.addEventListener('combat-ui-ready', handleUIReady);
+    
+    // Fallback: send after 100ms if UI doesn't signal ready
+    this.time.delayedCall(100, () => {
+      window.removeEventListener('combat-ui-ready', handleUIReady);
+      sendMonsterInfo();
+    });
 
     const { width, height } = this.cameras.main;
     
@@ -164,46 +199,70 @@ export class CombatScene extends BaseScene {
       this.registerUIElement(`border${index}`, border);
     });
 
-    // Create player (blue circle for now)
+    // Create player with soldier sprite
     this.player = this.add.sprite(
       width * 0.2,
       height * 0.5,
-      'gladiator-placeholder'
+      'soldier_idle',
+      0
     );
-    this.player.setTint(0x4444ff);
-    this.player.setScale(2);
+    this.player.setOrigin(0.5, 0.5);
+    this.player.setScale(2.0); // Scale up the soldier sprite
+    
+    // Don't play idle animation to avoid constant movement
+    // Just show static frame 0
     
     // Initialize position tracking
     this.prevPlayerX = this.player.x;
     this.prevPlayerY = this.player.y;
 
-    // Create monster using tier's sprite
-    const spriteKey = this.monsterData.tier.sprite;
+    // Create monster using Orc sprite for all monster types
+    const monsterName = this.monsterData.tier.name.toLowerCase();
+    
+    // Determine sprite key for animations
+    let spriteKey = 'orc';
+    if (monsterName.includes('skeleton')) {
+      spriteKey = 'skeleton';
+    } else if (monsterName.includes('goblin')) {
+      spriteKey = 'goblin';
+    } else if (monsterName.includes('orc')) {
+      spriteKey = 'orc';
+    } else if (monsterName.includes('minotaur')) {
+      spriteKey = 'minotaur';
+    } else if (monsterName.includes('cyclops')) {
+      spriteKey = 'cyclops';
+    }
+    
+    // Store sprite key for animations
+    this.monsterSpriteKey = spriteKey;
+    
+    // Create monster sprite using orc texture
     this.monster = this.add.sprite(
       width * 0.7,
       height * 0.5,
-      spriteKey
+      'orc',
+      0
     );
     
-    // Set appropriate tint based on monster type
-    const tints: Record<string, number> = {
-      'skeleton-placeholder': 0xff4444,  // Red
-      'goblin-placeholder': 0x44ff44,    // Green
-      'orc-placeholder': 0xff8844,       // Orange
-      'minotaur-placeholder': 0x8844ff,  // Purple
-      'cyclops-placeholder': 0x880000    // Dark Red
-    };
-    this.monster.setTint(tints[spriteKey] || 0xff4444);
+    // Set the origin to center for proper positioning
+    this.monster.setOrigin(0.5, 0.5);
     
-    // Scale based on difficulty
+    // Scale based on monster type
     const scales: Record<string, number> = {
-      'skeleton-placeholder': 2.5,
-      'goblin-placeholder': 2.5,
-      'orc-placeholder': 3.0,
-      'minotaur-placeholder': 3.5,
-      'cyclops-placeholder': 4.0
+      'skeleton': 2.0,
+      'goblin': 1.8,
+      'orc': 2.5,
+      'minotaur': 3.0,
+      'cyclops': 3.5
     };
-    this.monster.setScale(scales[spriteKey] || 2.5);
+    this.monster.setScale(scales[spriteKey] || 2.0);
+    
+    // Play idle animation
+    const idleAnimKey = `${spriteKey}_idle`;
+    this.currentMonsterAnimation = idleAnimKey;
+    if (this.anims.exists(idleAnimKey)) {
+      this.monster.play(idleAnimKey);
+    }
     this.monster.setAlpha(1); // Ensure fully visible
     this.monster.setVisible(true);
     this.monster.setDepth(5); // Ensure proper rendering order
@@ -212,13 +271,23 @@ export class CombatScene extends BaseScene {
     this.prevMonsterX = this.monster.x;
     this.prevMonsterY = this.monster.y;
 
-    // Create vault (gold rectangle at the back)
+    // Create vault as a graphics object (gold chest)
+    const vaultGraphics = this.add.graphics();
+    vaultGraphics.fillStyle(0xffd700, 1);
+    vaultGraphics.fillRect(-40, -30, 80, 60);
+    vaultGraphics.lineStyle(3, 0x8b7500, 1);
+    vaultGraphics.strokeRect(-40, -30, 80, 60);
+    
+    // Convert to texture and create sprite
+    vaultGraphics.generateTexture('vault-texture', 80, 60);
+    vaultGraphics.destroy();
+    
     this.vault = this.add.sprite(
       width * 0.9,
       height * 0.5,
-      'vault-placeholder'
+      'vault-texture'
     );
-    this.vault.setTint(0xffd700);
+    this.vault.setOrigin(0.5, 0.5);
     this.vault.setScale(1.5);
 
     // Enable physics
@@ -362,7 +431,7 @@ export class CombatScene extends BaseScene {
     window.dispatchEvent(
       new CustomEvent('monster-info', {
         detail: {
-          type: this.monsterData?.type || 'UNKNOWN MONSTER',
+          type: this.monsterData?.tier?.name || 'UNKNOWN MONSTER', // Use tier.name
           baseHealth: this.monsterData?.baseHealth || 100,
         },
       })
@@ -520,7 +589,7 @@ export class CombatScene extends BaseScene {
     const currentTime = this.time.now;
     if (this.isSlowed && currentTime > this.slowedUntil) {
       this.isSlowed = false;
-      this.player.setTint(0x4444ff); // Reset to normal blue tint
+      this.player.clearTint(); // Clear tint for Jiwatron sprite
       // Emit updated game state when slowdown ends
       this.emitGameState();
     }
@@ -530,18 +599,51 @@ export class CombatScene extends BaseScene {
 
     // Reset velocity
     playerBody.setVelocity(0);
+    
+    let isMoving = false;
 
     // Handle input
     if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
       playerBody.setVelocityX(-speed);
+      this.player.setFlipX(true); // Face left
+      isMoving = true;
     } else if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
       playerBody.setVelocityX(speed);
+      this.player.setFlipX(false); // Face right
+      isMoving = true;
     }
 
     if (this.cursors.up.isDown || this.wasdKeys.W.isDown) {
       playerBody.setVelocityY(-speed);
+      isMoving = true;
     } else if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
       playerBody.setVelocityY(speed);
+      isMoving = true;
+    }
+    
+    // Handle soldier animations based on movement
+    if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
+      this.player.setFlipX(true); // Face left
+    } else if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
+      this.player.setFlipX(false); // Face right
+    }
+    
+    // Update animation based on movement state
+    if (isMoving) {
+      if (!this.isPlayerMoving || this.currentPlayerAnimation !== 'soldier_walk') {
+        this.isPlayerMoving = true;
+        this.currentPlayerAnimation = 'soldier_walk';
+        if (this.anims.exists('soldier_walk')) {
+          this.player.play('soldier_walk');
+        }
+      }
+    } else {
+      if (this.isPlayerMoving) {
+        this.isPlayerMoving = false;
+        this.currentPlayerAnimation = 'idle';
+        // Stop animation to show static frame
+        this.player.stop();
+      }
     }
   }
 
@@ -564,6 +666,15 @@ export class CombatScene extends BaseScene {
     if (distance <= this.monsterAttackRange && this.playerHealth > 0) {
       // Stop moving when in attack range
       monsterBody.setVelocity(0);
+      
+      // Play idle animation when stopped (but not if currently attacking)
+      if (!this.isMonsterAttacking && (!this.isMonsterMoving || this.currentMonsterAnimation !== `${this.monsterSpriteKey}_idle`)) {
+        this.isMonsterMoving = false;
+        this.currentMonsterAnimation = `${this.monsterSpriteKey}_idle`;
+        if (this.anims.exists(this.currentMonsterAnimation)) {
+          this.monster.play(this.currentMonsterAnimation);
+        }
+      }
 
       // Try to attack if cooldown is over
       const currentTime = this.time.now;
@@ -597,6 +708,22 @@ export class CombatScene extends BaseScene {
       const speedMultiplier = 1.5 - this.monsterData.tier.defenseMultiplier; // Inverse relationship
       const speed = baseSpeed * (1 + speedMultiplier);
       monsterBody.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+      
+      // Play walk animation
+      if (this.isMonsterMoving === false || this.currentMonsterAnimation !== `${this.monsterSpriteKey}_walk`) {
+        this.isMonsterMoving = true;
+        this.currentMonsterAnimation = `${this.monsterSpriteKey}_walk`;
+        if (this.anims.exists(this.currentMonsterAnimation)) {
+          this.monster.play(this.currentMonsterAnimation);
+        }
+      }
+      
+      // Face the player
+      if (this.player.x < this.monster.x) {
+        this.monster.setFlipX(true); // Face left
+      } else {
+        this.monster.setFlipX(false); // Face right
+      }
     }
   }
 
@@ -643,6 +770,27 @@ export class CombatScene extends BaseScene {
       this.monster.x,
       this.monster.y
     );
+    
+    // Play random melee attack animation (Attack01 or Attack02)
+    const attackAnim = Phaser.Math.Between(1, 2) === 1 ? 'soldier_attack01' : 'soldier_attack02';
+    if (this.anims.exists(attackAnim)) {
+      this.currentPlayerAnimation = attackAnim;
+      this.player.play(attackAnim);
+      
+      // Return to idle after attack completes
+      this.player.once('animationcomplete', () => {
+        if (!this.isPlayerMoving) {
+          this.currentPlayerAnimation = 'idle';
+          // Stop animation to show static frame
+          this.player.stop();
+        } else {
+          this.currentPlayerAnimation = 'soldier_walk';
+          if (this.anims.exists('soldier_walk')) {
+            this.player.play('soldier_walk');
+          }
+        }
+      });
+    }
 
     // Create sword swing effect
     const swingGraphics = this.add.graphics();
@@ -712,10 +860,19 @@ export class CombatScene extends BaseScene {
     });
 
     if (willHit) {
-      // Deal damage only on hit
-      this.dealMeleeDamage();
+      // Delay damage to sync with animation (6 frames at 12fps = 500ms, hit at frame 3 = ~250ms)
+      this.time.delayedCall(250, () => {
+        // Re-check distance in case monster moved
+        const currentDistance = this.getPlayerMonsterDistance();
+        if (currentDistance <= this.meleeRange * 1.2) { // Slightly more forgiving
+          this.dealMeleeDamage();
+        } else {
+          console.log('Attack missed - monster moved out of range');
+          this.showMissFeedback();
+        }
+      });
     } else {
-      // Show miss feedback
+      // Show miss feedback immediately for out-of-range attacks
       this.showMissFeedback();
     }
   }
@@ -773,21 +930,49 @@ export class CombatScene extends BaseScene {
     // Emit updated game state
     this.emitGameState();
     
-    // Flash effect on hit
-    this.monster.setTint(0xffffff);
-    this.time.delayedCall(100, () => {
-      if (this.monsterHealth > 0) {
-        this.monster.setTint(0xff4444);
-      } else {
-        this.monster.setTint(0x666666);
+    // Play hurt or death animation
+    if (this.monsterHealth <= 0) {
+      // Monster died - play death animation
+      const deathKey = `${this.monsterSpriteKey}_death`;
+      if (this.anims.exists(deathKey)) {
+        this.currentMonsterAnimation = deathKey;
+        this.monster.play(deathKey);
+        // Don't return to idle after death - stay on last frame
       }
-    });
-    
-    // Stop monster if defeated
-    if (this.monsterHealth <= 0 && this.monster.body) {
-      const monsterBody = this.monster.body as Phaser.Physics.Arcade.Body;
-      monsterBody.setVelocity(0, 0);
-      monsterBody.enable = false;
+      
+      // Fade to grey
+      this.monster.setTint(0x666666);
+      
+      // Stop monster movement
+      if (this.monster.body) {
+        const monsterBody = this.monster.body as Phaser.Physics.Arcade.Body;
+        monsterBody.setVelocity(0, 0);
+        monsterBody.enable = false;
+      }
+    } else {
+      // Monster hurt - play hurt animation
+      const hurtKey = `${this.monsterSpriteKey}_hurt`;
+      if (this.anims.exists(hurtKey)) {
+        this.currentMonsterAnimation = hurtKey;
+        this.monster.play(hurtKey);
+        
+        // Return to idle after hurt animation
+        this.monster.once('animationcomplete', () => {
+          if (this.monsterHealth > 0) {  // Only return to idle if still alive
+            this.currentMonsterAnimation = `${this.monsterSpriteKey}_idle`;
+            if (this.anims.exists(this.currentMonsterAnimation)) {
+              this.monster.play(this.currentMonsterAnimation);
+            }
+            this.isMonsterMoving = false;
+          }
+        });
+      }
+      
+      // Flash effect
+      this.monster.setTint(0xffffff);
+      this.time.delayedCall(100, () => {
+        this.monster.setTint(0xff4444);
+      });
     }
   }
 
@@ -795,15 +980,65 @@ export class CombatScene extends BaseScene {
   performMonsterAttack() {
     console.log('Monster attacking! Player health before:', this.playerHealth);
 
-    // Monster attack animation
-    this.tweens.add({
-      targets: this.monster,
-      scaleX: 3,
-      scaleY: 3,
-      duration: 150,
-      yoyo: true,
-      ease: 'Power1',
-    });
+    // Set attacking flag to prevent idle animation override
+    this.isMonsterAttacking = true;
+
+    // Stop movement during attack to make animation visible
+    if (this.monster.body) {
+      const monsterBody = this.monster.body as Phaser.Physics.Arcade.Body;
+      monsterBody.setVelocity(0, 0);
+    }
+    this.isMonsterMoving = false;
+
+    // Play attack animation (randomly choose between attack01 and attack02)
+    const attackAnim = Phaser.Math.Between(1, 2) === 1 ? 
+      `${this.monsterSpriteKey}_attack01` : `${this.monsterSpriteKey}_attack02`;
+    
+    if (this.anims.exists(attackAnim)) {
+      this.currentMonsterAnimation = attackAnim;
+      this.monster.play(attackAnim);
+      
+      // Delay damage to sync with animation impact (halfway through animation)
+      // Animation is 6 frames at 12fps = 500ms total, so impact at ~250ms
+      this.time.delayedCall(250, () => {
+        this.applyMonsterDamage();
+      });
+      
+      // Return to idle after attack
+      this.monster.once('animationcomplete', () => {
+        this.isMonsterAttacking = false; // Clear attacking flag
+        this.currentMonsterAnimation = `${this.monsterSpriteKey}_idle`;
+        if (this.anims.exists(this.currentMonsterAnimation)) {
+          this.monster.play(this.currentMonsterAnimation);
+        }
+        this.isMonsterMoving = false;
+      });
+    } else {
+      // Fallback tween animation with immediate damage
+      this.tweens.add({
+        targets: this.monster,
+        scaleX: 3,
+        scaleY: 3,
+        duration: 150,
+        yoyo: true,
+        ease: 'Power1',
+        onComplete: () => {
+          this.isMonsterAttacking = false; // Clear attacking flag after tween
+        }
+      });
+      
+      // For fallback, apply damage immediately
+      this.applyMonsterDamage();
+    }
+  }
+
+  private applyMonsterDamage() {
+    // Check if player is still in range (they might have moved away)
+    const distance = this.getPlayerMonsterDistance();
+    if (distance > this.monsterAttackRange * 1.5) {
+      console.log('Player dodged! Out of range when attack landed');
+      return; // Attack misses if player moved away
+    }
 
     // Create claw swipe effect
     const swipeGraphics = this.add.graphics();
@@ -849,11 +1084,46 @@ export class CombatScene extends BaseScene {
     // Emit updated game state
     this.emitGameState();
 
-    // Flash player red
+    // Play hurt or death animation based on health
+    if (this.playerHealth <= 0) {
+      // Player died from this attack
+      if (this.anims.exists('soldier_death')) {
+        this.currentPlayerAnimation = 'soldier_death';
+        this.player.play('soldier_death');
+        // Don't return to idle after death - stay on last frame
+      }
+    } else if (this.anims.exists('soldier_hurt')) {
+      // Player still alive, play hurt animation
+      this.currentPlayerAnimation = 'soldier_hurt';
+      this.player.play('soldier_hurt');
+      
+      // Return to idle after hurt animation completes
+      this.player.once('animationcomplete', () => {
+        if (this.playerHealth > 0) {  // Only return to idle if still alive
+          if (!this.isPlayerMoving) {
+            this.currentPlayerAnimation = 'idle';
+            // Stop animation to show static frame
+            this.player.stop();
+          } else {
+            this.currentPlayerAnimation = 'soldier_walk';
+            if (this.anims.exists('soldier_walk')) {
+              this.player.play('soldier_walk');
+            }
+          }
+        }
+      });
+    }
+    
+    // Flash red tint
     this.player.setTint(0xff0000);
-    this.time.delayedCall(100, () => {
-      this.player.setTint(0x4444ff);
+    
+    // Clear tint after a short delay
+    this.time.delayedCall(200, () => {
+      this.player.clearTint();
     });
+
+    // Check if game is over
+    this.checkGameOver();
   }
 
   throwSpear(pointer?: Phaser.Input.Pointer) {
@@ -895,6 +1165,26 @@ export class CombatScene extends BaseScene {
     if (!this.spears) {
       console.error('Spear group not initialized!');
       return;
+    }
+    
+    // Play spear throw animation (Attack03)
+    if (this.anims.exists('soldier_attack03')) {
+      this.currentPlayerAnimation = 'soldier_attack03';
+      this.player.play('soldier_attack03');
+      
+      // Return to idle after attack completes
+      this.player.once('animationcomplete', () => {
+        if (!this.isPlayerMoving) {
+          this.currentPlayerAnimation = 'idle';
+          // Stop animation to show static frame
+          this.player.stop();
+        } else {
+          this.currentPlayerAnimation = 'soldier_walk';
+          if (this.anims.exists('soldier_walk')) {
+            this.player.play('soldier_walk');
+          }
+        }
+      });
     }
 
     try {
@@ -1078,16 +1368,46 @@ export class CombatScene extends BaseScene {
           // Emit updated game state
           this.emitGameState();
 
-          // Flash effect on monster (ensure monster still exists)
+          // Play hurt or death animation (ensure monster still exists)
           if (this.monster && this.monster.active) {
-            this.monster.setTint(0xffffaa);
-            this.time.delayedCall(100, () => {
-              if (this.monster && this.monster.active) {
-                this.monster.setTint(
-                  this.monsterHealth > 0 ? 0xff4444 : 0x666666
-                );
+            if (this.monsterHealth <= 0) {
+              // Monster died - play death animation
+              const deathKey = `${this.monsterSpriteKey}_death`;
+              if (this.anims.exists(deathKey)) {
+                this.currentMonsterAnimation = deathKey;
+                this.monster.play(deathKey);
+                // Don't return to idle after death
+              } else {
+                // Fallback for placeholder sprites
+                this.monster.setTint(0x666666);
               }
-            });
+            } else {
+              // Monster hurt - play hurt animation
+              const hurtKey = `${this.monsterSpriteKey}_hurt`;
+              if (this.anims.exists(hurtKey)) {
+                this.currentMonsterAnimation = hurtKey;
+                this.monster.play(hurtKey);
+                
+                // Return to idle after hurt animation
+                this.monster.once('animationcomplete', () => {
+                  if (this.monsterHealth > 0) {  // Only return to idle if still alive
+                    this.currentMonsterAnimation = `${this.monsterSpriteKey}_idle`;
+                    if (this.anims.exists(this.currentMonsterAnimation)) {
+                      this.monster.play(this.currentMonsterAnimation);
+                    }
+                    this.isMonsterMoving = false;
+                  }
+                });
+              }
+              
+              // Flash effect
+              this.monster.setTint(0xffffaa);
+              this.time.delayedCall(100, () => {
+                if (this.monster && this.monster.active) {
+                  this.monster.setTint(0xff4444);
+                }
+              });
+            }
           }
 
           // If monster just died, stop it immediately
@@ -1184,6 +1504,15 @@ export class CombatScene extends BaseScene {
   gameOver(victory: boolean) {
     this.isGameOver = true;
     const { width, height } = this.cameras.main;
+    
+    // Play death animation if player died
+    if (!victory && this.playerHealth <= 0) {
+      if (this.anims.exists('soldier_death')) {
+        this.currentPlayerAnimation = 'soldier_death';
+        this.player.play('soldier_death');
+        // Don't return to idle after death - stay on last frame
+      }
+    }
 
     // Emit game over event
     window.dispatchEvent(
@@ -1420,7 +1749,22 @@ export class CombatScene extends BaseScene {
       })
     );
 
+    // Listen for return to colosseum event from UI
+    const handleReturn = (event: any) => {
+      window.removeEventListener('return-to-colosseum', handleReturn);
+      const walletAddress = event.detail?.walletAddress || 'test-wallet';
+      
+      // Return to Colosseum scene
+      this.scene.start('ColosseumScene', {
+        walletAddress: walletAddress,
+      });
+    };
+    
+    window.addEventListener('return-to-colosseum', handleReturn);
+
+    // Also allow clicking anywhere to return (fallback)
     this.input.once('pointerdown', () => {
+      window.removeEventListener('return-to-colosseum', handleReturn);
       this.scene.start('ColosseumScene', {
         walletAddress: 'test-wallet',
       });
