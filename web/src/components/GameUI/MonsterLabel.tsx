@@ -6,10 +6,10 @@ interface Props {
 }
 
 export const MonsterLabel: React.FC<Props> = ({ name, position }) => {
-  // Position the label above the monster, aligned with jackpot height
+  // Position the label below the platform
   const style = {
     left: '80%', // Same horizontal position as monster
-    top: '17%', // Same height as jackpot
+    top: '38%', // Below the platform in mist area
     transform: 'translateX(-50%)',
     textShadow: '3px 3px 6px rgba(0, 0, 0, 0.9)'
   };

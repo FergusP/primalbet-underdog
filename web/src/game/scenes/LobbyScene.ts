@@ -45,33 +45,29 @@ export class LobbyScene extends BaseScene {
   
   private spawnWalkingGladiator() {
     const { centerX, centerY, width, height } = this.cameras.main;
-    const centerOffsetX = this.scaleValue(100, width);
-    const spreadX = this.scaleValue(250, width);
-    const spreadY = this.scaleValue(200, height);
     
-    // Define entry points
-    const entryPoints = [
-      { x: Phaser.Math.Between(centerX - 150, centerX + 150), y: -50 },
-      { x: Phaser.Math.Between(centerX - 150, centerX + 150), y: height + 50 },
-      { x: width + 50, y: Phaser.Math.Between(100, height - 100) },
-    ];
+    // Define left platform box (lower platform) - moved more to the left
+    const leftPlatform = {
+      minX: width * 0.08,  // Moved further left
+      maxX: width * 0.30,  // Moved further left
+      minY: height * 0.42,
+      maxY: height * 0.48
+    };
     
-    const entry = Phaser.Utils.Array.GetRandom(entryPoints);
+    // Soldiers drop from top of the left platform box
+    const entryX = Phaser.Math.Between(leftPlatform.minX, leftPlatform.maxX);
+    const entry = { x: entryX, y: -50 };
     
-    // Find final position with proper spacing
-    const minDistance = this.scaleValue(60, width); // Original spacing that worked
+    // Find final position within left platform box
+    const minDistance = this.scaleValue(50, width); // Spacing between soldiers
     let validPosition = false;
     let attempts = 0;
     let finalX = 0, finalY = 0;
     
-    while (!validPosition && attempts < 200) { // More attempts for better placement
-      finalX = centerX + centerOffsetX + Phaser.Math.Between(-spreadX/2, spreadX/2);
-      finalY = centerY + Phaser.Math.Between(-spreadY/2, spreadY/2);
-      
-      if (finalX < centerX - this.scaleValue(50, width)) {
-        attempts++;
-        continue;
-      }
+    while (!validPosition && attempts < 100) {
+      // Random position within the left platform box
+      finalX = Phaser.Math.Between(leftPlatform.minX, leftPlatform.maxX);
+      finalY = Phaser.Math.Between(leftPlatform.minY, leftPlatform.maxY);
       
       validPosition = true;
       // Check distance from all gladiators (existing and incoming)
@@ -180,28 +176,28 @@ export class LobbyScene extends BaseScene {
   private addNewSupportingGladiator() {
     const { centerX, centerY, width, height } = this.cameras.main;
     
-    // Define entry points for new gladiators
-    const entryPoints = [
-      { x: Phaser.Math.Between(centerX - 150, centerX + 150), y: -50 }, // Top
-      { x: Phaser.Math.Between(centerX - 150, centerX + 150), y: height + 50 }, // Bottom
-      { x: width + 50, y: Phaser.Math.Between(100, height - 100) }, // Right
-    ];
+    // Define left platform box (lower platform) - moved more to the left
+    const leftPlatform = {
+      minX: width * 0.08,  // Moved further left
+      maxX: width * 0.30,  // Moved further left
+      minY: height * 0.42,
+      maxY: height * 0.48
+    };
     
-    const entry = Phaser.Utils.Array.GetRandom(entryPoints);
+    // Entry from top of left platform box
+    const entryX = Phaser.Math.Between(leftPlatform.minX, leftPlatform.maxX);
+    const entry = { x: entryX, y: -50 };
     
-    // Find final position in the circle with proper spacing
-    const minDistance = this.scaleValue(60, width);
+    // Find final position within left platform box
+    const minDistance = this.scaleValue(50, width);
     let validPosition = false;
     let attempts = 0;
-    let finalX = 0, finalY = 0, angle = 0, radius = 0;
+    let finalX = 0, finalY = 0;
     
     while (!validPosition && attempts < 50) {
-      angle = Phaser.Math.Between(90, 270);
-      const radian = (angle * Math.PI) / 180;
-      radius = Phaser.Math.Between(this.scaleValue(120, width), this.scaleValue(200, width));
-      
-      finalX = centerX + radius * Math.cos(radian);
-      finalY = centerY + radius * Math.sin(radian);
+      // Random position within the left platform box
+      finalX = Phaser.Math.Between(leftPlatform.minX, leftPlatform.maxX);
+      finalY = Phaser.Math.Between(leftPlatform.minY, leftPlatform.maxY);
       
       // Check distance from existing gladiators
       validPosition = true;
@@ -301,19 +297,19 @@ export class LobbyScene extends BaseScene {
   }
   
   private bringNextGladiator() {
-    const { centerX, centerY, width, height } = this.cameras.main;
+    const { width, height } = this.cameras.main;
     
-    // Define possible entry points with more variation
-    const entryPoints = [
-      { x: Phaser.Math.Between(centerX - 100, centerX + 100), y: -50, name: 'top' },
-      { x: Phaser.Math.Between(centerX - 100, centerX + 100), y: height + 50, name: 'bottom' },
-      { x: width + 50, y: Phaser.Math.Between(50, height - 50), name: 'right' },
-      { x: Phaser.Math.Between(centerX + 50, width - 50), y: -50, name: 'topRight' },
-      { x: Phaser.Math.Between(centerX + 50, width - 50), y: height + 50, name: 'bottomRight' },
-    ];
+    // Define left platform box (lower platform) - moved more to the left
+    const leftPlatform = {
+      minX: width * 0.08,  // Moved further left
+      maxX: width * 0.30,  // Moved further left
+      minY: height * 0.42,
+      maxY: height * 0.48
+    };
     
-    // Randomly select entry point
-    const entryPoint = entryPoints[Math.floor(Math.random() * entryPoints.length)];
+    // Entry from top of left platform box
+    const entryX = Phaser.Math.Between(leftPlatform.minX, leftPlatform.maxX);
+    const entryPoint = { x: entryX, y: -50, name: 'top' };
     
     // Create new current gladiator sprite at entry point
     this.currentGladiator = this.add.sprite(entryPoint.x, entryPoint.y, 'soldier_idle', 0);
@@ -337,11 +333,14 @@ export class LobbyScene extends BaseScene {
       duration: 500
     });
     
-    // Animate gladiator walking to center
+    // Animate gladiator dropping to platform
+    const targetX = Phaser.Math.Between(leftPlatform.minX, leftPlatform.maxX);
+    const targetY = Phaser.Math.Between(leftPlatform.minY, leftPlatform.maxY);
+    
     this.tweens.add({
       targets: this.currentGladiator,
-      x: centerX,
-      y: centerY,
+      x: targetX,
+      y: targetY,
       duration: 1500,
       ease: 'Power2',
       onStart: () => {
@@ -422,8 +421,8 @@ export class LobbyScene extends BaseScene {
                 if (gladiator && gladiator.active) {
                   gladiator.setFrame(6); // Arrow release
                   
-                  // Create arrow sprite at release
-                  const arrow = this.add.sprite(
+                  // Create physics arrow sprite at release
+                  const arrow = this.physics.add.sprite(
                     gladiator.x + 10, // Slightly forward from gladiator
                     gladiator.y - 10, // Start at bow height
                     'soldier_arrow'
@@ -432,21 +431,43 @@ export class LobbyScene extends BaseScene {
                   arrow.setScale(0.8); // Larger arrow for better visibility
                   arrow.setDepth(2);
                   
-                  // Calculate angle to monster and rotate arrow
-                  const angle = Phaser.Math.Angle.Between(
-                    gladiator.x, gladiator.y,
-                    this.monsterSprite.x, this.monsterSprite.y
-                  );
-                  arrow.setRotation(angle);
+                  // Use actual monster sprite position
+                  const actualMonsterX = this.monsterSprite.x;
+                  const actualMonsterY = this.monsterSprite.y;
                   
-                  // Animate arrow flying toward monster - faster than spear
-                  this.tweens.add({
-                    targets: arrow,
-                    x: this.monsterSprite.x + Phaser.Math.Between(-30, 30),
-                    y: this.monsterSprite.y + Phaser.Math.Between(-30, 30),
-                    duration: 600, // Faster for arrow
-                    ease: 'Cubic.easeOut',
-                    onComplete: () => {
+                  // Calculate distance and time to target
+                  const dx = actualMonsterX - arrow.x;
+                  const dy = actualMonsterY - arrow.y;
+                  const distance = Math.sqrt(dx * dx + dy * dy);
+                  const flightTime = distance / 600; // Adjust speed as needed
+                  
+                  // Calculate velocity needed to reach target with gravity
+                  const gravity = 800; // Gravity strength
+                  const velocityX = dx / flightTime;
+                  const velocityY = (dy / flightTime) - (0.5 * gravity * flightTime);
+                  
+                  // Set arrow physics properties
+                  arrow.body.setGravityY(gravity);
+                  arrow.setVelocity(velocityX, velocityY);
+                  
+                  // Update arrow rotation during flight
+                  let rotationTimer = this.time.addEvent({
+                    delay: 16, // Update every frame (~60fps)
+                    loop: true,
+                    callback: () => {
+                      if (arrow && arrow.active) {
+                        // Point arrow in direction of movement
+                        const vx = arrow.body.velocity.x;
+                        const vy = arrow.body.velocity.y;
+                        arrow.setRotation(Math.atan2(vy, vx));
+                      }
+                    }
+                  });
+                  
+                  // Destroy arrow after flight time
+                  this.time.delayedCall(flightTime * 1000, () => {
+                    if (rotationTimer) rotationTimer.destroy();
+                    if (arrow && arrow.active) {
                   // Create small impact effect
                   this.tweens.add({
                     targets: arrow,
@@ -459,50 +480,94 @@ export class LobbyScene extends BaseScene {
               
               // Play hurt animation and effect
               if (this.monsterSprite) {
-                // Play hurt animation
-                const monsterName = this.colosseumState.currentMonster?.tier.name.toLowerCase() || '';
-                let spriteKey = 'orc';
-                
-                if (monsterName.includes('werebear')) spriteKey = 'werebear';
-                else if (monsterName.includes('werewolf')) spriteKey = 'werewolf';
-                else if (monsterName.includes('orc rider')) spriteKey = 'orc_rider';
-                else if (monsterName.includes('elite orc')) spriteKey = 'elite_orc';
-                else if (monsterName.includes('armored orc')) spriteKey = 'armored_orc';
-                else if (monsterName.includes('orc')) spriteKey = 'orc';
-                
-                const hurtKey = `${spriteKey}_hurt`;
-                if (this.anims.exists(hurtKey)) {
-                  // Only play hurt if not already playing it
-                  if (!this.monsterSprite.anims.isPlaying || this.monsterSprite.anims.currentAnim?.key !== hurtKey) {
-                    this.monsterSprite.play(hurtKey);
-                    
-                    // Return to idle after hurt animation
-                    this.monsterSprite.once('animationcomplete', () => {
-                      const idleKey = `${spriteKey}_idle`;
-                      if (this.anims.exists(idleKey)) {
-                        this.monsterSprite.play(idleKey);
-                      }
-                    });
+                // Only allow monster to be hurt if it's not jumping (check if tweening)
+                if (!this.tweens.isTweening(this.monsterSprite)) {
+                  // Play hurt animation
+                  const monsterName = this.colosseumState.currentMonster?.tier.name.toLowerCase() || '';
+                  let spriteKey = 'orc';
+                  
+                  if (monsterName.includes('werebear')) spriteKey = 'werebear';
+                  else if (monsterName.includes('werewolf')) spriteKey = 'werewolf';
+                  else if (monsterName.includes('orc rider')) spriteKey = 'orc_rider';
+                  else if (monsterName.includes('elite orc')) spriteKey = 'elite_orc';
+                  else if (monsterName.includes('armored orc')) spriteKey = 'armored_orc';
+                  else if (monsterName.includes('orc')) spriteKey = 'orc';
+                  
+                  const hurtKey = `${spriteKey}_hurt`;
+                  if (this.anims.exists(hurtKey)) {
+                    // Only play hurt if not already playing it
+                    if (!this.monsterSprite.anims.isPlaying || this.monsterSprite.anims.currentAnim?.key !== hurtKey) {
+                      this.monsterSprite.play(hurtKey);
+                      
+                      // Flash red tint during hurt
+                      this.monsterSprite.setTint(0xff0000);
+                      this.time.delayedCall(200, () => {
+                        this.monsterSprite.clearTint();
+                      });
+                      
+                      // After hurt, randomly decide to roar and/or counter-attack
+                      this.monsterSprite.once('animationcomplete', () => {
+                        // 50% chance to roar before counter-attack
+                        const shouldRoar = Phaser.Math.Between(1, 2) === 1;
+                        
+                        if (shouldRoar) {
+                          console.log('Playing roar effect');
+                          
+                          // Store original scale
+                          const origScaleX = this.monsterSprite.scaleX;
+                          const origScaleY = this.monsterSprite.scaleY;
+                          
+                          // Stay in idle animation during roar
+                          const idleKey = `${spriteKey}_idle`;
+                          if (this.anims.exists(idleKey)) {
+                            this.monsterSprite.play(idleKey);
+                          }
+                          
+                          // Roar effect: scale up with screen shake
+                          this.tweens.add({
+                            targets: this.monsterSprite,
+                            scaleX: origScaleX * 1.3,
+                            scaleY: origScaleY * 1.3,
+                            duration: 400,
+                            yoyo: true,
+                            ease: 'Power2',
+                            onStart: () => {
+                              // Screen shake during roar
+                              this.cameras.main.shake(600, 0.015);
+                            },
+                            onComplete: () => {
+                              console.log('Roar effect completed');
+                              
+                              // Ensure scale is restored
+                              this.monsterSprite.setScale(origScaleX, origScaleY);
+                              
+                              // Small delay before counter-attack for better visibility
+                              this.time.delayedCall(300, () => {
+                                // Trigger counter-attack jump
+                                this.triggerMonsterCounterAttack(spriteKey);
+                              });
+                            }
+                          });
+                        } else {
+                          // No roar, just go to idle then counter-attack
+                          const idleKey = `${spriteKey}_idle`;
+                          if (this.anims.exists(idleKey)) {
+                            this.monsterSprite.play(idleKey);
+                          }
+                          
+                          // Small delay before counter-attack
+                          this.time.delayedCall(500, () => {
+                            // Trigger counter-attack jump
+                            this.triggerMonsterCounterAttack(spriteKey);
+                          });
+                        }
+                      });
+                    }
                   }
                 }
-                
-                // Flash red tint
-                this.monsterSprite.setTint(0xff0000);
-                this.time.delayedCall(200, () => {
-                  this.monsterSprite.clearTint();
-                });
               }
             }
           });
-              
-              // Add slight arc to arrow trajectory
-              this.tweens.add({
-                targets: arrow,
-                y: arrow.y - 15,
-                duration: 400,
-                yoyo: true,
-                ease: 'Sine.easeOut'
-              });
                 }
               });
               
@@ -587,13 +652,13 @@ export class LobbyScene extends BaseScene {
     bgRect.setDepth(-1);
     this.registerUIElement('bgRect', bgRect);
     
-    // Load the colosseum background image
+    // Load the jungle platforms background image
     this.bgImage = this.add.image(width * 0.5, height * 0.5, 'colosseum-bg');
     
-    // Calculate aspect ratio to cover the screen properly with extra margin
-    const scaleX = (width * 1.1) / this.bgImage.width;
-    const scaleY = (height * 1.1) / this.bgImage.height;
-    const scale = Math.max(scaleX, scaleY); // Use max to ensure it covers the entire screen
+    // Calculate aspect ratio to properly fit the platforms
+    const scaleX = width / this.bgImage.width;
+    const scaleY = height / this.bgImage.height;
+    const scale = Math.max(scaleX, scaleY); // Ensure full coverage
     
     this.bgImage.setScale(scale);
     this.bgImage.setAlpha(0.35); // Much more transparent to focus on sprites
@@ -682,8 +747,8 @@ export class LobbyScene extends BaseScene {
       // Create monster with Orc sprite
       if (actualSpriteKey) {
         // Position monster to the left, further from soldiers
-        const monsterX = this.getRelativePosition(0.80, width);  // Further right
-        const monsterY = this.getRelativePosition(0.45, height);
+        const monsterX = this.getRelativePosition(0.80, width);  // Match text X position
+        const monsterY = this.getRelativePosition(0.20, height);  // Slightly lower on platform
         
         // Create the monster sprite using the correct texture
         const idleTexture = `${actualSpriteKey}_idle`;
@@ -703,6 +768,9 @@ export class LobbyScene extends BaseScene {
         this.monsterSprite.setScale(this.scaleValue(scales[actualSpriteKey] || 6.0, width));
         this.monsterSprite.setOrigin(0.5, 0.5);
         this.monsterSprite.setDepth(5);
+        this.monsterSprite.setAlpha(1.0); // Ensure full opacity
+        this.monsterSprite.setBlendMode(Phaser.BlendModes.NORMAL); // Ensure normal blend mode
+        this.monsterSprite.clearTint(); // Clear any tint
         
         // Start with idle animation
         const idleKey = `${actualSpriteKey}_idle`;
@@ -740,167 +808,186 @@ export class LobbyScene extends BaseScene {
       this.emitSpritePositions();
     });
     
-    // Add periodic attack animation
-    this.time.addEvent({
-      delay: 4000, // Attack every 4 seconds
-      loop: true,
-      callback: () => {
-        if (this.monsterSprite && this.monsterSprite.active) {
-          // Play random attack animation (Attack01 or Attack02)
-          const monsterName = this.colosseumState.currentMonster?.tier.name.toLowerCase() || '';
-          let spriteKey = 'orc';
-          
-          if (monsterName.includes('werebear')) spriteKey = 'werebear';
-          else if (monsterName.includes('werewolf')) spriteKey = 'werewolf';
-          else if (monsterName.includes('orc rider')) spriteKey = 'orc_rider';
-          else if (monsterName.includes('elite orc')) spriteKey = 'elite_orc';
-          else if (monsterName.includes('armored orc')) spriteKey = 'armored_orc';
-          else if (monsterName.includes('orc')) spriteKey = 'orc';
-          
-          // Randomly choose between attack01 and attack02
-          const attackAnim = Phaser.Math.Between(1, 2) === 1 ? 
-            `${spriteKey}_attack01` : `${spriteKey}_attack02`;
-          
-          if (this.anims.exists(attackAnim)) {
-            // Only play if not already playing an animation
-            if (!this.monsterSprite.anims.isPlaying || this.monsterSprite.anims.currentAnim?.key === `${spriteKey}_idle`) {
-              console.log('Monster attack triggered, current position:', this.monsterSprite.x);
-              this.monsterSprite.play(attackAnim);
+    // Monster now only attacks as counter-attack after being hit
+  }
+  
+  private triggerMonsterCounterAttack(spriteKey: string) {
+    // Check if monster is not already attacking (not in a tween)
+    if (!this.tweens.isTweening(this.monsterSprite)) {
+      console.log('Monster counter-attack triggered');
+      
+      // Store original position and scale for return jump
+      const originalX = this.monsterSprite.x;
+      const originalY = this.monsterSprite.y;
+      const originalScaleX = this.monsterSprite.scaleX;
+      const originalScaleY = this.monsterSprite.scaleY;
               
-              // Return to idle after attack animation
-              this.monsterSprite.once('animationcomplete', () => {
-                const idleKey = `${spriteKey}_idle`;
-                if (this.anims.exists(idleKey)) {
-                  this.monsterSprite.play(idleKey);
-                }
-              });
-              
-              // Add lunge animation for visual effect
-              const originalX = this.monsterSprite.x;
-              this.tweens.add({
-                targets: this.monsterSprite,
-                x: originalX - 30,  // Lunge left toward soldiers
-                duration: 300,
-                yoyo: true,
-                ease: 'Power2',
-                onComplete: () => {
-                  // Ensure sprite returns to exact original position
-                  this.monsterSprite.x = originalX;
-                }
-              });
-              
-              // ONLY show attack indicators when animation actually plays
-              // Show attack line
-              const attackLine = this.getUIElement('attackLine') as Phaser.GameObjects.Graphics;
-              if (attackLine && 'setAlpha' in attackLine) {
-                attackLine.setAlpha(1);
-                this.tweens.add({
-                  targets: attackLine,
-                  alpha: 0,
-                  duration: 600,
-                  ease: 'Power2'
-                });
-              }
-              
-              // Hit a random gladiator from the group
+              // Pick a target before jumping
               const allGladiators = this.gladiatorGroup.filter(g => g && g.active);
+              if (allGladiators.length === 0) return; // No targets
               
-              if (allGladiators.length > 0) {
-                // Pick random target
-                const target = Phaser.Utils.Array.GetRandom(allGladiators);
-                
-                // Update attack line to point to target
-                const attackLineTarget = this.getUIElement('attackLine') as Phaser.GameObjects.Graphics;
-                if (attackLineTarget && target) {
-                  attackLineTarget.clear();
-                  attackLineTarget.lineStyle(4, 0xff0000, 0.8);
-                  attackLineTarget.beginPath();
-                  attackLineTarget.moveTo(this.monsterSprite.x + this.scaleValue(50, this.cameras.main.width), this.monsterSprite.y);
-                  attackLineTarget.lineTo(target.x, target.y);
-                  attackLineTarget.strokePath();
-                }
-                
-                // Flash red on hit - delay to sync with animation
-                this.time.delayedCall(150, () => {
-                  // Flash red tint on hit and play hurt animation
-                  if (target && target.play) {
-                    // Play hurt animation
-                    target.play('soldier_hurt');
-                    
-                    // Flash red tint
-                    target.setTint(0xff0000);
-                    this.time.delayedCall(200, () => {
-                      // Return to original tint
-                      target.clearTint();
-                    });
+              const target = Phaser.Utils.Array.GetRandom(allGladiators);
+              
+              // Calculate landing position near the target
+              const landingX = target.x + 50; // Land slightly to the right of target
+              const landingY = target.y; // Same height as target
+              
+              // Jump to soldier platform with arc
+              this.tweens.chain({
+                targets: this.monsterSprite,
+                tweens: [
+                  {
+                    // Jump up and forward
+                    x: landingX,
+                    y: landingY - 100, // Arc peak
+                    scaleX: originalScaleX * 1.2,
+                    scaleY: originalScaleY * 1.2,
+                    duration: 400,
+                    ease: 'Sine.easeOut'
+                  },
+                  {
+                    // Land at target
+                    y: landingY,
+                    scaleX: originalScaleX,
+                    scaleY: originalScaleY,
+                    duration: 200,
+                    ease: 'Sine.easeIn',
+                    onComplete: () => {
+                      // Now on platform - play a random attack animation
+                      const attackNum = Phaser.Math.Between(1, 3);
+                      const meleeAnim = `${spriteKey}_attack0${attackNum}`;
+                      console.log('Attempting to play attack animation:', meleeAnim, 'exists:', this.anims.exists(meleeAnim));
+                      
+                      // Try the selected animation, fallback to attack01, then idle
+                      let animToPlay = meleeAnim;
+                      if (!this.anims.exists(meleeAnim)) {
+                        console.warn(`Animation ${meleeAnim} doesn't exist, trying attack01`);
+                        animToPlay = `${spriteKey}_attack01`;
+                        if (!this.anims.exists(animToPlay)) {
+                          console.warn(`Attack01 doesn't exist either, using idle`);
+                          animToPlay = `${spriteKey}_idle`;
+                        }
+                      }
+                      
+                      if (this.anims.exists(animToPlay)) {
+                        this.monsterSprite.play(animToPlay);
+                        
+                        // Sync hurt effect with attack animation hit frame
+                        this.time.delayedCall(300, () => {
+                          // Only apply hurt if monster is still near the target (on platform)
+                          const distanceToTarget = Phaser.Math.Distance.Between(
+                            this.monsterSprite.x, this.monsterSprite.y,
+                            target.x, target.y
+                          );
+                          
+                          if (target && target.active && distanceToTarget < 100) {
+                            // Play hurt animation on target
+                            target.play('soldier_hurt');
+                            target.setTint(0xff0000);
+                            this.time.delayedCall(200, () => {
+                              target.clearTint();
+                            });
+                            
+                            // Damage particles at impact point
+                            const particles = this.add.particles(target.x, target.y, 'spark-placeholder', {
+                              lifespan: 500,
+                              speed: { min: 100, max: 200 },
+                              scale: { start: 0.5, end: 0 },
+                              blendMode: 'ADD',
+                              tint: [0xff0000, 0xff6600, 0xffaa00],
+                              quantity: 10
+                            });
+                            
+                            this.time.delayedCall(600, () => {
+                              particles.destroy();
+                            });
+                            
+                            // Chance to kill the target
+                            if (Phaser.Math.Between(1, 2) === 1) {
+                              this.killSupportingGladiator(target);
+                              this.checkAndSpawnGladiators();
+                            }
+                          }
+                        });
+                        
+                        // Wait for attack animation to complete before moving on
+                        this.monsterSprite.once('animationcomplete', () => {
+                          // Return to idle after attack
+                          const idleKey = `${spriteKey}_idle`;
+                          if (this.anims.exists(idleKey)) {
+                            this.monsterSprite.play(idleKey);
+                          }
+                        });
+                      } else {
+                        console.error('No valid animation found for monster attack!', spriteKey);
+                      }
+                    }
+                  },
+                  {
+                    // Pause to let attack animation complete
+                    x: landingX,
+                    y: landingY,
+                    duration: 1000, // Wait for attack to finish
+                    ease: 'Linear'
+                  },
+                  {
+                    // Jump back - first leap up
+                    x: (originalX + landingX) / 2, // Midpoint
+                    y: Math.min(originalY, landingY) - 150, // High arc for return
+                    scaleX: originalScaleX * 1.1,
+                    scaleY: originalScaleY * 1.1,
+                    duration: 400,
+                    ease: 'Sine.easeOut',
+                    onStart: () => {
+                      // Return to idle animation when jumping back
+                      const idleKey = `${spriteKey}_idle`;
+                      if (this.anims.exists(idleKey)) {
+                        this.monsterSprite.play(idleKey);
+                      }
+                    }
+                  },
+                  {
+                    // Land back at original position
+                    x: originalX,
+                    y: originalY,
+                    scaleX: originalScaleX,
+                    scaleY: originalScaleY,
+                    duration: 300,
+                    ease: 'Sine.easeIn',
+                    onComplete: () => {
+                      // Ensure exact original position and scale
+                      this.monsterSprite.x = originalX;
+                      this.monsterSprite.y = originalY;
+                      this.monsterSprite.setScale(originalScaleX, originalScaleY);
+                      
+                      // Ensure monster returns to idle state for next attack
+                      const idleKey = `${spriteKey}_idle`;
+                      if (this.anims.exists(idleKey) && this.monsterSprite.anims.currentAnim?.key !== idleKey) {
+                        this.monsterSprite.play(idleKey);
+                      }
+                    }
                   }
-                  
-                  // Create impact particles
-                  const particles = this.add.particles(target.x, target.y, 'spark-placeholder', {
-                    lifespan: 500,
-                    speed: { min: 100, max: 200 },
-                    scale: { start: 0.5, end: 0 },
-                    blendMode: 'ADD',
-                    tint: [0xff0000, 0xff6600, 0xffaa00],
-                    quantity: 10
-                  });
-                  
-                  this.time.delayedCall(600, () => {
-                    particles.destroy();
-                  });
-                  
-                  // Each gladiator has a chance to die when hit
-                  if (Phaser.Math.Between(1, 2) === 1) { // 50% chance to die
-                    this.killSupportingGladiator(target);
-                    
-                    // Check if we need to spawn new gladiators
-                    this.checkAndSpawnGladiators();
-                  }
-                });
-              }
-            }
-          }
-        }
-      }
-    });
-    
-    // Add separate roar animation with screen shake
-    this.time.addEvent({
-      delay: 9000, // Roar every 9 seconds (avoids sync with 4s attacks)
-      loop: true,
-      callback: () => {
-        if (this.monsterSprite && this.monsterSprite.active) {
-          // Roar effect - scale up with screen shake (smaller multiplier for huge sprite)
-          this.tweens.add({
-            targets: this.monsterSprite,
-            scaleX: this.monsterSprite.scaleX * 1.1,  // Reduced from 1.4 for huge sprite
-            scaleY: this.monsterSprite.scaleY * 1.1,
-            duration: 600,
-            yoyo: true,
-            ease: 'Power2'
-          });
-          
-          // Enhanced screen shake for roar
-          this.cameras.main.shake(800, 0.02);
-          
-          // Play roar sound if available
-          if (this.sound.get('monster_roar')) {
-            this.sound.play('monster_roar', { volume: 0.7 });
-          }
-        }
-      }
-    });
+                ]
+              });
+              
+              // Remove attack line since monster jumps to melee range
+    }
   }
   
   private createDefeatedGladiators(width: number, height: number) {
     const { centerX, centerY } = this.cameras.main;
     
-    // Create gladiator group spread out like scattered dots
+    // Define left platform box (lower platform) - moved more to the left
+    const leftPlatform = {
+      minX: width * 0.08,  // Moved further left
+      maxX: width * 0.30,  // Moved further left
+      minY: height * 0.42,
+      maxY: height * 0.48
+    };
+    
+    // Create gladiator group within left platform
     const gladiatorCount = 15; // Fixed at 15 gladiators
-    const centerOffsetX = this.scaleValue(100, width); // Shift group to the right
-    const spreadX = this.scaleValue(300, width); // Horizontal spread
-    const spreadY = this.scaleValue(250, height); // Vertical spread
-    const minDistance = this.scaleValue(60, width); // Original spacing that worked
+    const minDistance = this.scaleValue(40, width); // Tighter spacing for platform
     
     const positions: { x: number, y: number, angle: number, radius: number }[] = [];
     
@@ -911,21 +998,13 @@ export class LobbyScene extends BaseScene {
       
       // Try to find a position that's not too close to existing gladiators
       while (!validPosition && attempts < 100) {
-        // Random angle for each gladiator, on left side facing right (toward monster)
-        const angle = Phaser.Math.Between(90, 270);
-        const radian = (angle * Math.PI) / 180;
+        // Random position within the left platform box
+        gladX = Phaser.Math.Between(leftPlatform.minX, leftPlatform.maxX);
+        gladY = Phaser.Math.Between(leftPlatform.minY, leftPlatform.maxY);
         
-        // Random distance from center
-        const radius = Phaser.Math.Between(this.scaleValue(120, width), this.scaleValue(200, width));
-        
-        gladX = centerX + radius * Math.cos(radian) + Phaser.Math.Between(-20, 20);
-        gladY = centerY + radius * Math.sin(radian) + Phaser.Math.Between(-20, 20);
-        
-        // Skip if too far right (monster side now)
-        if (gladX > centerX + this.scaleValue(50, width)) {
-          attempts++;
-          continue;
-        }
+        // For tracking (not used in positioning anymore)
+        angle = 0;
+        radius = 0;
         
         // Check distance from other gladiators
         validPosition = true;
@@ -1257,9 +1336,9 @@ export class LobbyScene extends BaseScene {
   private positionMonsterDisplay(width: number, height: number) {
     if (!this.monsterSprite) return;
     
-    // Monster positioned below the text label, centered horizontally
+    // Monster positioned on the elevated right platform
     const monsterX = this.getRelativePosition(0.80, width);
-    const monsterY = this.getRelativePosition(0.45, height);
+    const monsterY = this.getRelativePosition(0.20, height);
 
     // Position monster sprite - LARGER and more prominent
     this.monsterSprite.setPosition(monsterX, monsterY);
