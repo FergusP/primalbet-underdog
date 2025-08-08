@@ -10,7 +10,7 @@ export class PreloadScene extends Scene {
     // Load assets without showing loading screen
     // UI elements
     this.load.image('arena-bg', '/assets/backgrounds/arena.png');
-    this.load.image('colosseum-bg', '/assets/backgrounds/Load Image 1.jpg');
+    this.load.image('colosseum-bg', '/assets/backgrounds/lobby.png');
     this.load.image('ui_panel', '/assets/ui/panel.png');
     this.load.image('gold_coin', '/assets/particles/coin.png');
     this.load.image('vault_closed', '/assets/sprites/vault_closed.png');
@@ -62,8 +62,11 @@ export class PreloadScene extends Scene {
       frameHeight: 100
     });
     
-    // Arrow sprite for soldier ranged attacks
-    this.load.image('soldier_arrow', '/assets/sprites/soldier/Arrow01.png');
+    // Arrow sprites for soldier ranged attacks (projectile variety)
+    this.load.image('soldier_arrow', '/assets/sprites/soldier/Arrow01.png'); // Standard yellow arrow
+    this.load.image('arrow_yellow', '/assets/sprites/soldier/Arrow01.png');
+    this.load.image('arrow_blue', '/assets/sprites/soldier/Arrow02(100x100).png'); // Piercing blue arrow
+    this.load.image('arrow_red', '/assets/sprites/soldier/Arrow03(100x100).png'); // Explosive red arrow
     
     // Load all monster sprites
     // ORC (Tier 1)
@@ -246,6 +249,50 @@ export class PreloadScene extends Scene {
       frameHeight: 100
     });
     this.load.spritesheet('werebear_death', '/assets/sprites/werebear/Werebear-Death.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    
+    // SKELETON (Additional enemy type for crowded battles)
+    this.load.spritesheet('skeleton_idle', '/assets/sprites/skeleton/Skeleton-Idle.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('skeleton_walk', '/assets/sprites/skeleton/Skeleton-Walk.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('skeleton_attack01', '/assets/sprites/skeleton/Skeleton-Attack01.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('skeleton_attack02', '/assets/sprites/skeleton/Skeleton-Attack02.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('skeleton_hurt', '/assets/sprites/skeleton/Skeleton-Hurt.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('skeleton_death', '/assets/sprites/skeleton/Skeleton-Death.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    
+    // SLIME (Healing pickups when killed)
+    this.load.spritesheet('slime_idle', '/assets/sprites/slime/Slime-Idle.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('slime_walk', '/assets/sprites/slime/Slime-Walk.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('slime_hurt', '/assets/sprites/slime/Slime-Hurt.png', {
+      frameWidth: 100,
+      frameHeight: 100
+    });
+    this.load.spritesheet('slime_death', '/assets/sprites/slime/Slime-Death.png', {
       frameWidth: 100,
       frameHeight: 100
     });
@@ -434,7 +481,7 @@ export class PreloadScene extends Scene {
     this.createMonsterAnimation('armored_orc', 'idle', 0, 5, 8, -1);
     this.createMonsterAnimation('armored_orc', 'walk', 0, 7, 10, -1);
     this.createMonsterAnimation('armored_orc', 'attack01', 0, 5, 12, 0);
-    this.createMonsterAnimation('armored_orc', 'attack02', 0, 5, 12, 0);
+    this.createMonsterAnimation('armored_orc', 'attack02', 0, 7, 10, 0);  // 8 frames
     this.createMonsterAnimation('armored_orc', 'attack03', 0, 5, 12, 0);
     this.createMonsterAnimation('armored_orc', 'block', 0, 3, 10, 0);
     this.createMonsterAnimation('armored_orc', 'hurt', 0, 3, 10, 0);
@@ -444,7 +491,7 @@ export class PreloadScene extends Scene {
     this.createMonsterAnimation('elite_orc', 'idle', 0, 5, 8, -1);
     this.createMonsterAnimation('elite_orc', 'walk', 0, 7, 10, -1);
     this.createMonsterAnimation('elite_orc', 'attack01', 0, 5, 12, 0);
-    this.createMonsterAnimation('elite_orc', 'attack02', 0, 5, 12, 0);
+    this.createMonsterAnimation('elite_orc', 'attack02', 0, 10, 10, 0);  // 11 frames
     this.createMonsterAnimation('elite_orc', 'attack03', 0, 5, 12, 0);
     this.createMonsterAnimation('elite_orc', 'hurt', 0, 3, 10, 0);
     this.createMonsterAnimation('elite_orc', 'death', 0, 3, 8, 0);
@@ -453,7 +500,7 @@ export class PreloadScene extends Scene {
     this.createMonsterAnimation('orc_rider', 'idle', 0, 5, 8, -1);
     this.createMonsterAnimation('orc_rider', 'walk', 0, 7, 10, -1);
     this.createMonsterAnimation('orc_rider', 'attack01', 0, 5, 12, 0);
-    this.createMonsterAnimation('orc_rider', 'attack02', 0, 5, 12, 0);
+    this.createMonsterAnimation('orc_rider', 'attack02', 0, 8, 10, 0);  // 9 frames
     this.createMonsterAnimation('orc_rider', 'attack03', 0, 5, 12, 0);
     this.createMonsterAnimation('orc_rider', 'block', 0, 3, 10, 0);
     this.createMonsterAnimation('orc_rider', 'hurt', 0, 3, 10, 0);
@@ -463,7 +510,7 @@ export class PreloadScene extends Scene {
     this.createMonsterAnimation('werewolf', 'idle', 0, 5, 8, -1);
     this.createMonsterAnimation('werewolf', 'walk', 0, 7, 10, -1);
     this.createMonsterAnimation('werewolf', 'attack01', 0, 5, 12, 0);
-    this.createMonsterAnimation('werewolf', 'attack02', 0, 5, 12, 0);
+    this.createMonsterAnimation('werewolf', 'attack02', 0, 12, 10, 0);  // 13 frames, slower for roar
     this.createMonsterAnimation('werewolf', 'attack03', 0, 5, 12, 0);
     this.createMonsterAnimation('werewolf', 'hurt', 0, 3, 10, 0);
     this.createMonsterAnimation('werewolf', 'death', 0, 3, 8, 0);
@@ -472,10 +519,24 @@ export class PreloadScene extends Scene {
     this.createMonsterAnimation('werebear', 'idle', 0, 5, 8, -1);
     this.createMonsterAnimation('werebear', 'walk', 0, 7, 10, -1);
     this.createMonsterAnimation('werebear', 'attack01', 0, 5, 12, 0);
-    this.createMonsterAnimation('werebear', 'attack02', 0, 5, 12, 0);
+    this.createMonsterAnimation('werebear', 'attack02', 0, 12, 10, 0);  // 13 frames, slower for roar
     this.createMonsterAnimation('werebear', 'attack03', 0, 5, 12, 0);
     this.createMonsterAnimation('werebear', 'hurt', 0, 3, 10, 0);
     this.createMonsterAnimation('werebear', 'death', 0, 3, 8, 0);
+    
+    // SKELETON ANIMATIONS (Additional enemy)
+    this.createMonsterAnimation('skeleton', 'idle', 0, 5, 8, -1);
+    this.createMonsterAnimation('skeleton', 'walk', 0, 7, 10, -1);
+    this.createMonsterAnimation('skeleton', 'attack01', 0, 5, 12, 0);
+    this.createMonsterAnimation('skeleton', 'attack02', 0, 5, 12, 0);
+    this.createMonsterAnimation('skeleton', 'hurt', 0, 3, 10, 0);
+    this.createMonsterAnimation('skeleton', 'death', 0, 3, 8, 0);
+    
+    // SLIME ANIMATIONS (Healing enemy)
+    this.createMonsterAnimation('slime', 'idle', 0, 5, 6, -1);
+    this.createMonsterAnimation('slime', 'walk', 0, 7, 8, -1);
+    this.createMonsterAnimation('slime', 'hurt', 0, 3, 10, 0);
+    this.createMonsterAnimation('slime', 'death', 0, 3, 8, 0);
   }
   
   private createMonsterAnimation(monster: string, anim: string, start: number, end: number, fps: number, repeat: number) {

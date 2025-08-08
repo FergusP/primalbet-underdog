@@ -28,6 +28,7 @@ export interface Monster {
   defeatedBy: string | null;
   totalCombats: number;
   victories: number;                   // Gladiators defeated
+  evolution?: MonsterTier;             // Optional evolution form (e.g., Werewolf -> Werebear)
 }
 
 export interface CombatRequest {

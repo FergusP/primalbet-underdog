@@ -17,7 +17,7 @@ Aurelius Colosseum is a skill-based monster-fighting game where players battle i
 - **Dynamic Difficulty**: Monsters get tougher as the jackpot grows
 - **Provably Fair**: ProofNetwork VRF for vault crack attempts only
 - **Instant Payouts**: 90% to winner, 10% platform fee
-- **Monster Tiers**: Skeleton → Goblin → Shadow → Demon → Dragon → Titan
+- **Monster Tiers**: Orc → Armored Orc → Elite Orc → Orc Rider → Werewolf → Werebear
 
 ## 📚 Documentation
 
@@ -103,12 +103,12 @@ aurelius/
 ### Monster Progression
 | Pot Size | Monster | HP | Vault Chance |
 |----------|---------|-----|-------------|
-| 0-0.3 SOL | Skeleton | 80 | 0.5% |
-| 0.3-0.8 SOL | Goblin | 100 | 1% |
-| 0.8-1.5 SOL | Shadow | 130 | 2% |
-| 1.5-2.3 SOL | Demon | 170 | 3.5% |
-| 2.3-3.0 SOL | Dragon | 220 | 6% |
-| 3.0+ SOL | Titan | 280 | 10% |
+| 0-0.01 SOL | Orc | 80 | Low |
+| 0.01-0.02 SOL | Armored Orc | 100 | Medium |
+| 0.02-0.03 SOL | Elite Orc | 130 | Low |
+| 0.03-0.04 SOL | Orc Rider | 170 | Low |
+| 0.04+ SOL | Werewolf | 100 | None (must evolve) |
+| Evolution | Werebear | 100 | Very High |
 
 ## 🚀 Quick Start
 
