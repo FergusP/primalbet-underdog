@@ -1,6 +1,6 @@
 // Game Service - API communication with backend
 import { 
-  ColosseumState, 
+  ForestArenaState, 
   CombatRequest, 
   CombatResponse, 
   PlayerProfile, 
@@ -9,14 +9,14 @@ import {
 } from '../types';
 
 export class GameService {
-  private static readonly BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+  private static readonly BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
-  // Get current colosseum state (polled every 2s as per guide)
-  static async getColosseumState(): Promise<ColosseumState> {
+  // Get current arena state (polled every 2s as per guide)
+  static async getArenaState(): Promise<ForestArenaState> {
     const response = await fetch(`${this.BASE_URL}/state`);
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch colosseum state: ${response.status}`);
+      throw new Error(`Failed to fetch arena state: ${response.status}`);
     }
     
     return response.json();
@@ -82,11 +82,6 @@ export class GameService {
     return response.json();
   }
 
-  // Generate unique combat ID
-  static generateCombatId(): string {
-    return `combat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
   // Validate if backend is reachable
   static async checkBackendHealth(): Promise<boolean> {
     try {
@@ -101,78 +96,7 @@ export class GameService {
     }
   }
 
-  // Format SOL amounts for display
-  static formatSolAmount(lamports: number): string {
-    const sol = lamports / 1e9;
-    if (sol >= 1000) {
-      return `${(sol / 1000).toFixed(1)}K SOL`;
-    } else if (sol >= 1) {
-      return `${sol.toFixed(3)} SOL`;
-    } else {
-      return `${sol.toFixed(6)} SOL`;
-    }
-  }
-
-  // Format wallet address for display
-  static formatWalletAddress(address: string): string {
-    if (address.length <= 8) return address;
-    return `${address.slice(0, 4)}...${address.slice(-4)}`;
-  }
-
-  // Calculate win rate percentage
-  static calculateWinRate(victories: number, totalCombats: number): string {
-    if (totalCombats === 0) return '0%';
-    return `${Math.round((victories / totalCombats) * 100)}%`;
-  }
-
-  // Get monster emoji by name
-  static getMonsterEmoji(monsterName: string): string {
-    // Emoji map for the 5 real monsters only (matching backend exactly)
-    const emojiMap: { [key: string]: string } = {
-      'skeleton warrior': '💀',
-      'goblin archer': '👹',
-      'orc gladiator': '🛡️',
-      'minotaur champion': '🐂',
-      'cyclops titan': '👁️'
-    };
-    
-    return emojiMap[monsterName.toLowerCase()] || '👹';
-  }
-
-  // Check if combat is still valid (not too old)
-  static isCombatValid(combatTimestamp: number, maxAgeMs: number = 300000): boolean {
-    return Date.now() - combatTimestamp < maxAgeMs; // 5 minutes default
-  }
-
-  // Retry mechanism for failed requests
-  static async withRetry<T>(
-    operation: () => Promise<T>,
-    maxRetries: number = 3,
-    delayMs: number = 1000
-  ): Promise<T> {
-    let lastError: Error | null = null;
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        return await operation();
-      } catch (error) {
-        lastError = error as Error;
-        
-        if (attempt === maxRetries) {
-          break;
-        }
-        
-        console.warn(`Attempt ${attempt} failed, retrying in ${delayMs}ms:`, error);
-        await this.delay(delayMs * attempt); // Exponential backoff
-      }
-    }
-    
-    throw lastError;
-  }
-
-  private static delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
+  // Removed unused utility methods - they can be added back when actually needed
 }
 
 // Error types for better error handling

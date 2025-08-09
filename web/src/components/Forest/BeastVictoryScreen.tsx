@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RomanDesignSystem, RomanText, RomanIcons } from '../../styles/romanDesignSystem';
+import { ForestDesignSystem, ForestText, ForestIcons } from '../../styles/forestDesignSystem';
 
 interface BeastVictoryScreenProps {
   isVisible: boolean;
@@ -30,7 +30,7 @@ export const BeastVictoryScreen: React.FC<BeastVictoryScreenProps> = ({
 
   if (!isVisible) return null;
 
-  const romanReward = reward > 0 ? RomanIcons.toRomanNumeral(Math.floor(reward)) : '';
+  const rewardDisplay = reward > 0 ? ForestIcons.toNumber(Math.floor(reward)) : '';
 
   return (
     <div
@@ -44,7 +44,7 @@ export const BeastVictoryScreen: React.FC<BeastVictoryScreenProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: RomanDesignSystem.zIndex.modal,
+        zIndex: ForestDesignSystem.zIndex.modal,
         backdropFilter: 'blur(4px)',
       }}
     >
@@ -52,18 +52,18 @@ export const BeastVictoryScreen: React.FC<BeastVictoryScreenProps> = ({
       <div
         style={{
           position: 'relative',
-          background: RomanDesignSystem.textures.marble.background,
-          backgroundImage: RomanDesignSystem.textures.marble.pattern,
-          border: `4px solid ${RomanDesignSystem.colors.travertine}`,
-          borderRadius: RomanDesignSystem.borderRadius.lg,
-          boxShadow: RomanDesignSystem.shadows.deep,
-          padding: RomanDesignSystem.spacing['3xl'],
+          background: ForestDesignSystem.textures.marble.background,
+          backgroundImage: ForestDesignSystem.textures.marble.pattern,
+          border: `4px solid ${ForestDesignSystem.colors.stoneGray}`,
+          borderRadius: ForestDesignSystem.borderRadius.lg,
+          boxShadow: ForestDesignSystem.shadows.deep,
+          padding: ForestDesignSystem.spacing['3xl'],
           maxWidth: '600px',
           width: '90%',
           textAlign: 'center',
           transform: showAnimation ? 'scale(1) rotateY(0deg)' : 'scale(0.8) rotateY(-10deg)',
           opacity: showAnimation ? 1 : 0,
-          transition: `all ${RomanDesignSystem.animation.slow} cubic-bezier(0.34, 1.56, 0.64, 1)`,
+          transition: `all ${ForestDesignSystem.animation.slow} cubic-bezier(0.34, 1.56, 0.64, 1)`,
         }}
       >
         {/* Decorative Top Border with Eagles */}
@@ -71,11 +71,11 @@ export const BeastVictoryScreen: React.FC<BeastVictoryScreenProps> = ({
           style={{
             position: 'absolute',
             top: '-2px',
-            left: RomanDesignSystem.spacing.lg,
-            right: RomanDesignSystem.spacing.lg,
+            left: ForestDesignSystem.spacing.lg,
+            right: ForestDesignSystem.spacing.lg,
             height: '4px',
-            background: RomanDesignSystem.textures.goldLeaf.background,
-            borderRadius: RomanDesignSystem.borderRadius.sm,
+            background: ForestDesignSystem.textures.goldShimmer.background,
+            borderRadius: ForestDesignSystem.borderRadius.sm,
           }}
         />
 
@@ -83,40 +83,40 @@ export const BeastVictoryScreen: React.FC<BeastVictoryScreenProps> = ({
         <div
           style={{
             position: 'absolute',
-            top: RomanDesignSystem.spacing.sm,
-            left: RomanDesignSystem.spacing.sm,
-            fontSize: RomanDesignSystem.typography.sizes.lg,
-            color: RomanDesignSystem.colors.goldDeep,
+            top: ForestDesignSystem.spacing.sm,
+            left: ForestDesignSystem.spacing.sm,
+            fontSize: ForestDesignSystem.typography.sizes.lg,
+            color: ForestDesignSystem.colors.goldDeep,
             filter: `drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.6))`,
             transform: showAnimation ? 'scale(1)' : 'scale(0)',
-            transition: `transform ${RomanDesignSystem.animation.slow} ease-out 0.3s`,
+            transition: `transform ${ForestDesignSystem.animation.slow} ease-out 0.3s`,
           }}
         >
-          🦅
+          🦉
         </div>
         <div
           style={{
             position: 'absolute',
-            top: RomanDesignSystem.spacing.sm,
-            right: RomanDesignSystem.spacing.sm,
-            fontSize: RomanDesignSystem.typography.sizes.lg,
-            color: RomanDesignSystem.colors.goldDeep,
+            top: ForestDesignSystem.spacing.sm,
+            right: ForestDesignSystem.spacing.sm,
+            fontSize: ForestDesignSystem.typography.sizes.lg,
+            color: ForestDesignSystem.colors.goldDeep,
             filter: `drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.6))`,
             transform: showAnimation ? 'scale(1) scaleX(-1)' : 'scale(0)',
-            transition: `transform ${RomanDesignSystem.animation.slow} ease-out 0.4s`,
+            transition: `transform ${ForestDesignSystem.animation.slow} ease-out 0.4s`,
           }}
         >
-          🦅
+          🦉
         </div>
 
-        {/* Golden Laurel Crown */}
+        {/* Forest Trophy */}
         <div
           style={{
-            fontSize: RomanDesignSystem.typography.sizes['4xl'],
-            marginBottom: RomanDesignSystem.spacing.lg,
+            fontSize: ForestDesignSystem.typography.sizes['4xl'],
+            marginBottom: ForestDesignSystem.spacing.lg,
             filter: `drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4))`,
             transform: showAnimation ? 'scale(1) rotate(0deg)' : 'scale(0) rotate(-180deg)',
-            transition: `all ${RomanDesignSystem.animation.slow} ease-out 0.2s`,
+            transition: `all ${ForestDesignSystem.animation.slow} ease-out 0.2s`,
           }}
         >
           👑
@@ -125,79 +125,79 @@ export const BeastVictoryScreen: React.FC<BeastVictoryScreenProps> = ({
         {/* Main Victory Inscription */}
         <h1
           style={{
-            fontFamily: RomanDesignSystem.typography.display,
-            fontSize: RomanDesignSystem.typography.sizes['3xl'],
-            fontWeight: RomanDesignSystem.typography.weights.black,
-            color: RomanDesignSystem.colors.inscriptionDark,
-            textShadow: RomanDesignSystem.shadows.inscription,
-            letterSpacing: RomanDesignSystem.typography.letterSpacing.widest,
-            marginBottom: RomanDesignSystem.spacing.lg,
+            fontFamily: ForestDesignSystem.typography.display,
+            fontSize: ForestDesignSystem.typography.sizes['3xl'],
+            fontWeight: ForestDesignSystem.typography.weights.black,
+            color: ForestDesignSystem.colors.textDark,
+            textShadow: ForestDesignSystem.shadows.inscription,
+            letterSpacing: ForestDesignSystem.typography.letterSpacing.widest,
+            marginBottom: ForestDesignSystem.spacing.lg,
             background: `linear-gradient(45deg, 
-              ${RomanDesignSystem.colors.goldDeep} 0%,
-              ${RomanDesignSystem.colors.goldLeaf} 50%,
-              ${RomanDesignSystem.colors.goldAntique} 100%)`,
+              ${ForestDesignSystem.colors.goldDeep} 0%,
+              ${ForestDesignSystem.colors.goldShine} 50%,
+              ${ForestDesignSystem.colors.goldAntique} 100%)`,
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
             transform: showAnimation ? 'translateY(0)' : 'translateY(20px)',
             opacity: showAnimation ? 1 : 0,
-            transition: `all ${RomanDesignSystem.animation.normal} ease-out 0.5s`,
+            transition: `all ${ForestDesignSystem.animation.normal} ease-out 0.5s`,
           }}
         >
-          {RomanText.combat.victory}!
+          {ForestText.combat.victory}!
         </h1>
 
         {/* Subtitle - Glory and Honor */}
         <div
           style={{
-            fontFamily: RomanDesignSystem.typography.inscription,
-            fontSize: RomanDesignSystem.typography.sizes.lg,
-            fontWeight: RomanDesignSystem.typography.weights.medium,
-            color: RomanDesignSystem.colors.inscriptionGold,
-            textShadow: RomanDesignSystem.shadows.inscription,
-            letterSpacing: RomanDesignSystem.typography.letterSpacing.wider,
-            marginBottom: RomanDesignSystem.spacing.xl,
+            fontFamily: ForestDesignSystem.typography.inscription,
+            fontSize: ForestDesignSystem.typography.sizes.lg,
+            fontWeight: ForestDesignSystem.typography.weights.medium,
+            color: ForestDesignSystem.colors.textGold,
+            textShadow: ForestDesignSystem.shadows.inscription,
+            letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
+            marginBottom: ForestDesignSystem.spacing.xl,
             transform: showAnimation ? 'translateY(0)' : 'translateY(20px)',
             opacity: showAnimation ? 1 : 0,
-            transition: `all ${RomanDesignSystem.animation.normal} ease-out 0.6s`,
+            transition: `all ${ForestDesignSystem.animation.normal} ease-out 0.6s`,
           }}
         >
-          {RomanText.general.glory}
+          {ForestText.general.glory}
         </div>
 
         {/* Defeated Monster Information */}
         <div
           style={{
-            background: RomanDesignSystem.colors.marbleVeined,
-            border: `2px solid ${RomanDesignSystem.colors.goldAntique}`,
-            borderRadius: RomanDesignSystem.borderRadius.md,
-            padding: RomanDesignSystem.spacing.lg,
-            marginBottom: RomanDesignSystem.spacing.xl,
-            boxShadow: RomanDesignSystem.shadows.carved,
+            background: ForestDesignSystem.colors.mossGreen,
+            border: `2px solid ${ForestDesignSystem.colors.goldAntique}`,
+            borderRadius: ForestDesignSystem.borderRadius.md,
+            padding: ForestDesignSystem.spacing.lg,
+            marginBottom: ForestDesignSystem.spacing.xl,
+            boxShadow: ForestDesignSystem.shadows.carved,
             transform: showAnimation ? 'scale(1)' : 'scale(0.9)',
             opacity: showAnimation ? 1 : 0,
-            transition: `all ${RomanDesignSystem.animation.normal} ease-out 0.7s`,
+            transition: `all ${ForestDesignSystem.animation.normal} ease-out 0.7s`,
           }}
         >
           <div
             style={{
-              fontFamily: RomanDesignSystem.typography.body,
-              fontSize: RomanDesignSystem.typography.sizes.base,
-              color: RomanDesignSystem.colors.inscriptionDark,
-              marginBottom: RomanDesignSystem.spacing.sm,
-              letterSpacing: RomanDesignSystem.typography.letterSpacing.normal,
+              fontFamily: ForestDesignSystem.typography.body,
+              fontSize: ForestDesignSystem.typography.sizes.base,
+              color: ForestDesignSystem.colors.textDark,
+              marginBottom: ForestDesignSystem.spacing.sm,
+              letterSpacing: ForestDesignSystem.typography.letterSpacing.normal,
             }}
           >
             You Defeated:
           </div>
           <div
             style={{
-              fontFamily: RomanDesignSystem.typography.display,
-              fontSize: RomanDesignSystem.typography.sizes.xl,
-              fontWeight: RomanDesignSystem.typography.weights.bold,
-              color: RomanDesignSystem.colors.crimsonRoman,
-              textShadow: RomanDesignSystem.shadows.inscription,
-              letterSpacing: RomanDesignSystem.typography.letterSpacing.wide,
+              fontFamily: ForestDesignSystem.typography.display,
+              fontSize: ForestDesignSystem.typography.sizes.xl,
+              fontWeight: ForestDesignSystem.typography.weights.bold,
+              color: ForestDesignSystem.colors.bloodRed,
+              textShadow: ForestDesignSystem.shadows.inscription,
+              letterSpacing: ForestDesignSystem.typography.letterSpacing.wide,
               textTransform: 'uppercase',
             }}
           >
@@ -209,63 +209,63 @@ export const BeastVictoryScreen: React.FC<BeastVictoryScreenProps> = ({
         {reward > 0 && (
           <div
             style={{
-              background: RomanDesignSystem.textures.goldLeaf.background,
-              border: `3px solid ${RomanDesignSystem.colors.goldDeep}`,
-              borderRadius: RomanDesignSystem.borderRadius.lg,
-              padding: RomanDesignSystem.spacing.lg,
-              marginBottom: RomanDesignSystem.spacing.xl,
-              boxShadow: RomanDesignSystem.shadows.glow,
+              background: ForestDesignSystem.textures.goldShimmer.background,
+              border: `3px solid ${ForestDesignSystem.colors.goldDeep}`,
+              borderRadius: ForestDesignSystem.borderRadius.lg,
+              padding: ForestDesignSystem.spacing.lg,
+              marginBottom: ForestDesignSystem.spacing.xl,
+              boxShadow: ForestDesignSystem.shadows.glow,
               transform: showReward ? 'scale(1)' : 'scale(0)',
               opacity: showReward ? 1 : 0,
-              transition: `all ${RomanDesignSystem.animation.normal} ease-out`,
+              transition: `all ${ForestDesignSystem.animation.normal} ease-out`,
             }}
           >
             <div
               style={{
-                fontFamily: RomanDesignSystem.typography.inscription,
-                fontSize: RomanDesignSystem.typography.sizes.base,
-                color: RomanDesignSystem.colors.inscriptionDark,
-                marginBottom: RomanDesignSystem.spacing.sm,
-                letterSpacing: RomanDesignSystem.typography.letterSpacing.wider,
+                fontFamily: ForestDesignSystem.typography.inscription,
+                fontSize: ForestDesignSystem.typography.sizes.base,
+                color: ForestDesignSystem.colors.textDark,
+                marginBottom: ForestDesignSystem.spacing.sm,
+                letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
               }}
             >
               PRAEMIUM
             </div>
             <div
               style={{
-                fontFamily: RomanDesignSystem.typography.display,
-                fontSize: RomanDesignSystem.typography.sizes['2xl'],
-                fontWeight: RomanDesignSystem.typography.weights.black,
-                color: RomanDesignSystem.colors.inscriptionDark,
+                fontFamily: ForestDesignSystem.typography.display,
+                fontSize: ForestDesignSystem.typography.sizes['2xl'],
+                fontWeight: ForestDesignSystem.typography.weights.black,
+                color: ForestDesignSystem.colors.textDark,
                 textShadow: '1px 1px 0px rgba(255, 255, 255, 0.8)',
-                letterSpacing: RomanDesignSystem.typography.letterSpacing.wider,
+                letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
               }}
             >
-              {romanReward} SOL
+              {rewardDisplay} SOL
             </div>
           </div>
         )}
 
-        {/* Continue Button - Roman Style */}
-        {/* HIDDEN - Using the DEFINE YOUR DESTINY button from CombatSceneUIRoman instead */}
+        {/* Continue Button - Forest Style */}
+        {/* HIDDEN - Using the DEFINE YOUR DESTINY button from CombatSceneUI instead */}
 
         {/* Decorative Bottom Elements */}
         <div
           style={{
             position: 'absolute',
-            bottom: RomanDesignSystem.spacing.sm,
+            bottom: ForestDesignSystem.spacing.sm,
             left: '50%',
             transform: 'translateX(-50%)',
             display: 'flex',
-            gap: RomanDesignSystem.spacing.sm,
-            fontSize: RomanDesignSystem.typography.sizes.base,
-            color: RomanDesignSystem.colors.goldAntique,
+            gap: ForestDesignSystem.spacing.sm,
+            fontSize: ForestDesignSystem.typography.sizes.base,
+            color: ForestDesignSystem.colors.goldAntique,
             opacity: 0.7,
           }}
         >
           <span>🌿</span>
-          <span style={{ letterSpacing: RomanDesignSystem.typography.letterSpacing.widest }}>
-            {RomanText.general.spqr}
+          <span style={{ letterSpacing: ForestDesignSystem.typography.letterSpacing.widest }}>
+            {ForestText.general.spqr}
           </span>
           <span>🌿</span>
         </div>
@@ -280,7 +280,7 @@ export const BeastVictoryScreen: React.FC<BeastVictoryScreenProps> = ({
                   position: 'absolute',
                   width: '4px',
                   height: '4px',
-                  background: RomanDesignSystem.colors.goldLeaf,
+                  background: ForestDesignSystem.colors.goldShine,
                   borderRadius: '50%',
                   left: `${Math.random() * 100}%`,
                   top: `${Math.random() * 100}%`,

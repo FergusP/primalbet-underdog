@@ -7,7 +7,7 @@ import { LobbyScene } from './scenes/LobbyScene';
 import { CombatScene } from './scenes/CombatScene';
 import { VaultScene } from './scenes/VaultScene';
 
-export class AureliusGame {
+export class BetBeastGame {
   private game: Phaser.Game | null = null;
 
   constructor() {

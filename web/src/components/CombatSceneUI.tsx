@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { RomanDesignSystem, RomanText, RomanIcons } from '../styles/romanDesignSystem';
+import { ForestDesignSystem, ForestText, ForestIcons } from '../styles/forestDesignSystem';
 import BeastHealthBar from './Forest/BeastHealthBar';
 import BeastVictoryScreen from './Forest/BeastVictoryScreen';
 import { ForestFightButton, ForestButton } from './Forest/ForestButton';
@@ -243,8 +243,8 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
         right: 0,
         bottom: 0,
         pointerEvents: 'none',
-        zIndex: RomanDesignSystem.zIndex.overlay,
-        fontFamily: RomanDesignSystem.typography.body,
+        zIndex: ForestDesignSystem.zIndex.overlay,
+        fontFamily: ForestDesignSystem.typography.body,
       }}
     >
       {/* Forest Arena Background Overlay */}
@@ -259,7 +259,7 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
             rgba(0, 0, 0, 0.6) 0%, 
             rgba(0, 0, 0, 0.3) 50%, 
             transparent 100%)`,
-          borderBottom: `2px solid ${RomanDesignSystem.colors.goldAntique}`,
+          borderBottom: `2px solid ${ForestDesignSystem.colors.goldAntique}`,
         }}
       />
 
@@ -267,14 +267,14 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
       <div
         style={{
           position: 'absolute',
-          top: RomanDesignSystem.spacing.md,
+          top: ForestDesignSystem.spacing.md,
           left: '50%',
           transform: 'translateX(-50%)',
-          background: RomanDesignSystem.textures.marble.background,
-          border: `3px solid ${RomanDesignSystem.colors.goldDeep}`,
-          borderRadius: RomanDesignSystem.borderRadius.lg,
-          padding: `${RomanDesignSystem.spacing.sm} ${RomanDesignSystem.spacing.lg}`,
-          boxShadow: RomanDesignSystem.shadows.raised,
+          background: ForestDesignSystem.textures.marble.background,
+          border: `3px solid ${ForestDesignSystem.colors.goldDeep}`,
+          borderRadius: ForestDesignSystem.borderRadius.lg,
+          padding: `${ForestDesignSystem.spacing.sm} ${ForestDesignSystem.spacing.lg}`,
+          boxShadow: ForestDesignSystem.shadows.raised,
           pointerEvents: 'auto',
         }}
       >
@@ -282,17 +282,17 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: RomanDesignSystem.spacing.sm,
-            fontSize: RomanDesignSystem.typography.sizes.lg,
-            fontWeight: RomanDesignSystem.typography.weights.bold,
-            color: RomanDesignSystem.colors.inscriptionDark,
-            textShadow: RomanDesignSystem.shadows.inscription,
-            letterSpacing: RomanDesignSystem.typography.letterSpacing.wider,
+            gap: ForestDesignSystem.spacing.sm,
+            fontSize: ForestDesignSystem.typography.sizes.lg,
+            fontWeight: ForestDesignSystem.typography.weights.bold,
+            color: ForestDesignSystem.colors.textDark,
+            textShadow: ForestDesignSystem.shadows.inscription,
+            letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
           }}
         >
-          <span style={{ color: RomanDesignSystem.colors.goldDeep }}>🌲</span>
+          <span style={{ color: ForestDesignSystem.colors.goldDeep }}>🌲</span>
           <span>BETBEAST</span>
-          <span style={{ color: RomanDesignSystem.colors.goldDeep, transform: 'scaleX(-1)' }}>🌲</span>
+          <span style={{ color: ForestDesignSystem.colors.goldDeep, transform: 'scaleX(-1)' }}>🌲</span>
         </div>
       </div>
 
@@ -310,16 +310,16 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
         {/* Arena Section Title */}
         <div
           style={{
-            background: RomanDesignSystem.textures.bronze.background,
-            border: `2px solid ${RomanDesignSystem.colors.bronzePatina}`,
-            borderRadius: `${RomanDesignSystem.borderRadius.md} ${RomanDesignSystem.borderRadius.md} 0 0`,
-            padding: RomanDesignSystem.spacing.sm,
+            background: ForestDesignSystem.textures.stone.background,
+            border: `2px solid ${ForestDesignSystem.colors.stoneGray}`,
+            borderRadius: `${ForestDesignSystem.borderRadius.md} ${ForestDesignSystem.borderRadius.md} 0 0`,
+            padding: ForestDesignSystem.spacing.sm,
             textAlign: 'center',
-            fontSize: RomanDesignSystem.typography.sizes.sm,
-            fontWeight: RomanDesignSystem.typography.weights.bold,
-            color: RomanDesignSystem.colors.ivory,
-            textShadow: RomanDesignSystem.shadows.inscription,
-            letterSpacing: RomanDesignSystem.typography.letterSpacing.wider,
+            fontSize: ForestDesignSystem.typography.sizes.sm,
+            fontWeight: ForestDesignSystem.typography.weights.bold,
+            color: ForestDesignSystem.colors.textLight,
+            textShadow: ForestDesignSystem.shadows.inscription,
+            letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
             marginBottom: '-2px',
           }}
         >
@@ -330,7 +330,6 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
           currentHealth={combatState.playerHealth.current}
           maxHealth={combatState.playerHealth.max}
           label="YOUR HEALTH"
-          gladiatorType="warrior"
           isPlayer={true}
         />
       </div>
@@ -349,16 +348,16 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
         {/* Arena Section Title */}
         <div
           style={{
-            background: `linear-gradient(135deg, ${RomanDesignSystem.colors.crimsonRoman} 0%, #8B0000 100%)`,
-            border: `2px solid ${RomanDesignSystem.colors.crimsonRoman}`,
-            borderRadius: `${RomanDesignSystem.borderRadius.md} ${RomanDesignSystem.borderRadius.md} 0 0`,
-            padding: RomanDesignSystem.spacing.sm,
+            background: `linear-gradient(135deg, ${ForestDesignSystem.colors.bloodRed} 0%, #8B0000 100%)`,
+            border: `2px solid ${ForestDesignSystem.colors.bloodRed}`,
+            borderRadius: `${ForestDesignSystem.borderRadius.md} ${ForestDesignSystem.borderRadius.md} 0 0`,
+            padding: ForestDesignSystem.spacing.sm,
             textAlign: 'center',
-            fontSize: RomanDesignSystem.typography.sizes.sm,
-            fontWeight: RomanDesignSystem.typography.weights.bold,
-            color: RomanDesignSystem.colors.ivory,
-            textShadow: RomanDesignSystem.shadows.inscription,
-            letterSpacing: RomanDesignSystem.typography.letterSpacing.wider,
+            fontSize: ForestDesignSystem.typography.sizes.sm,
+            fontWeight: ForestDesignSystem.typography.weights.bold,
+            color: ForestDesignSystem.colors.textLight,
+            textShadow: ForestDesignSystem.shadows.inscription,
+            letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
             marginBottom: '-2px',
           }}
         >
@@ -369,7 +368,6 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
           currentHealth={combatState.monsterHealth.current}
           maxHealth={combatState.monsterHealth.max}
           label={combatState.monsterName}
-          gladiatorType="beast"
           isPlayer={false}
         />
       </div>
@@ -385,27 +383,27 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
       >
         <div
           style={{
-            background: RomanDesignSystem.textures.marble.background,
-            border: `3px solid ${RomanDesignSystem.colors.goldAntique}`,
-            borderRadius: RomanDesignSystem.borderRadius.lg,
-            padding: RomanDesignSystem.spacing.md,
-            boxShadow: RomanDesignSystem.shadows.raised,
+            background: ForestDesignSystem.textures.marble.background,
+            border: `3px solid ${ForestDesignSystem.colors.goldAntique}`,
+            borderRadius: ForestDesignSystem.borderRadius.lg,
+            padding: ForestDesignSystem.spacing.md,
+            boxShadow: ForestDesignSystem.shadows.raised,
           }}
         >
           <div
             style={{
-              fontSize: RomanDesignSystem.typography.sizes.sm,
-              fontWeight: RomanDesignSystem.typography.weights.bold,
-              color: RomanDesignSystem.colors.inscriptionDark,
+              fontSize: ForestDesignSystem.typography.sizes.sm,
+              fontWeight: ForestDesignSystem.typography.weights.bold,
+              color: ForestDesignSystem.colors.textDark,
               textAlign: 'center',
-              marginBottom: RomanDesignSystem.spacing.sm,
-              letterSpacing: RomanDesignSystem.typography.letterSpacing.wider,
+              marginBottom: ForestDesignSystem.spacing.sm,
+              letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
             }}
           >
             SPEARS
           </div>
           
-          <div style={{ display: 'flex', gap: RomanDesignSystem.spacing.xs }}>
+          <div style={{ display: 'flex', gap: ForestDesignSystem.spacing.xs }}>
             {Array.from({ length: combatState.maxSpears }, (_, i) => (
               <div
                 key={i}
@@ -413,17 +411,17 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
                   width: '30px',
                   height: '30px',
                   background: i < combatState.spearCount 
-                    ? RomanDesignSystem.colors.goldLeaf 
-                    : RomanDesignSystem.colors.sandstone,
-                  border: `2px solid ${RomanDesignSystem.colors.bronzePatina}`,
-                  borderRadius: RomanDesignSystem.borderRadius.sm,
+                    ? ForestDesignSystem.colors.goldShine 
+                    : ForestDesignSystem.colors.autumnOrange,
+                  border: `2px solid ${ForestDesignSystem.colors.mossGreen}`,
+                  borderRadius: ForestDesignSystem.borderRadius.sm,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: RomanDesignSystem.typography.sizes.base,
+                  fontSize: ForestDesignSystem.typography.sizes.base,
                   boxShadow: i < combatState.spearCount 
-                    ? RomanDesignSystem.shadows.raised 
-                    : RomanDesignSystem.shadows.carved,
+                    ? ForestDesignSystem.shadows.raised 
+                    : ForestDesignSystem.shadows.carved,
                 }}
               >
                 🔱
@@ -433,14 +431,14 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
           
           <div
             style={{
-              fontSize: RomanDesignSystem.typography.sizes.xs,
-              color: RomanDesignSystem.colors.bronzePatina,
+              fontSize: ForestDesignSystem.typography.sizes.xs,
+              color: ForestDesignSystem.colors.mossGreen,
               textAlign: 'center',
-              marginTop: RomanDesignSystem.spacing.xs,
-              letterSpacing: RomanDesignSystem.typography.letterSpacing.wide,
+              marginTop: ForestDesignSystem.spacing.xs,
+              letterSpacing: ForestDesignSystem.typography.letterSpacing.wide,
             }}
           >
-            {RomanIcons.toRomanNumeral(combatState.spearCount)} / {RomanIcons.toRomanNumeral(combatState.maxSpears)}
+            {ForestIcons.toNumber(combatState.spearCount)} / {ForestIcons.toNumber(combatState.maxSpears)}
           </div>
         </div>
       </div>
@@ -454,7 +452,7 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
           bottom: '140px',
           left: '24px',
           pointerEvents: 'none',
-          zIndex: RomanDesignSystem.zIndex.elevated,
+          zIndex: ForestDesignSystem.zIndex.elevated,
         }}
       />
 
@@ -504,7 +502,7 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
               animation: 'pulseGold 2s ease-in-out infinite',
             }}
           >
-            {isLoadingVault ? 'LOADING...' : '⚡ DEFINE YOUR DESTINY ⚡'}
+            {isLoadingVault ? 'LOADING...' : '💎 SEEK THE HIDDEN TREASURE 💎'}
           </ForestFightButton>
         </div>
       )}
@@ -525,8 +523,8 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
           <div
             style={{
               background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.95), rgba(0, 0, 0, 0.95))',
-              border: `3px solid ${RomanDesignSystem.colors.crimson}`,
-              borderRadius: RomanDesignSystem.borderRadius.lg,
+              border: `3px solid ${ForestDesignSystem.colors.crimsonFire}`,
+              borderRadius: ForestDesignSystem.borderRadius.lg,
               padding: '40px 60px',
               boxShadow: '0 20px 60px rgba(139, 0, 0, 0.8)',
             }}
@@ -555,8 +553,8 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
             </p>
             <ForestFightButton
               onClick={() => {
-                // Return to Colosseum via event
-                window.dispatchEvent(new CustomEvent('return-to-colosseum', {
+                // Return to Arena via event
+                window.dispatchEvent(new CustomEvent('return-to-arena', {
                   detail: {
                     walletAddress: window.localStorage.getItem('walletAddress') || 'test-wallet'
                   }
@@ -593,10 +591,10 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            background: RomanDesignSystem.textures.marble.background,
-            border: `3px solid ${RomanDesignSystem.colors.goldDeep}`,
-            borderRadius: RomanDesignSystem.borderRadius.lg,
-            padding: RomanDesignSystem.spacing.xl,
+            background: ForestDesignSystem.textures.marble.background,
+            border: `3px solid ${ForestDesignSystem.colors.goldDeep}`,
+            borderRadius: ForestDesignSystem.borderRadius.lg,
+            padding: ForestDesignSystem.spacing.xl,
             textAlign: 'center',
             pointerEvents: 'auto',
             animation: 'fadeInOut 4s ease-in-out forwards',
@@ -604,11 +602,11 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
         >
           <div
             style={{
-              fontSize: RomanDesignSystem.typography.sizes.lg,
-              fontWeight: RomanDesignSystem.typography.weights.bold,
-              color: RomanDesignSystem.colors.inscriptionDark,
-              marginBottom: RomanDesignSystem.spacing.md,
-              letterSpacing: RomanDesignSystem.typography.letterSpacing.wider,
+              fontSize: ForestDesignSystem.typography.sizes.lg,
+              fontWeight: ForestDesignSystem.typography.weights.bold,
+              color: ForestDesignSystem.colors.textDark,
+              marginBottom: ForestDesignSystem.spacing.md,
+              letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
             }}
           >
             PREPARE FOR BATTLE!
@@ -616,9 +614,9 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
           
           <div
             style={{
-              fontSize: RomanDesignSystem.typography.sizes.base,
-              color: RomanDesignSystem.colors.bronzePatina,
-              letterSpacing: RomanDesignSystem.typography.letterSpacing.normal,
+              fontSize: ForestDesignSystem.typography.sizes.base,
+              color: ForestDesignSystem.colors.mossGreen,
+              letterSpacing: ForestDesignSystem.typography.letterSpacing.normal,
             }}
           >
             Click to hurl spears • Move with WASD
@@ -677,10 +675,10 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
         
         @keyframes pulseGold {
           0%, 100% {
-            box-shadow: 0 0 20px ${RomanDesignSystem.colors.goldLeaf};
+            box-shadow: 0 0 20px ${ForestDesignSystem.colors.goldShine};
           }
           50% {
-            box-shadow: 0 0 40px ${RomanDesignSystem.colors.goldLeaf}, 0 0 60px ${RomanDesignSystem.colors.goldDeep};
+            box-shadow: 0 0 40px ${ForestDesignSystem.colors.goldShine}, 0 0 60px ${ForestDesignSystem.colors.goldDeep};
           }
         }
         

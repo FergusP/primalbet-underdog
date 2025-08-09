@@ -110,7 +110,7 @@ export class SpearRechargeIndicatorHTML {
       this.ctx.stroke();
     }
     
-    // Draw Roman numerals at cardinal points
+    // Draw forest numerals at cardinal points
     this.ctx.font = 'bold 10px serif';
     this.ctx.fillStyle = '#CD853F';
     this.ctx.textAlign = 'center';

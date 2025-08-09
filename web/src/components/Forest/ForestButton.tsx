@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { RomanDesignSystem } from '../../styles/romanDesignSystem';
+import { ForestDesignSystem } from '../../styles/forestDesignSystem';
 
 interface ForestButtonProps {
   children: React.ReactNode;
   onClick: () => void;
-  variant?: 'primary' | 'secondary' | 'imperial' | 'bronze' | 'marble';
+  variant?: 'primary' | 'secondary' | 'danger' | 'mystical' | 'nature';
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
   loading?: boolean;
@@ -28,72 +28,73 @@ export const ForestButton: React.FC<ForestButtonProps> = ({
   // Size configurations
   const sizeConfig = {
     small: {
-      padding: `${RomanDesignSystem.spacing.sm} ${RomanDesignSystem.spacing.md}`,
-      fontSize: RomanDesignSystem.typography.sizes.sm,
-      iconSize: RomanDesignSystem.typography.sizes.base,
+      padding: `${ForestDesignSystem.spacing.sm} ${ForestDesignSystem.spacing.md}`,
+      fontSize: ForestDesignSystem.typography.sizes.sm,
+      iconSize: ForestDesignSystem.typography.sizes.base,
     },
     medium: {
-      padding: `${RomanDesignSystem.spacing.md} ${RomanDesignSystem.spacing.lg}`,
-      fontSize: RomanDesignSystem.typography.sizes.base,
-      iconSize: RomanDesignSystem.typography.sizes.lg,
+      padding: `${ForestDesignSystem.spacing.md} ${ForestDesignSystem.spacing.lg}`,
+      fontSize: ForestDesignSystem.typography.sizes.base,
+      iconSize: ForestDesignSystem.typography.sizes.lg,
     },
     large: {
-      padding: `${RomanDesignSystem.spacing.lg} ${RomanDesignSystem.spacing.xl}`,
-      fontSize: RomanDesignSystem.typography.sizes.lg,
-      iconSize: RomanDesignSystem.typography.sizes.xl,
+      padding: `${ForestDesignSystem.spacing.lg} ${ForestDesignSystem.spacing.xl}`,
+      fontSize: ForestDesignSystem.typography.sizes.lg,
+      iconSize: ForestDesignSystem.typography.sizes.xl,
     },
   };
 
-  // Variant configurations
+  // Variant configurations - Forest themed
   const variantConfig = {
     primary: {
-      background: RomanDesignSystem.textures.goldLeaf.background,
-      border: `3px solid ${RomanDesignSystem.colors.goldDeep}`,
-      color: RomanDesignSystem.colors.inscriptionDark,
+      background: ForestDesignSystem.textures.goldShimmer.background,
+      border: `3px solid ${ForestDesignSystem.colors.goldDeep}`,
+      color: ForestDesignSystem.colors.textDark,
       textShadow: '1px 1px 0px rgba(255, 255, 255, 0.8)',
       hoverBackground: `linear-gradient(135deg, 
-        ${RomanDesignSystem.colors.goldLeaf} 0%, 
-        ${RomanDesignSystem.colors.goldDeep} 100%)`,
-      hoverShadow: RomanDesignSystem.shadows.glow,
+        ${ForestDesignSystem.colors.goldShine} 0%, 
+        ${ForestDesignSystem.colors.goldDeep} 100%)`,
+      hoverShadow: ForestDesignSystem.shadows.glow,
     },
     secondary: {
-      background: RomanDesignSystem.textures.marble.background,
-      border: `3px solid ${RomanDesignSystem.colors.travertine}`,
-      color: RomanDesignSystem.colors.inscriptionDark,
-      textShadow: RomanDesignSystem.shadows.inscription,
-      hoverBackground: RomanDesignSystem.colors.marbleVeined,
-      hoverShadow: RomanDesignSystem.shadows.raised,
+      background: ForestDesignSystem.textures.wood.background,
+      border: `3px solid ${ForestDesignSystem.colors.darkBark}`,
+      color: ForestDesignSystem.colors.textLight,
+      textShadow: ForestDesignSystem.shadows.deep,
+      hoverBackground: ForestDesignSystem.colors.mossGreen,
+      hoverShadow: ForestDesignSystem.shadows.raised,
     },
-    imperial: {
+    danger: {
       background: `linear-gradient(135deg, 
-        ${RomanDesignSystem.colors.goldDeep} 0%, 
-        ${RomanDesignSystem.colors.goldAntique} 100%)`,
-      border: `3px solid ${RomanDesignSystem.colors.goldDeep}`,
-      color: '#1a1a1a',
-      textShadow: '1px 1px 0px rgba(255, 255, 255, 0.8)',
+        ${ForestDesignSystem.colors.bloodRed} 0%, 
+        ${ForestDesignSystem.colors.crimsonFire} 100%)`,
+      border: `3px solid ${ForestDesignSystem.colors.bloodRed}`,
+      color: ForestDesignSystem.colors.textLight,
+      textShadow: '1px 1px 0px rgba(0, 0, 0, 0.8)',
       hoverBackground: `linear-gradient(135deg, 
-        ${RomanDesignSystem.colors.goldLeaf} 0%, 
-        ${RomanDesignSystem.colors.goldDeep} 100%)`,
-      hoverShadow: RomanDesignSystem.shadows.glow,
+        ${ForestDesignSystem.colors.crimsonFire} 0%, 
+        ${ForestDesignSystem.colors.dangerOrange} 100%)`,
+      hoverShadow: ForestDesignSystem.shadows.fire,
     },
-    bronze: {
-      background: RomanDesignSystem.textures.bronze.background,
-      border: `3px solid ${RomanDesignSystem.colors.bronzePatina}`,
-      color: RomanDesignSystem.colors.ivory,
-      textShadow: RomanDesignSystem.shadows.inscription,
+    mystical: {
+      background: `linear-gradient(135deg, 
+        ${ForestDesignSystem.colors.mysticPurple} 0%, 
+        ${ForestDesignSystem.colors.nightBlue} 100%)`,
+      border: `3px solid ${ForestDesignSystem.colors.mysticPurple}`,
+      color: ForestDesignSystem.colors.textLight,
+      textShadow: ForestDesignSystem.shadows.mystical,
       hoverBackground: `linear-gradient(135deg, 
-        ${RomanDesignSystem.colors.bronze} 0%, 
-        ${RomanDesignSystem.colors.goldAntique} 100%)`,
-      hoverShadow: RomanDesignSystem.shadows.deep,
+        ${ForestDesignSystem.colors.spiritCyan} 0%, 
+        ${ForestDesignSystem.colors.mysticPurple} 100%)`,
+      hoverShadow: ForestDesignSystem.shadows.mystical,
     },
-    marble: {
-      background: RomanDesignSystem.textures.marble.background,
-      backgroundImage: RomanDesignSystem.textures.marble.pattern,
-      border: `3px solid ${RomanDesignSystem.colors.goldAntique}`,
-      color: RomanDesignSystem.colors.inscriptionDark,
-      textShadow: RomanDesignSystem.shadows.inscription,
-      hoverBackground: RomanDesignSystem.colors.marbleVeined,
-      hoverShadow: RomanDesignSystem.shadows.column,
+    nature: {
+      background: ForestDesignSystem.textures.moss.background,
+      border: `3px solid ${ForestDesignSystem.colors.forestGreen}`,
+      color: ForestDesignSystem.colors.textLight,
+      textShadow: ForestDesignSystem.shadows.deep,
+      hoverBackground: ForestDesignSystem.colors.emeraldGlow,
+      hoverShadow: ForestDesignSystem.shadows.glow,
     },
   };
 
@@ -105,45 +106,38 @@ export const ForestButton: React.FC<ForestButtonProps> = ({
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: RomanDesignSystem.spacing.sm,
+    gap: ForestDesignSystem.spacing.sm,
     
     // Layout
     padding: currentSize.padding,
-    borderRadius: RomanDesignSystem.borderRadius.md,
+    borderRadius: ForestDesignSystem.borderRadius.md,
     cursor: disabled ? 'not-allowed' : 'pointer',
     
     // Typography
-    fontFamily: RomanDesignSystem.typography.display,
+    fontFamily: ForestDesignSystem.typography.display,
     fontSize: currentSize.fontSize,
-    fontWeight: RomanDesignSystem.typography.weights.bold,
-    letterSpacing: RomanDesignSystem.typography.letterSpacing.wider,
+    fontWeight: ForestDesignSystem.typography.weights.bold,
+    letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
     textTransform: 'uppercase',
     
-    // Appearance - avoid mixing background shorthand with backgroundImage
-    ...(variant === 'marble' ? {
-      backgroundImage: isHovered && !disabled 
-        ? `${currentVariant.hoverBackground}, ${(currentVariant as any).backgroundImage || ''}`
-        : `${currentVariant.background}, ${(currentVariant as any).backgroundImage || ''}`,
-      backgroundColor: 'transparent',
-    } : {
-      background: isHovered && !disabled ? currentVariant.hoverBackground : currentVariant.background,
-    }),
+    // Appearance
+    background: isHovered && !disabled ? currentVariant.hoverBackground : currentVariant.background,
     border: currentVariant.border,
-    color: disabled ? RomanDesignSystem.colors.bronzePatina : currentVariant.color,
+    color: disabled ? ForestDesignSystem.colors.mossGreen : currentVariant.color,
     textShadow: currentVariant.textShadow,
     
     // Effects
     boxShadow: isPressed 
-      ? RomanDesignSystem.shadows.carved 
+      ? ForestDesignSystem.shadows.carved 
       : isHovered && !disabled 
         ? currentVariant.hoverShadow 
-        : RomanDesignSystem.shadows.raised,
+        : ForestDesignSystem.shadows.raised,
     
     transform: isPressed ? 'scale(0.98)' : isHovered && !disabled ? 'scale(1.02)' : 'scale(1)',
     opacity: disabled ? 0.6 : 1,
     
     // Animation
-    transition: `all ${RomanDesignSystem.animation.fast} ease-out`,
+    transition: `all ${ForestDesignSystem.animation.fast} ease-out`,
     
     // Overflow for decorative elements
     overflow: 'hidden',
@@ -172,10 +166,10 @@ export const ForestButton: React.FC<ForestButtonProps> = ({
           top: '2px',
           left: '2px',
           fontSize: '8px',
-          color: RomanDesignSystem.colors.goldAntique,
+          color: ForestDesignSystem.colors.goldAntique,
           opacity: 0.7,
           transform: isHovered ? 'scale(1.2)' : 'scale(1)',
-          transition: `transform ${RomanDesignSystem.animation.fast} ease-out`,
+          transition: `transform ${ForestDesignSystem.animation.fast} ease-out`,
         }}
       >
         ◤
@@ -186,10 +180,10 @@ export const ForestButton: React.FC<ForestButtonProps> = ({
           top: '2px',
           right: '2px',
           fontSize: '8px',
-          color: RomanDesignSystem.colors.goldAntique,
+          color: ForestDesignSystem.colors.goldAntique,
           opacity: 0.7,
           transform: isHovered ? 'scale(1.2)' : 'scale(1)',
-          transition: `transform ${RomanDesignSystem.animation.fast} ease-out`,
+          transition: `transform ${ForestDesignSystem.animation.fast} ease-out`,
         }}
       >
         ◥
@@ -203,7 +197,7 @@ export const ForestButton: React.FC<ForestButtonProps> = ({
           left: 0,
           right: 0,
           bottom: 0,
-          background: RomanDesignSystem.textures.stone.texture,
+          background: ForestDesignSystem.textures.stone.texture,
           opacity: 0.1,
           pointerEvents: 'none',
         }}
@@ -224,7 +218,7 @@ export const ForestButton: React.FC<ForestButtonProps> = ({
       {/* Content */}
       <span style={{ position: 'relative', zIndex: 1 }}>
         {loading ? (
-          <span style={{ display: 'flex', alignItems: 'center', gap: RomanDesignSystem.spacing.xs }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: ForestDesignSystem.spacing.xs }}>
             <span
               style={{
                 display: 'inline-block',
@@ -253,7 +247,7 @@ export const ForestButton: React.FC<ForestButtonProps> = ({
           height: '1px',
           background: `linear-gradient(90deg, 
             transparent 0%, 
-            ${RomanDesignSystem.colors.goldAntique} 50%, 
+            ${ForestDesignSystem.colors.goldAntique} 50%, 
             transparent 100%)`,
           opacity: 0.5,
         }}
@@ -270,21 +264,21 @@ export const ForestButton: React.FC<ForestButtonProps> = ({
   );
 };
 
-// Specific Roman button variants for common actions
+// Specific Forest button variants for common actions
 export const ForestFightButton: React.FC<Omit<ForestButtonProps, 'variant' | 'icon'>> = (props) => (
-  <ForestButton {...props} variant="imperial" icon="⚔️" />
+  <ForestButton {...props} variant="danger" icon="⚔️" />
 );
 
 export const ForestContinueButton: React.FC<Omit<ForestButtonProps, 'variant' | 'icon'>> = (props) => (
-  <ForestButton {...props} variant="bronze" icon="→" />
+  <ForestButton {...props} variant="secondary" icon="→" />
 );
 
 export const ForestGoldButton: React.FC<Omit<ForestButtonProps, 'variant' | 'icon'>> = (props) => (
-  <ForestButton {...props} variant="primary" icon="👑" />
+  <ForestButton {...props} variant="primary" icon="💰" />
 );
 
 export const ForestWoodButton: React.FC<Omit<ForestButtonProps, 'variant'>> = (props) => (
-  <ForestButton {...props} variant="marble" />
+  <ForestButton {...props} variant="nature" />
 );
 
 export default ForestButton;

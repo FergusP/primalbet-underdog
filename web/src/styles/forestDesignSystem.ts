@@ -38,6 +38,8 @@ export const ForestDesignSystem = {
     textGold: '#B8860B',           // Gold text
     shadowDeep: 'rgba(0, 0, 0, 0.8)', // Deep shadows
     shadowSoft: 'rgba(0, 0, 0, 0.4)', // Soft shadows
+    
+    // Remove backward compatibility - not needed anymore
   },
 
   // Typography - Rugged fantasy fonts
@@ -46,6 +48,7 @@ export const ForestDesignSystem = {
     display: '"MedievalSharp", "Cinzel", "Georgia", serif',      // Headers
     body: '"Merriweather", "Crimson Text", "Georgia", serif',    // Body text
     accent: '"UnifrakturMaguntia", "Luminari", "Fantasy"',       // Special text
+    inscription: '"Merriweather", "Crimson Text", "Georgia", serif', // For inscriptions
     
     // Font Weights
     weights: {
@@ -137,6 +140,22 @@ export const ForestDesignSystem = {
         rgba(119, 136, 153, 0.3) 50%,
         rgba(119, 136, 153, 0.1) 100%)`,
     },
+    
+    // Backward compatibility - marble texture
+    marble: {
+      background: `linear-gradient(135deg, 
+        #3E2723 0%, 
+        #5D4037 25%, 
+        #3E2723 50%, 
+        #4E342E 75%, 
+        #3E2723 100%)`,
+      pattern: `radial-gradient(ellipse at top left, 
+        rgba(77, 44, 28, 0.3) 0%, 
+        transparent 50%),
+        radial-gradient(ellipse at bottom right, 
+        rgba(62, 39, 35, 0.3) 0%, 
+        transparent 50%)`,
+    },
   },
 
   // Shadows & Depth
@@ -148,6 +167,7 @@ export const ForestDesignSystem = {
     glow: '0 0 20px rgba(255, 215, 0, 0.6), 0 0 40px rgba(255, 215, 0, 0.3)',
     mystical: '0 0 30px rgba(107, 70, 193, 0.5), 0 0 60px rgba(107, 70, 193, 0.3)',
     fire: '0 0 20px rgba(220, 20, 60, 0.6), 0 0 40px rgba(255, 69, 0, 0.4)',
+    inscription: '1px 1px 0px rgba(0, 0, 0, 0.8), 2px 2px 4px rgba(0, 0, 0, 0.3)',
   },
 
   // Borders
@@ -242,6 +262,11 @@ export const ForestIcons = {
     trophy: '🏆',
     chest: '🎁',
   },
+  
+  // Utility function - convert numbers to string
+  toNumber: (num: number): string => {
+    return num.toString();
+  },
 };
 
 // Forest Battle Text
@@ -275,7 +300,7 @@ export const ForestText = {
   },
   
   phrases: {
-    battleCry: 'For glory and gold!',
+    battleCry: 'Hunt the beast, claim the prize!',
     victory: 'The beast falls!',
     defeat: 'The forest claims another...',
     taunt: 'Face your doom!',

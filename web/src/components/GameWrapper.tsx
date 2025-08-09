@@ -72,12 +72,12 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
 
     const initGame = async () => {
       try {
-        const { AureliusGame } = await import('../game/Game');
+        const { BetBeastGame } = await import('../game/Game');
         
         // Double-check we haven't been cancelled and no game exists
         if (isCancelled || gameInstanceRef.current) return;
         
-        const gameInstance = new AureliusGame();
+        const gameInstance = new BetBeastGame();
         gameInstance.init('game-container');
         
         if (!isCancelled) {

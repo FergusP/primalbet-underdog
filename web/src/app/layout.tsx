@@ -19,10 +19,7 @@ export const metadata: Metadata = {
   keywords: "Solana, Game, NFT, Jackpot, Combat, Blockchain, Crypto",
   authors: [{ name: "BetBeast Team" }],
   icons: {
-    icon: [
-      { url: '/forest-icon.svg', type: 'image/svg+xml' },
-      { url: '/favicon.ico', sizes: 'any' }
-    ],
+    icon: '/forest-icon.svg',
     shortcut: '/forest-icon.svg',
     apple: '/forest-icon.svg',
   },

@@ -50,8 +50,8 @@ export class LobbyScene extends BaseScene {
     const leftPlatform = {
       minX: width * 0.08,  // Moved further left
       maxX: width * 0.30,  // Moved further left
-      minY: height * 0.42,
-      maxY: height * 0.48
+      minY: height * 0.56,
+      maxY: height * 0.62
     };
     
     // Soldiers drop from top of the left platform box
@@ -180,8 +180,8 @@ export class LobbyScene extends BaseScene {
     const leftPlatform = {
       minX: width * 0.08,  // Moved further left
       maxX: width * 0.30,  // Moved further left
-      minY: height * 0.42,
-      maxY: height * 0.48
+      minY: height * 0.56,
+      maxY: height * 0.62
     };
     
     // Entry from top of left platform box
@@ -303,8 +303,8 @@ export class LobbyScene extends BaseScene {
     const leftPlatform = {
       minX: width * 0.08,  // Moved further left
       maxX: width * 0.30,  // Moved further left
-      minY: height * 0.42,
-      maxY: height * 0.48
+      minY: height * 0.56,
+      maxY: height * 0.62
     };
     
     // Entry from top of left platform box
@@ -653,7 +653,7 @@ export class LobbyScene extends BaseScene {
     this.registerUIElement('bgRect', bgRect);
     
     // Load the jungle platforms background image
-    this.bgImage = this.add.image(width * 0.5, height * 0.5, 'forest-bg');
+    this.bgImage = this.add.image(width * 0.5, height * 0.65, 'forest-bg');
     
     // Calculate aspect ratio to properly fit the platforms
     const scaleX = width / this.bgImage.width;
@@ -748,7 +748,7 @@ export class LobbyScene extends BaseScene {
       if (actualSpriteKey) {
         // Position monster to the left, further from soldiers
         const monsterX = this.getRelativePosition(0.80, width);  // Match text X position
-        const monsterY = this.getRelativePosition(0.20, height);  // Slightly lower on platform
+        const monsterY = this.getRelativePosition(0.35, height);  // Moved down to prevent cutoff
         
         // Create the monster sprite using the correct texture
         const idleTexture = `${actualSpriteKey}_idle`;
@@ -981,8 +981,8 @@ export class LobbyScene extends BaseScene {
     const leftPlatform = {
       minX: width * 0.08,  // Moved further left
       maxX: width * 0.30,  // Moved further left
-      minY: height * 0.42,
-      maxY: height * 0.48
+      minY: height * 0.56,
+      maxY: height * 0.62
     };
     
     // Create warrior group within left platform
@@ -1179,7 +1179,7 @@ export class LobbyScene extends BaseScene {
 
   private updateMonsterDisplay() {
     if (!this.forestArenaState?.currentMonster) return;
-    if (!this.monsterSprite || !this.scene.isActive()) return;
+    if (!this.monsterSprite || !this.scene || !this.scene.isActive()) return;
 
     // Since we now create the correct sprite in createMonsterDisplay,
     // this method only needs to handle updates when the monster changes
@@ -1308,12 +1308,12 @@ export class LobbyScene extends BaseScene {
     
     // Update background image
     if (this.bgImage) {
-      this.bgImage.setPosition(this.centerX(width), this.centerY(height));
+      this.bgImage.setPosition(this.centerX(width), height * 0.65);
       
       // Recalculate scale to maintain aspect ratio and cover the screen with margin
       const scaleX = (width * 1.1) / this.bgImage.width;
       const scaleY = (height * 1.1) / this.bgImage.height;
-      const scale = Math.max(scaleX, scaleY);
+      const scale = Math.max(scaleX, scaleY); // Ensure full coverage
       this.bgImage.setScale(scale);
     }
     
@@ -1338,7 +1338,7 @@ export class LobbyScene extends BaseScene {
     
     // Monster positioned on the elevated right platform
     const monsterX = this.getRelativePosition(0.80, width);
-    const monsterY = this.getRelativePosition(0.20, height);
+    const monsterY = this.getRelativePosition(0.35, height);
 
     // Position monster sprite - LARGER and more prominent
     this.monsterSprite.setPosition(monsterX, monsterY);

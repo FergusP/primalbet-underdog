@@ -270,9 +270,9 @@ export const MenuSceneUI: React.FC<MenuSceneUIProps> = () => {
               textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)',
             }}
           >
-            "In the blood-soaked sands of the arena, 
+            "In the dark depths of the haunted forest, 
             <br />
-            only the victorious may challenge the Vault of Sol."
+            only the bravest warriors may claim the Beast's treasure."
           </p>
         </div>
       </div>

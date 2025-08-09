@@ -1,11 +1,10 @@
 import React from 'react';
-import { RomanDesignSystem, RomanIcons } from '../../styles/romanDesignSystem';
+import { ForestDesignSystem, ForestIcons } from '../../styles/forestDesignSystem';
 
 interface BeastHealthBarProps {
   currentHealth: number;
   maxHealth: number;
   label: string;
-  gladiatorType?: 'murmillo' | 'retiarius' | 'thraex' | 'secutor' | 'hoplomachus';
   isPlayer?: boolean;
 }
 
@@ -13,28 +12,26 @@ export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
   currentHealth,
   maxHealth,
   label,
-  gladiatorType = 'murmillo',
   isPlayer = false
 }) => {
   const healthPercentage = Math.max(0, Math.min(100, (currentHealth / maxHealth) * 100));
-  const romanCurrentHealth = RomanIcons.toRomanNumeral(Math.max(0, currentHealth));
-  const romanMaxHealth = RomanIcons.toRomanNumeral(maxHealth);
+  const currentHealthDisplay = ForestIcons.toNumber(Math.max(0, currentHealth));
+  const maxHealthDisplay = ForestIcons.toNumber(maxHealth);
   
   // Determine health bar color based on percentage
   const getHealthColor = (percentage: number) => {
-    if (percentage > 60) return RomanDesignSystem.colors.laurelGreen;
-    if (percentage > 30) return RomanDesignSystem.colors.ochreYellow;
-    return RomanDesignSystem.colors.crimsonRoman;
+    if (percentage > 60) return ForestDesignSystem.colors.forestGreen;
+    if (percentage > 30) return ForestDesignSystem.colors.autumnOrange;
+    return ForestDesignSystem.colors.bloodRed;
   };
 
   const healthColor = getHealthColor(healthPercentage);
-  const gladiatorIcon = RomanIcons.gladiatorTypes[gladiatorType];
 
   return (
     <div 
       className="relative"
       style={{
-        fontFamily: RomanDesignSystem.typography.inscription,
+        fontFamily: ForestDesignSystem.typography.inscription,
         minWidth: '200px',
         maxWidth: '300px',
       }}
@@ -42,12 +39,12 @@ export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
       {/* Stone Tablet Background */}
       <div
         style={{
-          background: RomanDesignSystem.textures.marble.background,
-          backgroundImage: RomanDesignSystem.textures.marble.pattern,
-          border: `3px solid ${RomanDesignSystem.colors.travertine}`,
-          borderRadius: RomanDesignSystem.borderRadius.md,
-          boxShadow: RomanDesignSystem.shadows.raised,
-          padding: RomanDesignSystem.spacing.md,
+          background: ForestDesignSystem.textures.marble.background,
+          backgroundImage: ForestDesignSystem.textures.marble.pattern,
+          border: `3px solid ${ForestDesignSystem.colors.stoneGray}`,
+          borderRadius: ForestDesignSystem.borderRadius.md,
+          boxShadow: ForestDesignSystem.shadows.raised,
+          padding: ForestDesignSystem.spacing.md,
           position: 'relative',
           overflow: 'hidden',
         }}
@@ -59,11 +56,11 @@ export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
             top: '4px',
             left: '4px',
             fontSize: '12px',
-            color: RomanDesignSystem.colors.goldAntique,
-            textShadow: RomanDesignSystem.shadows.inscription,
+            color: ForestDesignSystem.colors.goldAntique,
+            textShadow: ForestDesignSystem.shadows.inscription,
           }}
         >
-          🦅
+          🦉
         </div>
         <div
           style={{
@@ -71,42 +68,32 @@ export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
             top: '4px',
             right: '4px',
             fontSize: '12px',
-            color: RomanDesignSystem.colors.goldAntique,
-            textShadow: RomanDesignSystem.shadows.inscription,
+            color: ForestDesignSystem.colors.goldAntique,
+            textShadow: ForestDesignSystem.shadows.inscription,
             transform: 'scaleX(-1)', // Mirror the eagle
           }}
         >
-          🦅
+          🦉
         </div>
 
-        {/* Header with Gladiator Type and Label */}
+        {/* Header with Label */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: RomanDesignSystem.spacing.sm,
-            gap: RomanDesignSystem.spacing.sm,
+            marginBottom: ForestDesignSystem.spacing.sm,
+            gap: ForestDesignSystem.spacing.sm,
           }}
         >
-          {/* Gladiator Type Icon */}
-          <div
-            style={{
-              fontSize: RomanDesignSystem.typography.sizes.lg,
-              filter: 'drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.6))',
-            }}
-          >
-            {gladiatorIcon}
-          </div>
-
           {/* Label */}
           <div
             style={{
-              fontSize: RomanDesignSystem.typography.sizes.sm,
-              fontWeight: RomanDesignSystem.typography.weights.bold,
-              color: RomanDesignSystem.colors.inscriptionDark,
-              textShadow: RomanDesignSystem.shadows.inscription,
-              letterSpacing: RomanDesignSystem.typography.letterSpacing.wider,
+              fontSize: ForestDesignSystem.typography.sizes.sm,
+              fontWeight: ForestDesignSystem.typography.weights.bold,
+              color: ForestDesignSystem.colors.textDark,
+              textShadow: ForestDesignSystem.shadows.inscription,
+              letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
               textTransform: 'uppercase',
             }}
           >
@@ -119,10 +106,10 @@ export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
           style={{
             position: 'relative',
             height: '20px',
-            background: RomanDesignSystem.colors.sandstone,
-            border: `2px solid ${RomanDesignSystem.colors.umberBurnt}`,
-            borderRadius: RomanDesignSystem.borderRadius.sm,
-            boxShadow: RomanDesignSystem.shadows.carved,
+            background: ForestDesignSystem.colors.autumnOrange,
+            border: `2px solid ${ForestDesignSystem.colors.umberBurnt}`,
+            borderRadius: ForestDesignSystem.borderRadius.sm,
+            boxShadow: ForestDesignSystem.shadows.carved,
             overflow: 'hidden',
           }}
         >
@@ -137,7 +124,7 @@ export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
               background: `linear-gradient(90deg, 
                 ${healthColor} 0%, 
                 ${healthColor}CC 100%)`,
-              transition: `width ${RomanDesignSystem.animation.normal} ease-out`,
+              transition: `width ${ForestDesignSystem.animation.normal} ease-out`,
               boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.3)',
             }}
           />
@@ -150,7 +137,7 @@ export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
               left: 0,
               right: 0,
               bottom: 0,
-              background: RomanDesignSystem.textures.stone.texture,
+              background: ForestDesignSystem.textures.stone.texture,
               opacity: 0.3,
               pointerEvents: 'none',
             }}
@@ -173,13 +160,13 @@ export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
           ))}
         </div>
 
-        {/* Health Display - Both Arabic and Roman */}
+        {/* Health Display - Both Arabic and formatted */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            marginTop: RomanDesignSystem.spacing.sm,
+            marginTop: ForestDesignSystem.spacing.sm,
             gap: '2px',
           }}
         >
@@ -188,52 +175,52 @@ export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: RomanDesignSystem.spacing.xs,
+              gap: ForestDesignSystem.spacing.xs,
             }}
           >
             <span
               style={{
-                fontSize: RomanDesignSystem.typography.sizes.xl,
-                fontWeight: RomanDesignSystem.typography.weights.black,
-                color: currentHealth > 0 ? healthColor : RomanDesignSystem.colors.crimsonRoman,
+                fontSize: ForestDesignSystem.typography.sizes.xl,
+                fontWeight: ForestDesignSystem.typography.weights.black,
+                color: currentHealth > 0 ? healthColor : ForestDesignSystem.colors.bloodRed,
                 textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
-                letterSpacing: RomanDesignSystem.typography.letterSpacing.normal,
+                letterSpacing: ForestDesignSystem.typography.letterSpacing.normal,
               }}
             >
               {currentHealth}
             </span>
             <span
               style={{
-                fontSize: RomanDesignSystem.typography.sizes.lg,
-                color: RomanDesignSystem.colors.bronzePatina,
-                fontWeight: RomanDesignSystem.typography.weights.bold,
+                fontSize: ForestDesignSystem.typography.sizes.lg,
+                color: ForestDesignSystem.colors.mossGreen,
+                fontWeight: ForestDesignSystem.typography.weights.bold,
               }}
             >
               /
             </span>
             <span
               style={{
-                fontSize: RomanDesignSystem.typography.sizes.xl,
-                fontWeight: RomanDesignSystem.typography.weights.bold,
-                color: RomanDesignSystem.colors.bronzePatina,
+                fontSize: ForestDesignSystem.typography.sizes.xl,
+                fontWeight: ForestDesignSystem.typography.weights.bold,
+                color: ForestDesignSystem.colors.mossGreen,
                 textShadow: '1px 1px 2px rgba(0, 0, 0, 0.6)',
-                letterSpacing: RomanDesignSystem.typography.letterSpacing.normal,
+                letterSpacing: ForestDesignSystem.typography.letterSpacing.normal,
               }}
             >
               {maxHealth}
             </span>
           </div>
           
-          {/* Roman numerals - Smaller, decorative */}
+          {/* Formatted numbers - Smaller, decorative */}
           <div
             style={{
-              fontSize: RomanDesignSystem.typography.sizes.xs,
-              color: RomanDesignSystem.colors.goldAntique,
+              fontSize: ForestDesignSystem.typography.sizes.xs,
+              color: ForestDesignSystem.colors.goldAntique,
               opacity: 0.7,
-              letterSpacing: RomanDesignSystem.typography.letterSpacing.wider,
+              letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
             }}
           >
-            ({romanCurrentHealth} / {romanMaxHealth})
+            ({currentHealthDisplay} / {maxHealthDisplay})
           </div>
         </div>
 
@@ -247,7 +234,7 @@ export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
             height: '2px',
             background: `linear-gradient(90deg, 
               transparent 0%, 
-              ${RomanDesignSystem.colors.goldAntique} 50%, 
+              ${ForestDesignSystem.colors.goldAntique} 50%, 
               transparent 100%)`,
             opacity: 0.6,
           }}
@@ -262,19 +249,19 @@ export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
             top: '-8px',
             left: '50%',
             transform: 'translateX(-50%)',
-            background: RomanDesignSystem.textures.goldLeaf.background,
-            border: `2px solid ${RomanDesignSystem.colors.goldDeep}`,
-            borderRadius: RomanDesignSystem.borderRadius.full,
+            background: ForestDesignSystem.textures.goldShimmer.background,
+            border: `2px solid ${ForestDesignSystem.colors.goldDeep}`,
+            borderRadius: ForestDesignSystem.borderRadius.full,
             padding: '4px 8px',
-            fontSize: RomanDesignSystem.typography.sizes.xs,
-            fontWeight: RomanDesignSystem.typography.weights.bold,
-            color: RomanDesignSystem.colors.inscriptionDark,
+            fontSize: ForestDesignSystem.typography.sizes.xs,
+            fontWeight: ForestDesignSystem.typography.weights.bold,
+            color: ForestDesignSystem.colors.textDark,
             textShadow: '1px 1px 0px rgba(255, 255, 255, 0.8)',
-            letterSpacing: RomanDesignSystem.typography.letterSpacing.wider,
-            boxShadow: RomanDesignSystem.shadows.raised,
+            letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
+            boxShadow: ForestDesignSystem.shadows.raised,
           }}
         >
-          TU
+          YOU
         </div>
       )}
 
@@ -286,9 +273,9 @@ export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
           left: '50%',
           transform: 'translateX(-50%)',
           pointerEvents: 'none',
-          zIndex: RomanDesignSystem.zIndex.elevated,
+          zIndex: ForestDesignSystem.zIndex.elevated,
         }}
-        // This could be used for floating damage numbers with Roman numerals
+        // This could be used for floating damage numbers
       />
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { RomanDesignSystem, RomanText, RomanIcons } from '../styles/romanDesignSystem';
+import { ForestDesignSystem, ForestText, ForestIcons } from '../styles/forestDesignSystem';
 import { ForestButton } from './Forest/ForestButton';
 
 interface VaultSceneUIProps {}
@@ -212,24 +212,24 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
           <h1 
             className="relative text-center"
             style={{
-              fontFamily: RomanDesignSystem.typography.display,
+              fontFamily: ForestDesignSystem.typography.display,
               fontSize: '48px', // Reduced from 4xl to prevent overlap
-              fontWeight: RomanDesignSystem.typography.weights.black,
-              letterSpacing: RomanDesignSystem.typography.letterSpacing.widest,
+              fontWeight: ForestDesignSystem.typography.weights.black,
+              letterSpacing: ForestDesignSystem.typography.letterSpacing.widest,
               textTransform: 'uppercase',
               marginBottom: '20px', // Add spacing
               background: `linear-gradient(
                 180deg,
-                ${RomanDesignSystem.colors.ivory} 0%,
-                ${RomanDesignSystem.colors.goldLeaf} 25%,
-                ${RomanDesignSystem.colors.goldDeep} 50%,
-                ${RomanDesignSystem.colors.bronze} 75%,
-                ${RomanDesignSystem.colors.bronzePatina} 100%
+                ${ForestDesignSystem.colors.textLight} 0%,
+                ${ForestDesignSystem.colors.goldShine} 25%,
+                ${ForestDesignSystem.colors.goldDeep} 50%,
+                ${ForestDesignSystem.colors.stoneGray} 75%,
+                ${ForestDesignSystem.colors.mossGreen} 100%
               )`,
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              textShadow: RomanDesignSystem.shadows.inscription,
-              filter: `drop-shadow(0 2px 10px ${RomanDesignSystem.colors.goldAntique})`,
+              textShadow: ForestDesignSystem.shadows.inscription,
+              filter: `drop-shadow(0 2px 10px ${ForestDesignSystem.colors.goldAntique})`,
             }}
           >
             GROVE OF DESTINY
@@ -239,11 +239,11 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
           <div 
             className="text-center mt-2"
             style={{
-              fontFamily: RomanDesignSystem.typography.inscription,
-              fontSize: RomanDesignSystem.typography.sizes.base,
+              fontFamily: ForestDesignSystem.typography.inscription,
+              fontSize: ForestDesignSystem.typography.sizes.base,
               fontStyle: 'italic',
-              color: RomanDesignSystem.colors.bronzePatina,
-              letterSpacing: RomanDesignSystem.typography.letterSpacing.wider,
+              color: ForestDesignSystem.colors.mossGreen,
+              letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
               textTransform: 'uppercase',
               opacity: 0.9,
             }}
@@ -492,7 +492,7 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
               </div>
             )}
             
-            {/* Roman continue button */}
+            {/* Forest continue button */}
             <ForestButton 
               onClick={handleContinue}
               variant="primary"
@@ -602,11 +602,11 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
               </div>
             </div>
             
-            {/* Try again button - Roman style */}
+            {/* Try again button - Forest style */}
             <div>
               <ForestButton 
                 onClick={handleContinue}
-                variant="bronze"
+                variant="secondary"
                 size="medium"
                 icon="🎲"
               >

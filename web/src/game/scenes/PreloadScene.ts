@@ -347,8 +347,7 @@ export class PreloadScene extends Scene {
     // All monster animations (Orc, Armored Orc, Elite Orc, Orc Rider, Werewolf)
     this.createAllMonsterAnimations();
     
-    // Gladiator animations - special handling for Jiwatron atlas
-    this.createJiwatronAnimations();
+    // Removed unused Jiwatron animations - player uses soldier sprite
 
     // Impact animation
     if (this.textures.exists('impact')) {
@@ -406,7 +405,7 @@ export class PreloadScene extends Scene {
     });
 
     // Special roar animation for monsters
-    if (key !== 'gladiator') {
+    if (key !== 'warrior') {
       this.anims.create({
         key: `${key}_roar`,
         frames: this.anims.generateFrameNumbers(key, { start: 0, end: framesPerAnimation - 1 }),
@@ -613,98 +612,6 @@ export class PreloadScene extends Scene {
     }
   }
 
-  private createJiwatronAnimations() {
-    if (!this.textures.exists('gladiator')) return;
-    
-    // Create animations based on Jiwatron's frame tags
-    // Idle animation - just use first frame to avoid constant movement
-    this.anims.create({
-      key: 'gladiator_idle',
-      frames: this.anims.generateFrameNames('gladiator', {
-        prefix: 'Jiwatron #Idle ',
-        suffix: '.aseprite',
-        start: 0,
-        end: 0  // Single frame
-      }),
-      frameRate: 1,
-      repeat: 0
-    });
-
-    // Walk animation (8 frames)
-    this.anims.create({
-      key: 'gladiator_walk',
-      frames: this.anims.generateFrameNames('gladiator', {
-        prefix: 'Jiwatron #Walk ',
-        suffix: '.aseprite',
-        start: 0,
-        end: 7
-      }),
-      frameRate: 12,
-      repeat: -1
-    });
-
-    // Attack animations
-    this.anims.create({
-      key: 'gladiator_attack',
-      frames: this.anims.generateFrameNames('gladiator', {
-        prefix: 'Jiwatron #Attack01 ',
-        suffix: '.aseprite',
-        start: 0,
-        end: 6
-      }),
-      frameRate: 14,
-      repeat: 0
-    });
-
-    this.anims.create({
-      key: 'gladiator_attack2',
-      frames: this.anims.generateFrameNames('gladiator', {
-        prefix: 'Jiwatron #Attack02 ',
-        suffix: '.aseprite',
-        start: 0,
-        end: 10
-      }),
-      frameRate: 16,
-      repeat: 0
-    });
-
-    this.anims.create({
-      key: 'gladiator_attack3',
-      frames: this.anims.generateFrameNames('gladiator', {
-        prefix: 'Jiwatron #Attack03 ',
-        suffix: '.aseprite',
-        start: 0,
-        end: 8
-      }),
-      frameRate: 15,
-      repeat: 0
-    });
-
-    // Hurt animation (4 frames)
-    this.anims.create({
-      key: 'gladiator_hurt',
-      frames: this.anims.generateFrameNames('gladiator', {
-        prefix: 'Jiwatron #Hurt ',
-        suffix: '.aseprite',
-        start: 0,
-        end: 3
-      }),
-      frameRate: 10,
-      repeat: 0
-    });
-
-    // Death animation (4 frames)
-    this.anims.create({
-      key: 'gladiator_death',
-      frames: this.anims.generateFrameNames('gladiator', {
-        prefix: 'Jiwatron #Death ',
-        suffix: '.aseprite',
-        start: 0,
-        end: 3
-      }),
-      frameRate: 8,
-      repeat: 0
-    });
-  }
+  // Removed createJiwatronAnimations method - player uses soldier sprite animations instead
 
 }

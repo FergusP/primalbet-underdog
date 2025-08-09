@@ -174,5 +174,4 @@ export interface PaymentOptions {
   canUsePDA: boolean;                  // Can pay from PDA
   lastPaymentMethod: string;           // 'wallet' or 'pda'
 }
-// Backward compatibility aliases
-export type ColosseumState = ForestArenaState;
+// Remove backward compatibility - no longer needed

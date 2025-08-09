@@ -678,7 +678,18 @@ export class CombatScene extends BaseScene {
         if (skeleton.active) {
           const dist = Phaser.Math.Distance.Between(x, y, skeleton.x, skeleton.y);
           if (dist <= range) {
-            skeleton.takeDamage(Math.floor(damage));
+            const killed = skeleton.takeDamage(Math.floor(damage));
+            if (killed) {
+              // Check if all enemies are defeated after skeleton dies
+              this.time.delayedCall(600, () => {
+                if (this.isMainMonsterDead && !this.isGameOver) {
+                  const remainingSkeletons = this.skeletons ? this.skeletons.getLength() : 0;
+                  if (remainingSkeletons === 0) {
+                    this.gameOver(true);
+                  }
+                }
+              });
+            }
             // Knockback (check if body exists)
             if (skeleton.body) {
               const angle = Phaser.Math.Angle.Between(x, y, skeleton.x, skeleton.y);
@@ -1255,8 +1266,19 @@ export class CombatScene extends BaseScene {
               // Use existing dealMeleeDamage for monster (it handles evolution)
               this.dealMeleeDamage();
             } else if (enemy.type === 'skeleton' && enemy.target instanceof SkeletonEnemy) {
-              enemy.target.takeDamage(damage);
+              const killed = enemy.target.takeDamage(damage);
               this.showDamageNumber(enemy.target.x, enemy.target.y - 40, damage, 0xff4444, isCrit);
+              if (killed) {
+                // Check if all enemies are defeated after skeleton dies
+                this.time.delayedCall(600, () => {
+                  if (this.isMainMonsterDead && !this.isGameOver) {
+                    const remainingSkeletons = this.skeletons ? this.skeletons.getLength() : 0;
+                    if (remainingSkeletons === 0) {
+                      this.gameOver(true);
+                    }
+                  }
+                });
+              }
             } else if (enemy.type === 'slime' && enemy.target instanceof SlimeEnemy) {
               enemy.target.takeDamage(damage);
               this.showDamageNumber(enemy.target.x, enemy.target.y - 40, damage, 0xff4444, isCrit);
@@ -2159,7 +2181,32 @@ export class CombatScene extends BaseScene {
     if (this.playerHealth <= 0) {
       this.gameOver(false); // Player died
     } else if (this.monsterHealth <= 0) {
-      this.gameOver(true); // Player won - werewolf won't reach 0 due to threshold
+      // Main monster is dead, but check if there are any remaining hostile enemies (skeletons)
+      const remainingSkeletons = this.skeletons ? this.skeletons.getLength() : 0;
+      
+      if (remainingSkeletons === 0) {
+        // All hostile enemies defeated - player wins
+        this.gameOver(true);
+      } else {
+        // Main monster dead but skeletons remain - mark boss as dead to stop spawning
+        this.isMainMonsterDead = true;
+        this.stopAllSpawning();
+        
+        // Play main monster death animation if not already playing
+        const deathKey = `${this.monsterSpriteKey}_death`;
+        if (this.anims.exists(deathKey) && this.monster && this.monster.active) {
+          this.currentMonsterAnimation = deathKey;
+          this.monster.play(deathKey);
+          this.monster.setTint(0x666666);
+          
+          // Disable monster physics
+          if (this.monster.body) {
+            const monsterBody = this.monster.body as Phaser.Physics.Arcade.Body;
+            monsterBody.setVelocity(0, 0);
+            monsterBody.enable = false;
+          }
+        }
+      }
     }
   }
 
@@ -2767,22 +2814,22 @@ export class CombatScene extends BaseScene {
       })
     );
 
-    // Listen for return to colosseum event from UI
+    // Listen for return to arena event from UI
     const handleReturn = (event: any) => {
-      window.removeEventListener('return-to-colosseum', handleReturn);
+      window.removeEventListener('return-to-arena', handleReturn);
       const walletAddress = event.detail?.walletAddress || 'test-wallet';
 
-      // Return to Colosseum scene
+      // Return to Arena scene
       this.scene.start('LobbyScene', {
         walletAddress: walletAddress,
       });
     };
 
-    window.addEventListener('return-to-colosseum', handleReturn);
+    window.addEventListener('return-to-arena', handleReturn);
 
     // Also allow clicking anywhere to return (fallback)
     this.input.once('pointerdown', () => {
-      window.removeEventListener('return-to-colosseum', handleReturn);
+      window.removeEventListener('return-to-arena', handleReturn);
       this.scene.start('LobbyScene', {
         walletAddress: 'test-wallet',
       });
@@ -3159,6 +3206,16 @@ export class CombatScene extends BaseScene {
           // If skeleton died, trigger revenge boost for nearby allies
           if (killed) {
             this.triggerRevengeBoost(skeleton.x, skeleton.y);
+            
+            // Check if all enemies are defeated after skeleton dies
+            this.time.delayedCall(600, () => {
+              if (this.isMainMonsterDead && !this.isGameOver) {
+                const remainingSkeletons = this.skeletons ? this.skeletons.getLength() : 0;
+                if (remainingSkeletons === 0) {
+                  this.gameOver(true);
+                }
+              }
+            });
           }
           
           // Handle special arrow effects

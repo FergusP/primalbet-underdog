@@ -1,6 +1,6 @@
 import React from 'react';
 import { ForestFightButton } from '../Forest/ForestButton';
-import { RomanText } from '../../styles/romanDesignSystem';
+import { ForestText } from '../../styles/forestDesignSystem';
 
 interface Props {
   onClick: () => void;

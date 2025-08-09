@@ -1,5 +1,5 @@
 // SpearRechargeIndicator.ts - Phaser 3 Circular Spear Recharge UI Component
-// Roman-themed circular progress indicator for divine spear regeneration
+// Forest-themed circular progress indicator for magic projectile regeneration
 
 export class SpearRechargeIndicator extends Phaser.GameObjects.Container {
   private radius: number;
@@ -33,7 +33,7 @@ export class SpearRechargeIndicator extends Phaser.GameObjects.Container {
   }
 
   private createElements(): void {
-    // Background circle (bronze Roman frame)
+    // Background circle (forest wood frame)
     this.backgroundCircle = this.scene.add.graphics();
     this.backgroundCircle.lineStyle(this.strokeWidth, 0x8B4513, 0.6); // Bronze
     this.backgroundCircle.strokeCircle(0, 0, this.radius);
@@ -48,7 +48,7 @@ export class SpearRechargeIndicator extends Phaser.GameObjects.Container {
     this.shimmerEffect.visible = false;
     this.add(this.shimmerEffect);
     
-    // Roman rune marks at cardinal directions
+    // Forest rune marks at cardinal directions
     this.createRuneMarks();
   }
 
