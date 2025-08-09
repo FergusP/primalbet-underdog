@@ -4,11 +4,11 @@ interface Props {
   position: { x: number; y: number };
 }
 
-export const GladiatorLabel: React.FC<Props> = ({ position }) => {
-  // Position the label below the gladiator triangular formation
+export const WarriorLabel: React.FC<Props> = ({ position }) => {
+  // Position the label below the warrior formation
   const style = {
     left: `${position.x}px`,
-    top: `${position.y + 60}px`, // Offset below gladiators
+    top: `${position.y + 60}px`, // Offset below warriors
     transform: 'translateX(-50%)',
     textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)'
   };
@@ -18,7 +18,7 @@ export const GladiatorLabel: React.FC<Props> = ({ position }) => {
       className="absolute pointer-events-none text-gray-400 italic text-base"
       style={style}
     >
-      little creeps (gladiator)
+      forest warriors
     </div>
   );
 };

@@ -10,14 +10,12 @@ export class PreloadScene extends Scene {
     // Load assets without showing loading screen
     // UI elements
     this.load.image('arena-bg', '/assets/backgrounds/arena.png');
-    this.load.image('colosseum-bg', '/assets/backgrounds/lobby.png');
+    this.load.image('forest-bg', '/assets/backgrounds/lobby.png');
     this.load.image('ui_panel', '/assets/ui/panel.png');
     this.load.image('gold_coin', '/assets/particles/coin.png');
     this.load.image('vault_closed', '/assets/sprites/vault_closed.png');
     this.load.image('vault_open', '/assets/sprites/vault_open.png');
     
-    // Gladiator - Using Jiwatron atlas (for LobbyScene)
-    this.load.atlas('gladiator', '/assets/sprites/Jiwatron.png', '/assets/sprites/Jiwatron.json');
     
     // Soldier sprites for player in CombatScene
     // Main spritesheet
@@ -210,10 +208,6 @@ export class PreloadScene extends Scene {
       frameWidth: 100,
       frameHeight: 100
     });
-    this.load.spritesheet('werewolf_attack03', '/assets/sprites/werewolf/Werewolf-Attack03.png', {
-      frameWidth: 100,
-      frameHeight: 100
-    });
     this.load.spritesheet('werewolf_hurt', '/assets/sprites/werewolf/Werewolf-Hurt.png', {
       frameWidth: 100,
       frameHeight: 100
@@ -312,10 +306,6 @@ export class PreloadScene extends Scene {
       frameHeight: 64
     });
     
-    this.load.spritesheet('fire_breath', '/assets/effects/fire_breath.png', {
-      frameWidth: 96,
-      frameHeight: 96
-    });
     
     this.load.image('spark', '/assets/particles/spark.png');
     

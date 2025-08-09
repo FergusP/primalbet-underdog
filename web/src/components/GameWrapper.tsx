@@ -17,8 +17,10 @@ import { GameUIOverlay } from './GameUIOverlay';
 import { IntegratedPaymentUI } from './IntegratedPaymentUI';
 import { PDADepositModal } from './PDADepositModal';
 import { PDAWithdrawModal } from './PDAWithdrawModal';
-// Import dynamic UI components
-import { MenuUI, CombatUI, VaultUI } from './UIComponentLoader';
+// Import UI components
+import { MenuSceneUI } from './MenuSceneUI';
+import { CombatSceneUI } from './CombatSceneUI';
+import { VaultSceneUI } from './VaultSceneUI';
 import { LoadingScreen } from './LoadingScreen';
 import type { PaymentOptions } from '../types';
 
@@ -540,7 +542,7 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       />
 
       {/* UI Overlays - Scene-specific rendering */}
-      {isGameReady && currentScene === 'MenuScene' && <MenuUI />}
+      {isGameReady && currentScene === 'MenuScene' && <MenuSceneUI />}
       {isGameReady && currentScene === 'LobbyScene' && (
         <GameUIOverlay 
           selectedPaymentMethod={selectedPaymentMethod} 
@@ -550,8 +552,8 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
           isLoading={isCombatProcessing}
         />
       )}
-      {isGameReady && currentScene === 'CombatScene' && <CombatUI />}
-      {isGameReady && currentScene === 'VaultScene' && <VaultUI />}
+      {isGameReady && currentScene === 'CombatScene' && <CombatSceneUI />}
+      {isGameReady && currentScene === 'VaultScene' && <VaultSceneUI />}
       
       {/* Debug: Show current scene */}
       {process.env.NODE_ENV === 'development' && (
@@ -565,7 +567,7 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
         <div className="absolute inset-0 bg-black flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-yellow-500 mx-auto mb-4"></div>
-            <h2 className="text-2xl font-bold text-white mb-2">🏛️ AURELIUS COLOSSEUM 🏛️</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">🌲 BETBEAST ARENA 🌲</h2>
             <p className="text-gray-400">Loading the arena...</p>
           </div>
         </div>

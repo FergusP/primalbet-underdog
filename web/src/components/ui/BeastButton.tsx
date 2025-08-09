@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-interface GladiatorButtonProps {
+interface BeastButtonProps {
   children: React.ReactNode;
   onClick?: () => void;
   variant?: 'primary' | 'secondary' | 'danger' | 'victory';
@@ -10,7 +10,7 @@ interface GladiatorButtonProps {
   style?: React.CSSProperties;
 }
 
-export const GladiatorButton: React.FC<GladiatorButtonProps> = ({
+export const BeastButton: React.FC<BeastButtonProps> = ({
   children,
   onClick,
   variant = 'primary',
@@ -24,7 +24,7 @@ export const GladiatorButton: React.FC<GladiatorButtonProps> = ({
 
   const variants = {
     primary: {
-      background: 'linear-gradient(135deg, var(--color-bronze) 0%, var(--color-dark-gold) 100%)',
+      background: 'linear-gradient(135deg, var(--color-bark) 0%, var(--color-dark-gold) 100%)',
       border: '2px solid var(--color-gold)',
       color: 'var(--color-light-gold)',
       hoverShadow: '0 12px 48px rgba(255, 215, 0, 0.3)',
@@ -45,7 +45,7 @@ export const GladiatorButton: React.FC<GladiatorButtonProps> = ({
       activeShadow: '0 4px 16px rgba(220, 20, 60, 0.2)',
     },
     victory: {
-      background: 'linear-gradient(135deg, var(--color-gold) 0%, var(--color-bronze) 100%)',
+      background: 'linear-gradient(135deg, var(--color-gold) 0%, var(--color-bark) 100%)',
       border: '3px solid var(--color-light-gold)',
       color: 'var(--background)',
       hoverShadow: '0 20px 80px rgba(255, 215, 0, 0.6), 0 0 120px rgba(255, 215, 0, 0.4)',
@@ -90,7 +90,7 @@ export const GladiatorButton: React.FC<GladiatorButtonProps> = ({
       }}
       onMouseDown={() => setIsPressed(true)}
       onMouseUp={() => setIsPressed(false)}
-      className={`gladiator-button ${className}`}
+      className={`beast-button ${className}`}
       style={{
         ...currentSize,
         ...currentVariant,

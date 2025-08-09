@@ -22,7 +22,7 @@ interface Props {
   children: React.ReactNode;
 }
 
-export const AureliusWalletProvider: React.FC<Props> = ({ children }) => {
+export const BetBeastWalletProvider: React.FC<Props> = ({ children }) => {
   // Network can be set to 'devnet', 'testnet', or 'mainnet-beta'
   const network = WalletAdapterNetwork.Devnet; // Change to Mainnet for production
 
@@ -34,7 +34,7 @@ export const AureliusWalletProvider: React.FC<Props> = ({ children }) => {
     return clusterApiUrl(network);
   }, [network]);
 
-  // Wallet adapters supported by Aurelius Colosseum
+  // Wallet adapters supported by BetBeast
   const wallets = useMemo(
     () => [
       new PhantomWalletAdapter(),
@@ -57,3 +57,6 @@ export const AureliusWalletProvider: React.FC<Props> = ({ children }) => {
     </ConnectionProvider>
   );
 };
+
+// Export with old name for backward compatibility
+export const AureliusWalletProvider = BetBeastWalletProvider;

@@ -9,20 +9,24 @@ export const MenuSceneUI: React.FC<MenuSceneUIProps> = () => {
   const [walletConnected, setWalletConnected] = useState(connected);
   const [walletAddress, setWalletAddress] = useState(publicKey?.toString() || '');
   const [showEnterButton, setShowEnterButton] = useState(connected);
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  // Update state when wallet connection changes
   useEffect(() => {
     setWalletConnected(connected);
     setWalletAddress(publicKey?.toString() || '');
     setShowEnterButton(connected);
   }, [connected, publicKey]);
 
+  useEffect(() => {
+    // Trigger entrance animation
+    setTimeout(() => setIsLoaded(true), 100);
+  }, []);
+
   const handleConnectWallet = () => {
     window.dispatchEvent(new CustomEvent('connectWallet'));
   };
 
   const handleEnterArena = () => {
-    // Navigate to Colosseum scene
     window.dispatchEvent(new CustomEvent('enterArena'));
   };
 
@@ -31,302 +35,289 @@ export const MenuSceneUI: React.FC<MenuSceneUIProps> = () => {
 
   return createPortal(
     <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 100 }}>
-      {/* Text Backdrop */}
-      <div 
-        className="absolute bg-black/60 rounded-[30px]" 
-        style={{
-          left: '5%',
-          top: '10%',
-          width: '90%',
-          height: '60%'
-        }}
-      />
-
-      {/* Crossed Swords Behind Title */}
-      <div className="absolute flex items-center justify-center" style={{ top: '20%', left: '50%', transform: 'translateX(-50%)' }}>
-        <span 
-          className="text-[180px] text-[#8b4513] opacity-30 absolute"
-          style={{ 
-            transform: 'rotate(-23deg) translateX(-100px)',
-            fontFamily: 'system-ui'
+      {/* Animated Background Pattern */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div 
+          className="absolute inset-0"
+          style={{
+            background: `
+              radial-gradient(circle at 20% 30%, rgba(255, 215, 0, 0.1) 0%, transparent 40%),
+              radial-gradient(circle at 80% 70%, rgba(139, 0, 0, 0.1) 0%, transparent 40%),
+              radial-gradient(circle at 50% 50%, rgba(205, 127, 50, 0.05) 0%, transparent 60%)
+            `,
+            animation: 'pulse 8s ease-in-out infinite',
           }}
-        >
-          ⚔️
-        </span>
-        <span 
-          className="text-[180px] text-[#8b4513] opacity-30 absolute"
-          style={{ 
-            transform: 'rotate(23deg) translateX(100px)',
-            fontFamily: 'system-ui'
-          }}
-        >
-          ⚔️
-        </span>
+        />
+        
+        {/* Floating Particles */}
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full"
+            style={{
+              width: `${Math.random() * 4 + 2}px`,
+              height: `${Math.random() * 4 + 2}px`,
+              background: i % 2 === 0 ? 'var(--color-gold)' : 'var(--color-bronze)',
+              opacity: Math.random() * 0.5 + 0.1,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animation: `float ${20 + Math.random() * 10}s linear infinite`,
+              animationDelay: `${Math.random() * 20}s`,
+            }}
+          />
+        ))}
       </div>
 
-      {/* Main Title with Glowing Effect */}
-      <h1 
-        className="absolute font-bold text-center select-none whitespace-nowrap"
-        style={{
-          top: '20%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          fontSize: 'clamp(48px, 6vw, 90px)',
-          color: '#ffd700',
-          WebkitTextStroke: '2px #000000',
-          textShadow: '0 0 30px #ffaa00, 0 0 20px #ff6600, 3px 3px 6px #000000',
-          animation: 'titlePulse 2s ease-in-out infinite'
-        }}
-      >
-        AURELIUS COLOSSEUM
-      </h1>
-
-      {/* Connected Status */}
-      {walletConnected && (
-        <div 
-          className="absolute text-center select-none"
-          style={{
-            top: '36%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            fontSize: 'clamp(16px, 1.8vw, 24px)',
-            color: '#00ff00',
-            fontWeight: 'bold',
-            WebkitTextStroke: '0.5px #000000',
-            textShadow: '0 0 10px #00ff00, 2px 2px 4px #000000'
-          }}
-        >
-          Connected: {shortAddress}
-        </div>
-      )}
-
-      {/* Subtitle */}
-      {!walletConnected && (
-        <h2 
-          className="absolute text-center select-none"
-          style={{
-            top: '30%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            fontSize: 'clamp(20px, 2.2vw, 32px)',
-            color: '#ffffff',
-            fontWeight: 'bold',
-            WebkitTextStroke: '0.5px #000000',
-            textShadow: '0 0 10px #ff6600, 2px 2px 4px #000000'
-          }}
-        >
-          PVGNA • VINCE • DIVITIAS CAPE
-        </h2>
-      )}
-
-      {/* Translation Text */}
-      {!walletConnected && (
-        <p 
-          className="absolute text-center italic select-none"
-          style={{
-            top: '38%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            fontSize: 'clamp(16px, 2vw, 24px)',
-            color: '#ffdd00',
-            fontWeight: 'bold',
-            WebkitTextStroke: '0.5px #000000',
-            textShadow: '0 0 8px #ffaa00, 2px 2px 3px #000000'
-          }}
-        >
-          ( Fight • Conquer • Claim Riches )
-        </p>
-      )}
-
-      {/* Lore Text */}
+      {/* Main Content Container */}
       <div 
-        className="absolute text-center italic select-none"
-        style={{
-          top: '44%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          fontSize: 'clamp(18px, 2.2vw, 28px)',
-          color: '#ffffff',
-          fontWeight: 'bold',
-          WebkitTextStroke: '0.5px #000000',
-          textShadow: '0 0 20px #ffaa00, 0 0 15px #ff6600, 3px 3px 6px #000000',
-          animation: 'loreShimmer 2.5s ease-in-out infinite',
-          letterSpacing: '0.5px',
-          lineHeight: '1.4',
-          width: '90%',
-          maxWidth: '800px'
-        }}
+        className={`absolute inset-0 flex flex-col items-center justify-center ${
+          isLoaded ? 'animate-hero-entrance' : 'opacity-0'
+        }`}
       >
-        <div>"Ave, gladiator! The beasts of the arena await."</div>
-        <div style={{ marginTop: '8px' }}>"Only the victorious may challenge the Vault of Sol."</div>
+        {/* Logo Section */}
+        <div className="relative mb-8">
+          {/* Decorative Frame */}
+          <div 
+            className="absolute inset-0 -inset-x-20 -inset-y-10"
+            style={{
+              background: `url("data:image/svg+xml,%3Csvg width='400' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50,50 L350,50 L350,150 L50,150 Z' fill='none' stroke='%23B8860B' stroke-width='2' opacity='0.3'/%3E%3C/svg%3E") center no-repeat`,
+              filter: 'drop-shadow(0 0 20px rgba(255, 215, 0, 0.3))',
+            }}
+          />
+          
+          {/* Main Title */}
+          <h1 
+            className="relative text-center select-none"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(48px, 8vw, 120px)',
+              fontWeight: 900,
+              letterSpacing: '0.02em',
+              lineHeight: 1,
+              background: `linear-gradient(
+                180deg,
+                var(--color-light-gold) 0%,
+                var(--color-gold) 50%,
+                var(--color-dark-gold) 100%
+              )`,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8))',
+            }}
+          >
+            BETBEAST
+            <span 
+              className="block mt-2"
+              style={{
+                fontSize: '0.8em',
+                fontWeight: 600,
+              }}
+            >
+              ARENA
+            </span>
+          </h1>
+
+          {/* Subtitle */}
+          <div 
+            className="text-center mt-4"
+            style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: 'clamp(16px, 2vw, 24px)',
+              color: 'var(--color-bronze)',
+              fontStyle: 'italic',
+              letterSpacing: '0.1em',
+            }}
+          >
+            HUNT • FIGHT • CLAIM THE FOMO POOL
+          </div>
+        </div>
+
+        {/* Status Section */}
+        {walletConnected && (
+          <div 
+            className="mb-8 px-6 py-3 rounded-lg animate-fade-in"
+            style={{
+              background: 'rgba(26, 26, 26, 0.8)',
+              border: '1px solid var(--color-dark-gold)',
+              boxShadow: '0 0 20px rgba(255, 215, 0, 0.2)',
+            }}
+          >
+            <div 
+              className="flex items-center gap-3"
+              style={{
+                fontFamily: 'var(--font-system)',
+                fontSize: 'clamp(14px, 1.5vw, 18px)',
+              }}
+            >
+              <div 
+                className="w-3 h-3 rounded-full animate-pulse"
+                style={{ background: 'var(--color-gold)' }}
+              />
+              <span style={{ color: 'var(--color-bronze)' }}>Connected:</span>
+              <span style={{ color: 'var(--color-light-gold)', fontWeight: 600 }}>
+                {shortAddress}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Button Section */}
+        <div className="relative pointer-events-auto">
+          {!walletConnected ? (
+            <button 
+              onClick={handleConnectWallet}
+              className="group relative overflow-hidden transition-all duration-300 hover:scale-105"
+              style={{
+                padding: '24px 64px',
+                background: `linear-gradient(135deg, var(--color-bronze) 0%, var(--color-dark-gold) 100%)`,
+                borderRadius: '8px',
+                border: '2px solid var(--color-gold)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 12px 48px rgba(255, 215, 0, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4)';
+              }}
+            >
+              {/* Button shine effect */}
+              <div 
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                style={{
+                  background: `linear-gradient(
+                    105deg,
+                    transparent 40%,
+                    rgba(255, 255, 255, 0.7) 50%,
+                    transparent 60%
+                  )`,
+                  animation: 'shine 0.5s',
+                }}
+              />
+              
+              <span 
+                className="relative z-10"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 'clamp(18px, 2vw, 28px)',
+                  fontWeight: 700,
+                  color: 'var(--color-light-gold)',
+                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.8)',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                CONNECT WALLET
+              </span>
+            </button>
+          ) : (
+            <button 
+              onClick={handleEnterArena}
+              className="group relative overflow-hidden transition-all duration-300 hover:scale-105 animate-pulse"
+              style={{
+                padding: '28px 80px',
+                background: `linear-gradient(135deg, var(--color-blood) 0%, var(--color-crimson) 100%)`,
+                borderRadius: '8px',
+                border: '2px solid var(--color-gold)',
+                boxShadow: '0 8px 32px rgba(139, 0, 0, 0.6), 0 0 48px rgba(255, 215, 0, 0.3)',
+              }}
+            >
+              {/* Animated border glow */}
+              <div 
+                className="absolute inset-0 rounded-lg"
+                style={{
+                  background: 'none',
+                  border: '2px solid var(--color-gold)',
+                  opacity: 0.5,
+                  animation: 'borderGlow 2s ease-in-out infinite',
+                }}
+              />
+              
+              <span 
+                className="relative z-10 flex items-center gap-3"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 'clamp(20px, 2.5vw, 32px)',
+                  fontWeight: 900,
+                  color: 'var(--color-gold)',
+                  textShadow: '0 0 20px rgba(255, 215, 0, 0.8), 0 2px 4px rgba(0, 0, 0, 0.8)',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                <span style={{ fontSize: '1.2em' }}>⚔️</span>
+                ENTER THE ARENA
+                <span style={{ fontSize: '1.2em' }}>⚔️</span>
+              </span>
+            </button>
+          )}
+        </div>
+
+        {/* Lore Text */}
+        <div 
+          className="mt-12 text-center max-w-2xl px-8 animate-fade-in"
+          style={{
+            animationDelay: '0.5s',
+            opacity: 0,
+            animationFillMode: 'forwards',
+          }}
+        >
+          <p 
+            style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: 'clamp(18px, 2vw, 26px)',
+              fontStyle: 'italic',
+              color: 'var(--color-steel)',
+              lineHeight: 1.6,
+              textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)',
+            }}
+          >
+            "In the blood-soaked sands of the arena, 
+            <br />
+            only the victorious may challenge the Vault of Sol."
+          </p>
+        </div>
       </div>
 
-      {/* Decorative Elements */}
-      <span 
-        className="absolute text-[100px] text-[#228b22] select-none"
-        style={{ 
-          top: '15%', 
-          left: 'clamp(50px, 10vw, 150px)',
-          transform: 'rotate(-17deg)'
-        }}
-      >
-        🌿
-      </span>
-      <span 
-        className="absolute text-[100px] text-[#228b22] select-none"
-        style={{ 
-          top: '15%', 
-          right: 'clamp(50px, 10vw, 150px)',
-          transform: 'rotate(17deg)'
-        }}
-      >
-        🌿
-      </span>
-      <span 
-        className="absolute text-[60px] text-[#cd853f] opacity-40 select-none"
-        style={{ 
-          top: '50%', 
-          left: 'clamp(100px, 15vw, 200px)'
-        }}
-      >
-        🛡️
-      </span>
-      <span 
-        className="absolute text-[60px] text-[#cd853f] opacity-40 select-none"
-        style={{ 
-          top: '50%', 
-          right: 'clamp(100px, 15vw, 200px)'
-        }}
-      >
-        🛡️
-      </span>
-
-      {/* Floating Coins */}
-      {[0, 1, 2, 3, 4].map((i) => (
-        <span 
-          key={i} 
-          className="absolute text-[40px] text-[#ffd700] opacity-60 select-none"
-          style={{
-            left: `${15 + (i * 17)}%`,
-            top: '75%',
-            animation: `coinFloat ${2 + (i * 0.3)}s ease-in-out infinite`,
-            animationDelay: `${i * 0.2}s`
-          }}
-        >
-          🪙
-        </span>
-      ))}
-
-      {/* Connect Wallet Button */}
-      {!walletConnected && (
-        <div 
-          className="absolute pointer-events-auto"
-          style={{
-            top: '60%',
-            left: '50%',
-            transform: 'translateX(-50%)'
-          }}
-        >
-          <button 
-            onClick={handleConnectWallet}
-            className="group relative transition-all duration-200 hover:scale-105"
-            style={{
-              padding: '20px 60px',
-              background: 'linear-gradient(to bottom, #8b7355, #654321)',
-              borderRadius: '8px',
-              border: '3px solid rgba(74, 60, 42, 0.8)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(to bottom, #a08970, #8b7355)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(to bottom, #8b7355, #654321)';
-            }}
-          >
-            {/* Top highlight */}
-            <div 
-              className="absolute top-[3px] left-[10px] right-[10px] h-[2px]"
-              style={{ background: 'rgba(218, 165, 32, 0.3)' }}
-            />
-            <span 
-              className="font-bold text-white group-hover:text-[#ffd700] transition-colors duration-200"
-              style={{
-                fontSize: 'clamp(16px, 2vw, 26px)',
-                fontWeight: 'bold',
-                WebkitTextStroke: '0.5px #000000',
-                textShadow: '0 0 15px #ffd700, 0 0 8px #ffaa00, 2px 2px 4px #000000'
-              }}
-            >
-              CONNECT WALLET
-            </span>
-          </button>
-        </div>
-      )}
-
-      {/* Enter Arena Button */}
-      {showEnterButton && (
-        <div 
-          className="absolute pointer-events-auto"
-          style={{
-            top: '68%',
-            left: '50%',
-            transform: 'translateX(-50%)'
-          }}
-        >
-          <button 
-            onClick={handleEnterArena}
-            className="group relative transition-all duration-200 hover:scale-105"
-            style={{
-              padding: '24px 80px',
-              background: 'linear-gradient(to bottom, #8b4513, #654321)',
-              borderRadius: '10px',
-              border: '4px solid rgba(139, 0, 0, 0.8)',
-              animation: 'enterButtonGlow 1s ease-in-out infinite'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(to bottom, #a0522d, #8b4513)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(to bottom, #8b4513, #654321)';
-            }}
-          >
-            {/* Top highlight */}
-            <div 
-              className="absolute top-[3px] left-[10px] right-[10px] h-[2px]"
-              style={{ background: 'rgba(255, 215, 0, 0.4)' }}
-            />
-            <span 
-              className="font-bold text-white group-hover:scale-105 transition-transform duration-200"
-              style={{
-                fontSize: 'clamp(18px, 2.2vw, 30px)',
-                fontWeight: 'bold',
-                WebkitTextStroke: '1px #000000',
-                textShadow: '0 0 20px #ff6600, 0 0 10px #ffd700, 3px 3px 5px #000000'
-              }}
-            >
-              ENTER THE ARENA
-            </span>
-          </button>
-        </div>
-      )}
-
-      {/* CSS Animations */}
+      {/* Custom animations */}
       <style jsx>{`
-        @keyframes titlePulse {
-          0%, 100% { transform: translateX(-50%) scale(1); }
-          50% { transform: translateX(-50%) scale(1.05); }
-        }
-        @keyframes loreShimmer {
+        @keyframes pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.8; }
         }
-        @keyframes enterButtonGlow {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.8; }
+        
+        @keyframes float {
+          from { transform: translateY(100vh) rotate(0deg); }
+          to { transform: translateY(-100vh) rotate(360deg); }
         }
-        @keyframes coinFloat {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-20px); }
+        
+        @keyframes shine {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(100%); }
+        }
+        
+        @keyframes borderGlow {
+          0%, 100% { 
+            transform: scale(1);
+            opacity: 0.5;
+          }
+          50% { 
+            transform: scale(1.05);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes fade-in {
+          from { 
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to { 
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-fade-in {
+          animation: fade-in 0.8s ease-out;
         }
       `}</style>
     </div>,

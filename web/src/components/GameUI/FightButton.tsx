@@ -23,7 +23,7 @@ export const FightButton: React.FC<Props> = ({
   const insufficientPDABalance = paymentMethod === 'pda' && pdaBalance < entryFee;
   
   // Determine button text
-  let buttonText = 'CLAIM YOUR JACKPOT (ENTER THE FIGHT)';
+  let buttonText = 'ENTER THE HUNT';
   if (isLoading) {
     buttonText = 'PROCESSING...';
   } else if (insufficientPDABalance) {

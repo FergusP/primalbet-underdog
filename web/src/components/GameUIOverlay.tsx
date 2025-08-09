@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { JackpotDisplay } from './GameUI/JackpotDisplay';
-import { DynamicFightButton } from './UIComponentLoader';
+import { ForestFightButtonWrapper } from './GameUI/ForestFightButtonWrapper';
 import { MonsterLabel } from './GameUI/MonsterLabel';
 
 interface GameState {
@@ -122,7 +122,7 @@ export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({
       <div className="absolute top-2 left-1/2 transform -translate-x-1/2 pointer-events-auto">
         <h1 className="text-xl text-white" 
             style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
-          AURELIUS COLOSSEUM
+          BETBEAST ARENA
         </h1>
       </div>
 
@@ -136,7 +136,7 @@ export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({
       {/* Fight Button - Bottom center */}
       <div className="absolute left-1/2 transform -translate-x-1/2 pointer-events-auto" 
            style={{ bottom: '120px' }}>
-        <DynamicFightButton 
+        <ForestFightButtonWrapper 
           onClick={handleFightClick} 
           disabled={isFightButtonDisabled || !isPaymentOptionsReady}
           isLoading={isLoading || isFightButtonDisabled}

@@ -6,7 +6,7 @@
   --color-gold: #FFD700;
   --color-light-gold: #FFF3B8;
   --color-dark-gold: #B8860B;
-  --color-bronze: #CD7F32;
+  --color-bark: #8B4513;
   --color-blood: #8B0000;
   --color-crimson: #DC143C;
   --color-stone: #4A4A4A;
@@ -59,13 +59,13 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--color-bronze) 0%, var(--color-dark-gold) 100%);
+  background: linear-gradient(180deg, var(--color-bark) 0%, var(--color-dark-gold) 100%);
   border-radius: 4px;
   border: 1px solid var(--color-dark-gold);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, var(--color-gold) 0%, var(--color-bronze) 100%);
+  background: linear-gradient(180deg, var(--color-gold) 0%, var(--color-bark) 100%);
 }
 
 /* Hero Entrance Animation */

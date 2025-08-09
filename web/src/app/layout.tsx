@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AureliusWalletProvider } from "@/components/WalletProvider";
+import { BetBeastWalletProvider } from "@/components/WalletProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,17 +14,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Aurelius Colosseum - Monster Combat Jackpot on Solana",
-  description: "Fight monsters, crack the vault, claim the SOL jackpot. The ultimate blockchain arena game.",
+  title: "BetBeast - Monster Combat FOMO Pools on Solana",
+  description: "Battle fierce beasts in the dark forest. High-risk FOMO pools with massive jackpots. The ultimate Web3 betting arena.",
   keywords: "Solana, Game, NFT, Jackpot, Combat, Blockchain, Crypto",
-  authors: [{ name: "Aurelius Colosseum Team" }],
+  authors: [{ name: "BetBeast Team" }],
   icons: {
     icon: [
-      { url: '/colosseum-icon.svg', type: 'image/svg+xml' },
+      { url: '/forest-icon.svg', type: 'image/svg+xml' },
       { url: '/favicon.ico', sizes: 'any' }
     ],
-    shortcut: '/colosseum-icon.svg',
-    apple: '/colosseum-icon.svg',
+    shortcut: '/forest-icon.svg',
+    apple: '/forest-icon.svg',
   },
 };
 
@@ -49,9 +49,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-900 text-white overflow-hidden`}
       >
-        <AureliusWalletProvider>
+        <BetBeastWalletProvider>
           {children}
-        </AureliusWalletProvider>
+        </BetBeastWalletProvider>
       </body>
     </html>
   );

@@ -1,4 +1,4 @@
-// Shared types from INTERFACE_CONTRACT.md v6.0
+// Shared types for BetBeast Forest Arena
 // Monster Combat System Types
 
 export interface MonsterTier {
@@ -27,7 +27,7 @@ export interface Monster {
   spawnedAt: number;
   defeatedBy: string | null;
   totalCombats: number;
-  victories: number;                   // Gladiators defeated
+  victories: number;                   // Warriors defeated
   evolution?: MonsterTier;             // Optional evolution form (e.g., Werewolf -> Werebear)
 }
 
@@ -40,10 +40,10 @@ export interface CombatRequest {
 
 export interface CombatResult {
   combatId: string;
-  gladiator: string;                   // Player wallet
+  warrior: string;                   // Player wallet
   monster: string;                     // Monster type name
-  gladiatorPower: number;              // Calculated from entry amount
-  gladiatorScore: number;              // Final combat score
+  warriorPower: number;              // Calculated from entry amount
+  warriorScore: number;              // Final combat score
   monsterScore: number;                // Monster's combat score
   victory: boolean;                    // Combat outcome
   vrfProof: string;                    // ProofNetwork verification
@@ -55,14 +55,14 @@ export interface CombatResult {
 
 export interface CombatLogEntry {
   action: 'attack' | 'defend' | 'special';
-  source: 'gladiator' | 'monster';
+  source: 'warrior' | 'monster';
   damage?: number;                     // Visual only
   effect?: string;
   timestamp: number;
 }
 
 export interface VaultCrackResult {
-  gladiator: string;
+  warrior: string;
   monster: string;
   crackChance: number;                 // From monster tier
   roll: number;                        // VRF result (0-99)
@@ -72,7 +72,7 @@ export interface VaultCrackResult {
   timestamp: number;
 }
 
-export interface ColosseumState {
+export interface ForestArenaState {
   currentMonster: Monster;
   currentJackpot: number;              // In lamports
   lastWinner: {
@@ -86,7 +86,7 @@ export interface ColosseumState {
 }
 
 export interface CombatSummary {
-  gladiator: string;
+  warrior: string;
   monster: string;
   victory: boolean;
   vaultAttempted: boolean;
@@ -142,18 +142,18 @@ export interface EntryButtonState {
 
 // Phaser Scene Events
 export interface CombatSceneEvents {
-  'combat:start': { gladiator: string; monster: Monster };
+  'combat:start': { warrior: string; monster: Monster };
   'combat:attack': { source: string; target: string; damage: number };
-  'combat:victory': { gladiator: string };
-  'combat:defeat': { gladiator: string };
-  'vault:attempt': { gladiator: string; chance: number };
-  'vault:cracked': { gladiator: string; amount: number };
-  'vault:failed': { gladiator: string };
+  'combat:victory': { warrior: string };
+  'combat:defeat': { warrior: string };
+  'vault:attempt': { warrior: string; chance: number };
+  'vault:cracked': { warrior: string; amount: number };
+  'vault:failed': { warrior: string };
 }
 
 export interface CombatSceneState {
   phase: 'loading' | 'combat' | 'vault' | 'result';
-  gladiatorHealth: number;             // Visual only
+  warriorHealth: number;             // Visual only
   monsterHealth: number;               // Visual only
   combatResult?: CombatResult;
   vaultResult?: VaultCrackResult;
@@ -174,3 +174,5 @@ export interface PaymentOptions {
   canUsePDA: boolean;                  // Can pay from PDA
   lastPaymentMethod: string;           // 'wallet' or 'pda'
 }
+// Backward compatibility aliases
+export type ColosseumState = ForestArenaState;

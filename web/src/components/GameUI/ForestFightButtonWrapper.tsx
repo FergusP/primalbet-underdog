@@ -1,5 +1,5 @@
 import React from 'react';
-import { RomanFightButton } from '../Roman/RomanButton';
+import { ForestFightButton } from '../Forest/ForestButton';
 import { RomanText } from '../../styles/romanDesignSystem';
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
   entryFee?: number;
 }
 
-export const RomanFightButtonWrapper: React.FC<Props> = ({ 
+export const ForestFightButtonWrapper: React.FC<Props> = ({ 
   onClick, 
   disabled = false, 
   isLoading = false,
@@ -23,7 +23,7 @@ export const RomanFightButtonWrapper: React.FC<Props> = ({
   const insufficientPDABalance = paymentMethod === 'pda' && pdaBalance < entryFee;
   
   // Determine button text
-  let buttonText = 'ENTER COMBAT';
+  let buttonText = 'BATTLE THE BEAST';
   if (isLoading) {
     buttonText = 'LOADING...';
   } else if (insufficientPDABalance) {
@@ -31,7 +31,7 @@ export const RomanFightButtonWrapper: React.FC<Props> = ({
   }
 
   return (
-    <RomanFightButton
+    <ForestFightButton
       onClick={onClick}
       disabled={disabled || isLoading || insufficientPDABalance}
       loading={isLoading}
@@ -42,8 +42,8 @@ export const RomanFightButtonWrapper: React.FC<Props> = ({
       }}
     >
       {buttonText}
-    </RomanFightButton>
+    </ForestFightButton>
   );
 };
 
-export default RomanFightButtonWrapper;
+export default ForestFightButtonWrapper;

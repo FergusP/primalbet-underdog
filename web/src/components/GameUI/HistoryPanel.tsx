@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface Combat {
-  gladiator: string;
+  warrior: string;
   monster: string;
   victory: boolean;
   vaultCracked?: boolean;
@@ -18,7 +18,7 @@ export const HistoryPanel: React.FC<Props> = ({ combats }) => {
   };
 
   const getCombatMessage = (combat: Combat) => {
-    const shortAddress = formatAddress(combat.gladiator);
+    const shortAddress = formatAddress(combat.warrior);
     
     if (combat.vaultCracked) {
       return { text: `🏆 ${shortAddress} CRACKED THE VAULT!`, color: 'text-yellow-400' };

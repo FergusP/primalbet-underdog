@@ -1,10 +1,10 @@
 // Main Lobby Scene - core gameplay hub with HTML UI overlay
 import { BaseScene } from './BaseScene';
-import { ColosseumState, Monster, CombatSummary } from '../../types';
+import { ForestArenaState, Monster, CombatSummary } from '../../types';
 
 export class LobbyScene extends BaseScene {
   private walletAddress!: string;
-  private colosseumState!: ColosseumState;
+  private forestArenaState!: ForestArenaState;
   private monsterSprite!: Phaser.GameObjects.Sprite;
   private updateTimer!: Phaser.Time.TimerEvent;
   private bgImage!: Phaser.GameObjects.Image;
@@ -14,36 +14,36 @@ export class LobbyScene extends BaseScene {
     // Just verify orc texture exists
     console.log('LobbyScene preload - orc exists?', this.textures.exists('orc_idle'));
   }
-  private gladiatorGroup: Phaser.GameObjects.Sprite[] = [];
+  private warriorGroup: Phaser.GameObjects.Sprite[] = [];
   private spearTimer?: Phaser.Time.TimerEvent;
-  private minGladiators: number = 15; // Fixed at 15 gladiators
-  private incomingGladiators: Phaser.GameObjects.Sprite[] = []; // Track walking gladiators
-  private currentGladiator?: Phaser.GameObjects.Sprite; // Center gladiator
-  private gladiatorHealth: number = 2; // Health for center gladiator
+  private minWarriors: number = 15; // Fixed at 15 warriors
+  private incomingWarriors: Phaser.GameObjects.Sprite[] = []; // Track walking warriors
+  private currentWarrior?: Phaser.GameObjects.Sprite; // Center warrior
+  private warriorHealth: number = 2; // Health for center warrior
 
   constructor() {
     super({ key: 'LobbyScene' });
   }
   
-  private checkAndSpawnGladiators() {
-    // Count active gladiators (not including incoming ones)
-    const activeGladiators = this.gladiatorGroup.filter(g => g && g.active).length;
-    const totalGladiators = activeGladiators + this.incomingGladiators.length;
+  private checkAndSpawnWarriors() {
+    // Count active warriors (not including incoming ones)
+    const activeWarriors = this.warriorGroup.filter(g => g && g.active).length;
+    const totalWarriors = activeWarriors + this.incomingWarriors.length;
     
-    // Spawn new gladiators if below minimum
-    if (totalGladiators < this.minGladiators) {
-      const toSpawn = this.minGladiators - totalGladiators;
+    // Spawn new warriors if below minimum
+    if (totalWarriors < this.minWarriors) {
+      const toSpawn = this.minWarriors - totalWarriors;
       
       for (let i = 0; i < toSpawn; i++) {
         // Stagger the spawns
         this.time.delayedCall(i * 800, () => {
-          this.spawnWalkingGladiator();
+          this.spawnWalkingWarrior();
         });
       }
     }
   }
   
-  private spawnWalkingGladiator() {
+  private spawnWalkingWarrior() {
     const { centerX, centerY, width, height } = this.cameras.main;
     
     // Define left platform box (lower platform) - moved more to the left
@@ -70,9 +70,9 @@ export class LobbyScene extends BaseScene {
       finalY = Phaser.Math.Between(leftPlatform.minY, leftPlatform.maxY);
       
       validPosition = true;
-      // Check distance from all gladiators (existing and incoming)
-      const allGladiators = [...this.gladiatorGroup, ...this.incomingGladiators];
-      for (const glad of allGladiators) {
+      // Check distance from all warriors (existing and incoming)
+      const allWarriors = [...this.warriorGroup, ...this.incomingWarriors];
+      for (const glad of allWarriors) {
         if (glad && glad.active) {
           const distance = Phaser.Math.Distance.Between(finalX, finalY, glad.x, glad.y);
           if (distance < minDistance) {
@@ -84,96 +84,96 @@ export class LobbyScene extends BaseScene {
       attempts++;
     }
     
-    // Create gladiator sprite at entry point
-    const gladiator = this.add.sprite(entry.x, entry.y, 'soldier_idle', 0);
-    gladiator.setOrigin(0.5, 0.5);
-    gladiator.setScale(2.0);
-    gladiator.setFlipX(false); // Don't flip - face right toward monster
-    gladiator.setAlpha(0);
-    gladiator.setDepth(3);
+    // Create warrior sprite at entry point
+    const warrior = this.add.sprite(entry.x, entry.y, 'soldier_idle', 0);
+    warrior.setOrigin(0.5, 0.5);
+    warrior.setScale(2.0);
+    warrior.setFlipX(false); // Don't flip - face right toward monster
+    warrior.setAlpha(0);
+    warrior.setDepth(3);
     
     // Add color tint variation
     const colorVariation = Phaser.Math.Between(0, 2);
     const tints = [0xffffff, 0xffdddd, 0xddffdd];
-    gladiator.setTint(tints[colorVariation]);
+    warrior.setTint(tints[colorVariation]);
     
     // Play idle animation
-    gladiator.play('soldier_idle');
+    warrior.play('soldier_idle');
     
     // Track as incoming
-    this.incomingGladiators.push(gladiator);
+    this.incomingWarriors.push(warrior);
     
     // Store position data
-    gladiator.setData('originalX', finalX - centerX);
-    gladiator.setData('originalY', finalY - centerY);
+    warrior.setData('originalX', finalX - centerX);
+    warrior.setData('originalY', finalY - centerY);
     
     // Fade in while moving
     this.tweens.add({
-      targets: gladiator,
+      targets: warrior,
       alpha: 0.9,
       duration: 500
     });
     
     // Walk to position
     this.tweens.add({
-      targets: gladiator,
+      targets: warrior,
       x: finalX,
       y: finalY,
       duration: 2500,
       ease: 'Power2',
       onStart: () => {
         // Play walking animation
-        gladiator.play('soldier_walk');
+        warrior.play('soldier_walk');
       },
       onComplete: () => {
         // Remove from incoming list
-        const index = this.incomingGladiators.indexOf(gladiator);
+        const index = this.incomingWarriors.indexOf(warrior);
         if (index > -1) {
-          this.incomingGladiators.splice(index, 1);
+          this.incomingWarriors.splice(index, 1);
         }
         
         // Add to main group
-        this.gladiatorGroup.push(gladiator);
+        this.warriorGroup.push(warrior);
         
         // Return to idle animation
-        gladiator.play('soldier_idle');
+        warrior.play('soldier_idle');
         
         // Mark as not moving (ready to attack)
-        gladiator.setData('isMoving', false);
+        warrior.setData('isMoving', false);
       }
     });
   }
   
-  private killSupportingGladiator(gladiator: Phaser.GameObjects.Sprite) {
+  private killSupportingWarrior(warrior: Phaser.GameObjects.Sprite) {
     // Remove from group
-    const index = this.gladiatorGroup.indexOf(gladiator);
+    const index = this.warriorGroup.indexOf(warrior);
     if (index > -1) {
-      this.gladiatorGroup.splice(index, 1);
+      this.warriorGroup.splice(index, 1);
     }
     
     // Play death animation
-    gladiator.play('soldier_death');
+    warrior.play('soldier_death');
     
     // Death animation - fade and fall after death animation plays
-    gladiator.once('animationcomplete', () => {
+    warrior.once('animationcomplete', () => {
       this.tweens.add({
-        targets: gladiator,
+        targets: warrior,
         alpha: 0,
-        y: gladiator.y + 30,
+        y: warrior.y + 30,
         scaleX: 0.7,
         scaleY: 0.7,
         duration: 400,
         ease: 'Power2',
         onComplete: () => {
-          gladiator.destroy();
+          warrior.destroy();
           
-          // Don't spawn immediately - let checkAndSpawnGladiators handle it
+          // Don't spawn immediately - let checkAndSpawnWarriors handle it
         }
       });
     });
   }
   
-  private addNewSupportingGladiator() {
+  private addNewSupportingWarrior() {
     const { centerX, centerY, width, height } = this.cameras.main;
     
     // Define left platform box (lower platform) - moved more to the left
@@ -199,9 +199,9 @@ export class LobbyScene extends BaseScene {
       finalX = Phaser.Math.Between(leftPlatform.minX, leftPlatform.maxX);
       finalY = Phaser.Math.Between(leftPlatform.minY, leftPlatform.maxY);
       
-      // Check distance from existing gladiators
+      // Check distance from existing warriors
       validPosition = true;
-      for (const glad of this.gladiatorGroup) {
+      for (const glad of this.warriorGroup) {
         if (glad && glad.active) {
           const distance = Phaser.Math.Distance.Between(finalX, finalY, glad.x, glad.y);
           if (distance < minDistance) {
@@ -213,75 +213,75 @@ export class LobbyScene extends BaseScene {
       attempts++;
     }
     
-    // Create gladiator sprite at entry point
-    const gladiator = this.add.sprite(entry.x, entry.y, 'soldier_idle', 0);
-    gladiator.setOrigin(0.5, 0.5);
-    gladiator.setScale(2.0);
-    gladiator.setFlipX(false); // Don't flip - face right toward monster
-    gladiator.setAlpha(0);
-    gladiator.setDepth(3);
+    // Create warrior sprite at entry point
+    const warrior = this.add.sprite(entry.x, entry.y, 'soldier_idle', 0);
+    warrior.setOrigin(0.5, 0.5);
+    warrior.setScale(2.0);
+    warrior.setFlipX(false); // Don't flip - face right toward monster
+    warrior.setAlpha(0);
+    warrior.setDepth(3);
     
     // Add color tint variation
     const colorVariation = Phaser.Math.Between(0, 2);
     const tints = [0xffffff, 0xffdddd, 0xddffdd];
-    gladiator.setTint(tints[colorVariation]);
+    warrior.setTint(tints[colorVariation]);
     
     // Play idle animation
-    gladiator.play('soldier_idle');
+    warrior.play('soldier_idle');
     
     // Store position data
-    gladiator.setData('originalAngle', angle);
-    gladiator.setData('originalRadius', radius);
+    warrior.setData('originalAngle', angle);
+    warrior.setData('originalRadius', radius);
     
     // Fade in while moving to position
     this.tweens.add({
-      targets: gladiator,
+      targets: warrior,
       alpha: Phaser.Math.FloatBetween(0.8, 1.0),
       duration: 300
     });
     
     // Move from entry point to final position
     this.tweens.add({
-      targets: gladiator,
+      targets: warrior,
       x: finalX,
       y: finalY,
       duration: 1500,
       ease: 'Power2'
     });
     
-    this.gladiatorGroup.push(gladiator);
+    this.warriorGroup.push(warrior);
   }
   
-  private killCurrentGladiator() {
-    if (!this.currentGladiator) return;
+  private killCurrentWarrior() {
+    if (!this.currentWarrior) return;
     
     // Play death animation
-    this.currentGladiator.play('soldier_death');
+    this.currentWarrior.play('soldier_death');
     
     // Death animation - fade and fall after death animation plays
-    this.currentGladiator.once('animationcomplete', () => {
+    this.currentWarrior.once('animationcomplete', () => {
       this.tweens.add({
-        targets: this.currentGladiator,
+        targets: this.currentWarrior,
         alpha: 0,
-        y: this.currentGladiator.y + 50,
+        y: this.currentWarrior.y + 50,
         scaleX: 0.5,
         scaleY: 0.5,
         duration: 600,
         ease: 'Power2',
         onComplete: () => {
-          // Destroy the dead gladiator
-          if (this.currentGladiator) {
-            this.currentGladiator.destroy();
+          // Destroy the dead warrior
+          if (this.currentWarrior) {
+            this.currentWarrior.destroy();
           }
           
-          // Bring in next gladiator from queue
-          this.bringNextGladiator();
+          // Bring in next warrior from queue
+          this.bringNextWarrior();
         }
       });
     });
     
     // Create death particles
-    const particles = this.add.particles(this.currentGladiator.x, this.currentGladiator.y, 'spark-placeholder', {
+    const particles = this.add.particles(this.currentWarrior.x, this.currentWarrior.y, 'spark-placeholder', {
       lifespan: 1000,
       speed: { min: 50, max: 150 },
       scale: { start: 0.8, end: 0 },
@@ -296,7 +296,7 @@ export class LobbyScene extends BaseScene {
     });
   }
   
-  private bringNextGladiator() {
+  private bringNextWarrior() {
     const { width, height } = this.cameras.main;
     
     // Define left platform box (lower platform) - moved more to the left
@@ -311,59 +311,59 @@ export class LobbyScene extends BaseScene {
     const entryX = Phaser.Math.Between(leftPlatform.minX, leftPlatform.maxX);
     const entryPoint = { x: entryX, y: -50, name: 'top' };
     
-    // Create new current gladiator sprite at entry point
-    this.currentGladiator = this.add.sprite(entryPoint.x, entryPoint.y, 'soldier_idle', 0);
-    this.currentGladiator.setOrigin(0.5, 0.5);
-    this.currentGladiator.setScale(2.5);
-    this.currentGladiator.setFlipX(true); // Flip to face correct direction
-    this.currentGladiator.setAlpha(0);
-    this.currentGladiator.setDepth(4);
-    this.currentGladiator.setTint(0xff8888); // Red tint for current gladiator
+    // Create new current warrior sprite at entry point
+    this.currentWarrior = this.add.sprite(entryPoint.x, entryPoint.y, 'soldier_idle', 0);
+    this.currentWarrior.setOrigin(0.5, 0.5);
+    this.currentWarrior.setScale(2.5);
+    this.currentWarrior.setFlipX(true); // Flip to face correct direction
+    this.currentWarrior.setAlpha(0);
+    this.currentWarrior.setDepth(4);
+    this.currentWarrior.setTint(0xff8888); // Red tint for current warrior
     
     // Start with idle animation
-    this.currentGladiator.play('soldier_idle');
+    this.currentWarrior.play('soldier_idle');
     
     // Mark as moving since they're walking to center
-    this.currentGladiator.setData('isMoving', true);
+    this.currentWarrior.setData('isMoving', true);
     
-    // Fade in as gladiator enters
+    // Fade in as warrior enters
     this.tweens.add({
-      targets: this.currentGladiator,
+      targets: this.currentWarrior,
       alpha: 1,
       duration: 500
     });
     
-    // Animate gladiator dropping to platform
+    // Animate warrior dropping to platform
     const targetX = Phaser.Math.Between(leftPlatform.minX, leftPlatform.maxX);
     const targetY = Phaser.Math.Between(leftPlatform.minY, leftPlatform.maxY);
     
     this.tweens.add({
-      targets: this.currentGladiator,
+      targets: this.currentWarrior,
       x: targetX,
       y: targetY,
       duration: 1500,
       ease: 'Power2',
       onStart: () => {
         // Play walking animation
-        if (this.currentGladiator) {
-          this.currentGladiator.play('soldier_walk');
+        if (this.currentWarrior) {
+          this.currentWarrior.play('soldier_walk');
         }
       },
       onComplete: () => {
         // Return to idle animation
-        if (this.currentGladiator) {
-          this.currentGladiator.play('soldier_idle');
+        if (this.currentWarrior) {
+          this.currentWarrior.play('soldier_idle');
           // Mark as not moving (ready to be attacked)
-          this.currentGladiator.setData('isMoving', false);
+          this.currentWarrior.setData('isMoving', false);
         }
       }
     });
     
-    // Reset health for new gladiator
-    this.gladiatorHealth = 2;
+    // Reset health for new warrior
+    this.warriorHealth = 2;
     
-    // Register the new gladiator
-    this.registerUIElement('currentGladiator', this.currentGladiator);
+    // Register the new warrior
+    this.registerUIElement('currentWarrior', this.currentWarrior);
   }
   
   private startSpearThrowing() {
@@ -376,55 +376,55 @@ export class LobbyScene extends BaseScene {
     this.spearTimer = this.time.addEvent({
       delay: Phaser.Math.Between(1200, 2000), // Random intervals
       callback: () => {
-        // Filter out gladiators that are still moving
-        const availableGladiators = this.gladiatorGroup.filter(g => 
+        // Filter out warriors that are still moving
+        const availableWarriors = this.warriorGroup.filter(g => 
           g && g.active && !g.getData('isMoving')
         );
         
-        // If not enough gladiators are ready, skip this attack round
-        if (availableGladiators.length < 2) return;
+        // If not enough warriors are ready, skip this attack round
+        if (availableWarriors.length < 2) return;
         
-        // Randomly select 2-3 gladiators to throw arrows
-        const throwers = Phaser.Utils.Array.Shuffle([...availableGladiators]).slice(0, Phaser.Math.Between(2, Math.min(3, availableGladiators.length)));
+        // Randomly select 2-3 warriors to throw arrows
+        const throwers = Phaser.Utils.Array.Shuffle([...availableWarriors]).slice(0, Phaser.Math.Between(2, Math.min(3, availableWarriors.length)));
         
-        throwers.forEach((gladiator, i) => {
-          if (!gladiator || !gladiator.active) return;
+        throwers.forEach((warrior, i) => {
+          if (!warrior || !warrior.active) return;
           
           // Use static frames for attack instead of animation to avoid movement
-          if (gladiator && gladiator.active) {
+          if (warrior && warrior.active) {
             // Store original position and check facing
-            const originalX = gladiator.x;
-            const isFacingBackwards = gladiator.flipX === true; // True means facing left (backwards from target)
+            const originalX = warrior.x;
+            const isFacingBackwards = warrior.flipX === true; // True means facing left (backwards from target)
             
             // Only animate and shoot if facing forward (toward monster)
             if (!isFacingBackwards) {
               // Switch to attack03 texture and set to bow drawn frame
-              gladiator.setTexture('soldier_attack03');
-              gladiator.setFrame(3); // Start at frame 3 (beginning of draw)
-              gladiator.x = originalX + 4; // Small forward adjustment to counter backward lean
+              warrior.setTexture('soldier_attack03');
+              warrior.setFrame(3); // Start at frame 3 (beginning of draw)
+              warrior.x = originalX + 4; // Small forward adjustment to counter backward lean
               
               // Progress through animation frames
               this.time.delayedCall(100, () => {
-                if (gladiator && gladiator.active) {
-                  gladiator.setFrame(4); // Drawing bow
+                if (warrior && warrior.active) {
+                  warrior.setFrame(4); // Drawing bow
                 }
               });
               
               this.time.delayedCall(200, () => {
-                if (gladiator && gladiator.active) {
-                  gladiator.setFrame(5); // Bow fully drawn
+                if (warrior && warrior.active) {
+                  warrior.setFrame(5); // Bow fully drawn
                 }
               });
               
               // Release arrow at frame 6
               this.time.delayedCall(300, () => {
-                if (gladiator && gladiator.active) {
-                  gladiator.setFrame(6); // Arrow release
+                if (warrior && warrior.active) {
+                  warrior.setFrame(6); // Arrow release
                   
                   // Create physics arrow sprite at release
                   const arrow = this.physics.add.sprite(
-                    gladiator.x + 10, // Slightly forward from gladiator
-                    gladiator.y - 10, // Start at bow height
+                    warrior.x + 10, // Slightly forward from warrior
+                    warrior.y - 10, // Start at bow height
                     'soldier_arrow'
                   );
                   
@@ -483,7 +483,7 @@ export class LobbyScene extends BaseScene {
                 // Only allow monster to be hurt if it's not jumping (check if tweening)
                 if (!this.tweens.isTweening(this.monsterSprite)) {
                   // Play hurt animation
-                  const monsterName = this.colosseumState.currentMonster?.tier.name.toLowerCase() || '';
+                  const monsterName = this.forestArenaState.currentMonster?.tier.name.toLowerCase() || '';
                   let spriteKey = 'orc';
                   
                   if (monsterName.includes('werebear')) spriteKey = 'werebear';
@@ -573,22 +573,22 @@ export class LobbyScene extends BaseScene {
               
               // Return to idle after attack completes
               this.time.delayedCall(500, () => {
-                if (gladiator && gladiator.active) {
+                if (warrior && warrior.active) {
                   // Return to idle texture and frame
-                  gladiator.setTexture('soldier_idle');
-                  gladiator.setFrame(0);
-                  gladiator.x = originalX; // Restore original position
+                  warrior.setTexture('soldier_idle');
+                  warrior.setFrame(0);
+                  warrior.x = originalX; // Restore original position
                 }
               });
             } else {
               // Facing backwards - shoot arrow that misses
-              gladiator.setTexture('soldier_attack03');
-              gladiator.setFrame(6); // Just show release frame
+              warrior.setTexture('soldier_attack03');
+              warrior.setFrame(6); // Just show release frame
               
               // Create arrow that shoots backwards/sideways and misses
               const arrow = this.add.sprite(
-                gladiator.x - 10, // Behind gladiator
-                gladiator.y - 10,
+                warrior.x - 10, // Behind warrior
+                warrior.y - 10,
                 'soldier_arrow'
               );
               
@@ -599,8 +599,8 @@ export class LobbyScene extends BaseScene {
               // Arrow flies backwards and disappears
               this.tweens.add({
                 targets: arrow,
-                x: gladiator.x - 200, // Fly backwards
-                y: gladiator.y + Phaser.Math.Between(-50, 50),
+                x: warrior.x - 200, // Fly backwards
+                y: warrior.y + Phaser.Math.Between(-50, 50),
                 duration: 600,
                 ease: 'Cubic.easeOut',
                 onComplete: () => arrow.destroy()
@@ -608,9 +608,9 @@ export class LobbyScene extends BaseScene {
               
               // Return to idle quickly since attack failed
               this.time.delayedCall(300, () => {
-                if (gladiator && gladiator.active) {
-                  gladiator.setTexture('soldier_idle');
-                  gladiator.setFrame(0);
+                if (warrior && warrior.active) {
+                  warrior.setTexture('soldier_idle');
+                  warrior.setFrame(0);
                 }
               });
             }
@@ -625,8 +625,8 @@ export class LobbyScene extends BaseScene {
     this.walletAddress = data?.walletAddress || 'test-wallet';
     // If we have preloaded state, use it immediately
     if (data?.preloadedState) {
-      this.colosseumState = data.preloadedState;
-      console.log('Using preloaded game state:', this.colosseumState);
+      this.forestArenaState = data.preloadedState;
+      console.log('Using preloaded game state:', this.forestArenaState);
     }
   }
 
@@ -653,7 +653,7 @@ export class LobbyScene extends BaseScene {
     this.registerUIElement('bgRect', bgRect);
     
     // Load the jungle platforms background image
-    this.bgImage = this.add.image(width * 0.5, height * 0.5, 'colosseum-bg');
+    this.bgImage = this.add.image(width * 0.5, height * 0.5, 'forest-bg');
     
     // Calculate aspect ratio to properly fit the platforms
     const scaleX = width / this.bgImage.width;
@@ -680,10 +680,10 @@ export class LobbyScene extends BaseScene {
     this.setupFightButtonListener();
 
     // If we have preloaded state, emit it immediately
-    if (this.colosseumState) {
+    if (this.forestArenaState) {
       // Store current monster type for combat scene
-      if (this.colosseumState.currentMonster?.tier?.name) {
-        window.localStorage.setItem('currentMonsterType', this.colosseumState.currentMonster.tier.name);
+      if (this.forestArenaState.currentMonster?.tier?.name) {
+        window.localStorage.setItem('currentMonsterType', this.forestArenaState.currentMonster.tier.name);
       }
       
       // Emit the preloaded state to update UI
@@ -691,7 +691,7 @@ export class LobbyScene extends BaseScene {
       this.updateGameStateForUI();
       
       // Update monster display with preloaded data
-      if (this.colosseumState.currentMonster) {
+      if (this.forestArenaState.currentMonster) {
         this.updateMonsterDisplay();
       }
     } else {
@@ -717,7 +717,7 @@ export class LobbyScene extends BaseScene {
 
   private createMonsterDisplay() {
     const { width, height } = this.cameras.main;
-    const monster = this.colosseumState?.currentMonster;
+    const monster = this.forestArenaState?.currentMonster;
 
     if (monster) {
       // Determine actual sprite based on monster name
@@ -792,8 +792,8 @@ export class LobbyScene extends BaseScene {
     
     // Removed shadow and aura effects completely
 
-    // Create small gladiator indicators
-    this.createDefeatedGladiators(width, height);
+    // Create small warrior indicators
+    this.createDefeatedWarriors(width, height);
     
     // Position elements
     this.positionMonsterDisplay(width, height);
@@ -823,10 +823,10 @@ export class LobbyScene extends BaseScene {
       const originalScaleY = this.monsterSprite.scaleY;
               
               // Pick a target before jumping
-              const allGladiators = this.gladiatorGroup.filter(g => g && g.active);
-              if (allGladiators.length === 0) return; // No targets
+              const allWarriors = this.warriorGroup.filter(g => g && g.active);
+              if (allWarriors.length === 0) return; // No targets
               
-              const target = Phaser.Utils.Array.GetRandom(allGladiators);
+              const target = Phaser.Utils.Array.GetRandom(allWarriors);
               
               // Calculate landing position near the target
               const landingX = target.x + 50; // Land slightly to the right of target
@@ -904,8 +904,8 @@ export class LobbyScene extends BaseScene {
                             
                             // Chance to kill the target
                             if (Phaser.Math.Between(1, 2) === 1) {
-                              this.killSupportingGladiator(target);
-                              this.checkAndSpawnGladiators();
+                              this.killSupportingWarrior(target);
+                              this.checkAndSpawnWarriors();
                             }
                           }
                         });
@@ -974,7 +974,7 @@ export class LobbyScene extends BaseScene {
     }
   }
   
-  private createDefeatedGladiators(width: number, height: number) {
+  private createDefeatedWarriors(width: number, height: number) {
     const { centerX, centerY } = this.cameras.main;
     
     // Define left platform box (lower platform) - moved more to the left
@@ -985,18 +985,18 @@ export class LobbyScene extends BaseScene {
       maxY: height * 0.48
     };
     
-    // Create gladiator group within left platform
-    const gladiatorCount = 15; // Fixed at 15 gladiators
+    // Create warrior group within left platform
+    const warriorCount = 15; // Fixed at 15 warriors
     const minDistance = this.scaleValue(40, width); // Tighter spacing for platform
     
     const positions: { x: number, y: number, angle: number, radius: number }[] = [];
     
-    for (let i = 0; i < gladiatorCount; i++) {
+    for (let i = 0; i < warriorCount; i++) {
       let validPosition = false;
       let attempts = 0;
       let gladX = 0, gladY = 0, angle = 0, radius = 0;
       
-      // Try to find a position that's not too close to existing gladiators
+      // Try to find a position that's not too close to existing warriors
       while (!validPosition && attempts < 100) {
         // Random position within the left platform box
         gladX = Phaser.Math.Between(leftPlatform.minX, leftPlatform.maxX);
@@ -1006,7 +1006,7 @@ export class LobbyScene extends BaseScene {
         angle = 0;
         radius = 0;
         
-        // Check distance from other gladiators
+        // Check distance from other warriors
         validPosition = true;
         for (const pos of positions) {
           const distance = Phaser.Math.Distance.Between(gladX, gladY, pos.x, pos.y);
@@ -1019,39 +1019,39 @@ export class LobbyScene extends BaseScene {
         attempts++;
       }
       
-      // Only create gladiator if we found a valid position
+      // Only create warrior if we found a valid position
       if (!validPosition) {
-        console.warn('Could not find position for gladiator', i);
+        console.warn('Could not find position for warrior', i);
         continue;
       }
       
       positions.push({ x: gladX, y: gladY, angle: 0, radius: 0 });
       
-      // Create gladiator sprite
-      const gladiator = this.add.sprite(gladX, gladY, 'soldier_idle', 0);
-      gladiator.setOrigin(0.5, 0.5);
-      gladiator.setScale(2.0);
-      gladiator.setFlipX(false); // Don't flip - face right toward monster
-      gladiator.setAlpha(0.9);
-      gladiator.setDepth(3);
+      // Create warrior sprite
+      const warrior = this.add.sprite(gladX, gladY, 'soldier_idle', 0);
+      warrior.setOrigin(0.5, 0.5);
+      warrior.setScale(2.0);
+      warrior.setFlipX(false); // Don't flip - face right toward monster
+      warrior.setAlpha(0.9);
+      warrior.setDepth(3);
       
       // Add color tint variation
       const colorVariation = Phaser.Math.Between(0, 2);
       const tints = [0xffffff, 0xffdddd, 0xddffdd];
-      gladiator.setTint(tints[colorVariation]);
+      warrior.setTint(tints[colorVariation]);
       
       // Play idle animation
-      gladiator.play('soldier_idle');
+      warrior.play('soldier_idle');
       
       // Store original position for repositioning
-      gladiator.setData('originalX', gladX - centerX);
-      gladiator.setData('originalY', gladY - centerY);
+      warrior.setData('originalX', gladX - centerX);
+      warrior.setData('originalY', gladY - centerY);
       
-      this.gladiatorGroup.push(gladiator);
-      this.registerUIElement(`gladiatorGroup${i}`, gladiator);
+      this.warriorGroup.push(warrior);
+      this.registerUIElement(`warriorGroup${i}`, warrior);
     }
     
-    // No center gladiator anymore since attacks are random
+    // No center warrior anymore since attacks are random
     
     // Create attack effect line
     const attackLine = this.add.graphics();
@@ -1062,8 +1062,8 @@ export class LobbyScene extends BaseScene {
     // Start spear throwing animation
     this.startSpearThrowing();
     
-    // Initial check for gladiator count
-    this.checkAndSpawnGladiators();
+    // Initial check for warrior count
+    this.checkAndSpawnWarriors();
     
     // No health tracking needed for random attacks
   }
@@ -1074,10 +1074,10 @@ export class LobbyScene extends BaseScene {
       console.log('Fight button clicked from HTML overlay', event.detail);
       // Don't start combat immediately - payment will be handled first
       // Store pending combat data
-      if (this.colosseumState?.currentMonster) {
+      if (this.forestArenaState?.currentMonster) {
         const combatId = `combat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         this.registry.set('pendingCombat', {
-          monster: this.colosseumState.currentMonster,
+          monster: this.forestArenaState.currentMonster,
           combatId: combatId,
           walletAddress: this.walletAddress
         });
@@ -1134,12 +1134,12 @@ export class LobbyScene extends BaseScene {
       const stateData = await response.json();
       console.log('Raw API response:', stateData);
       console.log('currentPot in response:', stateData.currentPot);
-      this.colosseumState = stateData;
-      console.log('After assignment - currentPot:', (this.colosseumState as any)['currentPot']);
+      this.forestArenaState = stateData;
+      console.log('After assignment - currentPot:', (this.forestArenaState as any)['currentPot']);
       
       // Store current monster type for combat scene
-      if (this.colosseumState.currentMonster?.tier?.name) {
-        window.localStorage.setItem('currentMonsterType', this.colosseumState.currentMonster.tier.name);
+      if (this.forestArenaState.currentMonster?.tier?.name) {
+        window.localStorage.setItem('currentMonsterType', this.forestArenaState.currentMonster.tier.name);
       }
       
       // Update UI via events to HTML overlay
@@ -1154,19 +1154,19 @@ export class LobbyScene extends BaseScene {
   }
 
   private updateGameStateForUI() {
-    if (!this.colosseumState) return;
+    if (!this.forestArenaState) return;
 
-    console.log('LobbyScene raw state:', this.colosseumState);
+    console.log('LobbyScene raw state:', this.forestArenaState);
     // Use bracket notation to access currentPot from backend without TypeScript errors
-    const jackpotValue = (this.colosseumState as any)['currentPot'] || this.colosseumState.currentJackpot || 0;
+    const jackpotValue = (this.forestArenaState as any)['currentPot'] || this.forestArenaState.currentJackpot || 0;
     console.log('Sending jackpot value:', jackpotValue);
 
     // Emit event with game state for HTML UI
     window.dispatchEvent(new CustomEvent('gameStateUpdate', {
       detail: {
         jackpot: jackpotValue,
-        monsterName: this.colosseumState.currentMonster?.tier?.name || 'SKELETON WARRIOR',
-        recentCombats: this.colosseumState.recentCombats || [],
+        monsterName: this.forestArenaState.currentMonster?.tier?.name || 'SKELETON WARRIOR',
+        recentCombats: this.forestArenaState.recentCombats || [],
         playerStats: {
           combats: 0, // TODO: Get from player state
           victories: 0,
@@ -1178,7 +1178,7 @@ export class LobbyScene extends BaseScene {
   }
 
   private updateMonsterDisplay() {
-    if (!this.colosseumState?.currentMonster) return;
+    if (!this.forestArenaState?.currentMonster) return;
     if (!this.monsterSprite || !this.scene.isActive()) return;
 
     // Since we now create the correct sprite in createMonsterDisplay,
@@ -1204,8 +1204,8 @@ export class LobbyScene extends BaseScene {
       }));
     }
 
-    // Emit gladiator group center position
-    window.dispatchEvent(new CustomEvent('gladiatorPositionUpdate', {
+    // Emit warrior group center position
+    window.dispatchEvent(new CustomEvent('warriorPositionUpdate', {
       detail: {
         x: this.getRelativePosition(0.6, this.cameras.main.width),
         y: this.getRelativePosition(0.5, this.cameras.main.height)
@@ -1214,9 +1214,9 @@ export class LobbyScene extends BaseScene {
   }
 
   private async startCombat() {
-    console.log('Starting combat...', this.colosseumState);
+    console.log('Starting combat...', this.forestArenaState);
     
-    if (!this.colosseumState?.currentMonster) {
+    if (!this.forestArenaState?.currentMonster) {
       console.error('No monster data available');
       return;
     }
@@ -1347,15 +1347,15 @@ export class LobbyScene extends BaseScene {
     
     // Removed shadow and aura positioning
 
-    // No center gladiator to position anymore
+    // No center warrior to position anymore
     
-    // Reposition gladiator group maintaining their scattered positions
+    // Reposition warrior group maintaining their scattered positions
     const centerX = this.getRelativePosition(0.5, width);
     const centerY = this.getRelativePosition(0.5, height);
     
-    // Reposition both active and incoming gladiators
-    const allGladiators = [...this.gladiatorGroup, ...this.incomingGladiators];
-    allGladiators.forEach((glad) => {
+    // Reposition both active and incoming warriors
+    const allWarriors = [...this.warriorGroup, ...this.incomingWarriors];
+    allWarriors.forEach((glad) => {
       if (glad && glad.active) {
         const offsetX = glad.getData('originalX');
         const offsetY = glad.getData('originalY');

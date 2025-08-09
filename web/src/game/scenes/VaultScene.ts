@@ -88,7 +88,7 @@ export class VaultScene extends BaseScene {
       detail: { sceneName: 'VaultScene' } 
     }));
 
-    // Roman victory chamber background - marble/gold tone
+    // Forest treasure chamber background - wood/gold tone
     this.bgRect = this.add.rectangle(width/2, height/2, width, height, 0x2a2520);
     this.registerUIElement('bg', this.bgRect);
     
@@ -98,7 +98,7 @@ export class VaultScene extends BaseScene {
     gradient.fillRect(0, 0, width, height);
     gradient.setDepth(1);
     
-    // Add golden particles falling like Roman coins
+    // Add golden particles falling like forest treasures
     this.particles = this.add.particles(0, 0, 'spark-placeholder', {
       x: { min: 0, max: width },
       y: 0,

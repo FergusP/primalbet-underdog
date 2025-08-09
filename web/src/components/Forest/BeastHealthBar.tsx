@@ -1,7 +1,7 @@
 import React from 'react';
 import { RomanDesignSystem, RomanIcons } from '../../styles/romanDesignSystem';
 
-interface RomanHealthBarProps {
+interface BeastHealthBarProps {
   currentHealth: number;
   maxHealth: number;
   label: string;
@@ -9,7 +9,7 @@ interface RomanHealthBarProps {
   isPlayer?: boolean;
 }
 
-export const RomanHealthBar: React.FC<RomanHealthBarProps> = ({
+export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
   currentHealth,
   maxHealth,
   label,
@@ -294,4 +294,4 @@ export const RomanHealthBar: React.FC<RomanHealthBarProps> = ({
   );
 };
 
-export default RomanHealthBar;
+export default BeastHealthBar;

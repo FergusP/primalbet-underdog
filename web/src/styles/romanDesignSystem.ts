@@ -1,50 +1,51 @@
-// Authentic Roman Design System
-// Based on research of ancient Roman architecture, typography, and materials
+// Forest Design System for BetBeast (formerly RomanDesignSystem)
+// Dark forest theme with mystical elements and beast combat atmosphere
+// NOTE: Keeping original export names for backward compatibility during migration
 
 export const RomanDesignSystem = {
-  // Color Palette - Based on authentic Roman materials and pigments
+  // Color Palette - Dark forest with gold accents for rewards
   colors: {
-    // Primary Materials
-    marbleWhite: '#F8F6F0',        // Carrara marble
-    marbleVeined: '#F5F3ED',       // Marble with subtle veining
-    travertine: '#E8E2D5',         // Roman travertine stone
-    sandstone: '#D4C4A8',          // Roman building stone
+    // Primary Forest Colors (replacing marble/stone)
+    marbleWhite: '#3E2723',        // Now dark bark
+    marbleVeined: '#4A5D23',       // Now moss green  
+    travertine: '#5D6D7E',         // Now stone gray
+    sandstone: '#6B8E23',          // Now forest moss
     
-    // Metals & Precious Materials
-    goldLeaf: '#FFD700',           // Pure gold leaf
-    goldAntique: '#B8860B',        // Aged gold
-    goldDeep: '#DAA520',           // Rich gold
-    bronze: '#CD7F32',             // Roman bronze
-    bronzePatina: '#8C7853',       // Aged bronze
+    // Metals & Precious Materials (keeping gold)
+    goldLeaf: '#FFD700',           // Pure gold (KEPT)
+    goldAntique: '#B8860B',        // Aged gold (KEPT)
+    goldDeep: '#DAA520',           // Rich gold (KEPT)
+    bronze: '#5D6D7E',             // Now stone gray
+    bronzePatina: '#4A5D23',       // Now moss green
     
-    // Imperial Colors
-    purpleImperial: '#663399',     // Tyrian purple (imperial)
-    purpleDark: '#4B0082',         // Deep imperial purple
-    crimsonRoman: '#DC143C',       // Roman red/crimson
+    // Imperial Colors (now forest themed)
+    purpleImperial: '#0B3D0B',     // Now deep forest green
+    purpleDark: '#1C3A1C',         // Now darker forest
+    crimsonRoman: '#8B0000',       // Now blood red
     
-    // Natural Pigments
-    ochreYellow: '#CC7722',        // Roman ochre
-    umberBurnt: '#8A4117',         // Burnt umber
-    charcoal: '#36454F',           // Roman charcoal/soot
-    ivory: '#FFFFF0',              // Ivory white
+    // Natural Pigments (forest themed)
+    ochreYellow: '#D2691E',        // Autumn orange
+    umberBurnt: '#5D4037',         // Dark wood
+    charcoal: '#1C1C1C',           // Shadow black
+    ivory: '#F5F5F5',              // Light text
     
-    // Accent Colors
-    oliveBranch: '#808000',        // Olive green (peace symbol)
-    laurelGreen: '#355E3B',        // Laurel leaf green
+    // Accent Colors (forest themed)
+    oliveBranch: '#4A5D23',        // Moss green
+    laurelGreen: '#0B3D0B',        // Deep forest green
     
     // Text Colors
-    inscriptionDark: '#2F2F2F',    // Dark text for marble
+    inscriptionDark: '#2F2F2F',    // Dark text
     inscriptionGold: '#B8860B',    // Gold text
-    shadowDeep: 'rgba(0, 0, 0, 0.6)', // Deep shadows
-    shadowSoft: 'rgba(0, 0, 0, 0.3)', // Soft shadows
+    shadowDeep: 'rgba(0, 0, 0, 0.8)',
+    shadowSoft: 'rgba(0, 0, 0, 0.4)',
   },
 
-  // Typography - Based on Roman Trajan Column inscriptions
+  // Typography - Rugged fantasy fonts
   typography: {
-    // Font Families (using web-safe alternatives to Roman styles)
-    display: '"Trajan Pro", "Cinzel", "Times New Roman", serif', // For headings
-    inscription: '"Optima", "Futura", "Arial", sans-serif',      // For inscriptions
-    body: '"Minion Pro", "Georgia", "Times", serif',             // For body text
+    // Font Families
+    display: '"MedievalSharp", "Cinzel", "Georgia", serif',
+    inscription: '"Merriweather", "Crimson Text", "Georgia", serif',
+    body: '"Merriweather", "Georgia", "Times", serif',
     
     // Font Weights
     weights: {
@@ -52,10 +53,10 @@ export const RomanDesignSystem = {
       regular: 400,
       medium: 500,
       bold: 700,
-      black: 900, // For carved stone effect
+      black: 900,
     },
     
-    // Font Sizes (using classical proportions)
+    // Font Sizes (responsive)
     sizes: {
       xs: 'clamp(10px, 1.2vw, 14px)',
       sm: 'clamp(12px, 1.5vw, 16px)',
@@ -68,30 +69,30 @@ export const RomanDesignSystem = {
       '5xl': 'clamp(48px, 6.5vw, 80px)',
     },
     
-    // Letter Spacing (Roman inscriptions used generous spacing)
+    // Letter Spacing
     letterSpacing: {
       tight: '-0.025em',
       normal: '0em',
-      wide: '0.1em',
-      wider: '0.15em',
-      widest: '0.2em', // For inscription headers
+      wide: '0.05em',
+      wider: '0.1em',
+      widest: '0.15em',
     },
   },
 
-  // Textures & Materials
+  // Textures & Materials (forest themed)
   textures: {
     marble: {
       background: `linear-gradient(135deg, 
-        #F8F6F0 0%, 
-        #F5F3ED 25%, 
-        #F8F6F0 50%, 
-        #F2F0EA 75%, 
-        #F8F6F0 100%)`,
+        #3E2723 0%, 
+        #5D4037 25%, 
+        #3E2723 50%, 
+        #4E342E 75%, 
+        #3E2723 100%)`,
       pattern: `radial-gradient(ellipse at top left, 
-        rgba(200, 200, 200, 0.1) 0%, 
+        rgba(77, 44, 28, 0.3) 0%, 
         transparent 50%),
         radial-gradient(ellipse at bottom right, 
-        rgba(180, 180, 180, 0.1) 0%, 
+        rgba(62, 39, 35, 0.3) 0%, 
         transparent 50%)`,
     },
     
@@ -110,57 +111,57 @@ export const RomanDesignSystem = {
     
     bronze: {
       background: `linear-gradient(135deg, 
-        #CD7F32 0%, 
-        #B8860B 25%, 
-        #CD7F32 50%, 
-        #8C7853 75%, 
-        #CD7F32 100%)`,
+        #5D6D7E 0%, 
+        #708090 25%, 
+        #5D6D7E 50%, 
+        #778899 75%, 
+        #5D6D7E 100%)`,
     },
     
     stone: {
       background: `linear-gradient(135deg, 
-        #E8E2D5 0%, 
-        #D4C4A8 50%, 
-        #E8E2D5 100%)`,
+        #5D6D7E 0%, 
+        #708090 50%, 
+        #5D6D7E 100%)`,
       texture: `radial-gradient(circle at 25% 25%, 
-        rgba(0, 0, 0, 0.1) 0%, 
+        rgba(0, 0, 0, 0.2) 0%, 
         transparent 50%),
         radial-gradient(circle at 75% 75%, 
-        rgba(0, 0, 0, 0.05) 0%, 
+        rgba(0, 0, 0, 0.1) 0%, 
         transparent 50%)`,
     },
   },
 
-  // Shadows & Depth (Roman architecture used dramatic shadows)
+  // Shadows & Depth (forest themed)
   shadows: {
-    carved: 'inset 2px 2px 4px rgba(0, 0, 0, 0.3), inset -2px -2px 4px rgba(255, 255, 255, 0.3)',
-    raised: '2px 2px 6px rgba(0, 0, 0, 0.4), -1px -1px 2px rgba(255, 255, 255, 0.3)',
-    deep: '4px 8px 16px rgba(0, 0, 0, 0.6)',
-    column: '0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 0, 0, 0.2)',
+    carved: 'inset 2px 2px 4px rgba(0, 0, 0, 0.5), inset -2px -2px 4px rgba(255, 255, 255, 0.1)',
+    raised: '2px 2px 8px rgba(0, 0, 0, 0.6), -1px -1px 2px rgba(255, 255, 255, 0.1)',
+    deep: '4px 8px 16px rgba(0, 0, 0, 0.8)',
+    column: '0 10px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 0, 0, 0.4)',
     inscription: '1px 1px 0px rgba(0, 0, 0, 0.8), 2px 2px 4px rgba(0, 0, 0, 0.3)',
     glow: '0 0 20px rgba(255, 215, 0, 0.6), 0 0 40px rgba(255, 215, 0, 0.3)',
   },
 
-  // Borders (Roman architectural elements)
+  // Borders (forest themed)
   borders: {
-    marble: '2px solid #E8E2D5',
+    marble: '2px solid #5D4037',
     gold: '2px solid #B8860B',
-    bronze: '2px solid #8C7853',
+    bronze: '2px solid #5D6D7E',
     carved: '1px solid rgba(0, 0, 0, 0.3)',
     ornate: '3px solid #B8860B, inset 0 0 0 1px #FFD700',
   },
 
-  // Border Radius (Roman architecture favored geometric shapes)
+  // Border Radius
   borderRadius: {
     none: '0',
     sm: '4px',
     md: '8px',
     lg: '12px',
     full: '50%',
-    arch: '50% 50% 0 0', // Roman arch shape
+    arch: '50% 50% 0 0',
   },
 
-  // Spacing (Based on Roman proportional systems)
+  // Spacing
   spacing: {
     xs: '4px',
     sm: '8px',
@@ -178,8 +179,8 @@ export const RomanDesignSystem = {
     fast: '0.2s',
     normal: '0.3s',
     slow: '0.5s',
-    marble: '2s', // For marble texture shifts
-    shimmer: '3s', // For gold shimmer effects
+    marble: '2s',
+    shimmer: '3s',
   },
 
   // Z-index layers
@@ -192,86 +193,63 @@ export const RomanDesignSystem = {
   },
 };
 
-// Roman Iconography Constants
+// Forest Icons (replacing Roman iconography)
 export const RomanIcons = {
-  // Gladiator Types
+  // Beast Types (replacing gladiator types)
   gladiatorTypes: {
-    murmillo: '🛡️', // Shield and sword
-    retiarius: '🔱', // Trident and net
-    thraex: '⚔️', // Curved sword
-    secutor: '🗡️', // Straight sword
-    hoplomachus: '🏹', // Spear
+    murmillo: '🐺',    // Wolf
+    retiarius: '🐻',   // Bear
+    thraex: '⚔️',      // Sword
+    secutor: '🗡️',     // Dagger
+    hoplomachus: '🏹', // Bow
   },
   
-  // Roman Symbols
+  // Forest Symbols (replacing Roman symbols)
   symbols: {
-    eagle: '🦅',
-    laurel: '🌿',
-    spqr: 'SPQR',
-    column: '🏛️',
-    amphitheater: '🏟️',
-    crown: '👑',
-    olive: '🫒',
+    eagle: '🦉',       // Owl instead of eagle
+    laurel: '🌲',      // Tree instead of laurel
+    spqr: 'BETBEAST',  // BetBeast instead of SPQR
+    column: '🌲',      // Tree instead of column
+    amphitheater: '🏞️', // Forest instead of amphitheater
+    crown: '💀',       // Skull instead of crown
+    olive: '🍄',       // Mushroom instead of olive
   },
   
-  // Roman Numerals Helper
+  // No Roman numerals - using regular numbers
   toRomanNumeral: (num: number): string => {
-    const romanNumerals = [
-      { value: 1000, symbol: 'M' },
-      { value: 900, symbol: 'CM' },
-      { value: 500, symbol: 'D' },
-      { value: 400, symbol: 'CD' },
-      { value: 100, symbol: 'C' },
-      { value: 90, symbol: 'XC' },
-      { value: 50, symbol: 'L' },
-      { value: 40, symbol: 'XL' },
-      { value: 10, symbol: 'X' },
-      { value: 9, symbol: 'IX' },
-      { value: 5, symbol: 'V' },
-      { value: 4, symbol: 'IV' },
-      { value: 1, symbol: 'I' },
-    ];
-    
-    let result = '';
-    for (const { value, symbol } of romanNumerals) {
-      while (num >= value) {
-        result += symbol;
-        num -= value;
-      }
-    }
-    return result;
+    return num.toString(); // Just return regular numbers
   },
 };
 
-// Roman Latin Phrases
+// Forest Battle Text (replacing Latin)
 export const RomanText = {
   combat: {
-    fight: 'PUGNA',
-    victory: 'VICTORIA',
-    defeat: 'CLADES',
-    glory: 'GLORIA',
+    fight: 'FIGHT',
+    victory: 'VICTORY',
+    defeat: 'DEFEATED',
+    glory: 'GLORY',
     honor: 'HONOR',
-    courage: 'VIRTUS',
-    strength: 'FORTITUDO',
+    courage: 'COURAGE',
+    strength: 'STRENGTH',
   },
   
   general: {
-    fortune: 'FORTUNA',
-    destiny: 'FATUM',
-    glory: 'GLORIA ET HONOR',
-    greeting: 'AVE',
-    farewell: 'VALE',
-    senate: 'SENATUS POPULUSQUE ROMANUS',
-    spqr: 'S.P.Q.R.',
+    fortune: 'FORTUNE',
+    destiny: 'DESTINY', 
+    glory: 'GLORY AND GOLD',
+    greeting: 'WELCOME HUNTER',
+    farewell: 'UNTIL NEXT HUNT',
+    senate: 'THE FOREST COUNCIL',
+    spqr: 'BETBEAST',
   },
   
   phrases: {
-    mayFortuneSmile: 'FORTUNA FAVEAT',
-    toGlory: 'AD GLORIAM',
-    forRome: 'PRO ROMA',
-    victoryOrDeath: 'AUT VINCERE AUT MORI',
-    weWhoAreAboutToDie: 'MORITURI TE SALUTANT',
-    theGamesBegin: 'LUDI INCIPIUNT',
+    mayFortuneSmile: 'FORTUNE FAVORS THE BOLD',
+    toGlory: 'TO GLORY',
+    forRome: 'FOR THE HUNT',
+    victoryOrDeath: 'VICTORY OR DEATH',
+    weWhoAreAboutToDie: 'THE HUNT BEGINS',
+    theGamesBegin: 'LET THE GAMES BEGIN',
   },
 };
 

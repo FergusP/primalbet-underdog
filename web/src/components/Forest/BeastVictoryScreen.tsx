@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { RomanDesignSystem, RomanText, RomanIcons } from '../../styles/romanDesignSystem';
 
-interface RomanVictoryScreenProps {
+interface BeastVictoryScreenProps {
   isVisible: boolean;
   monsterDefeated: string;
   reward?: number;
   onContinue: () => void;
 }
 
-export const RomanVictoryScreen: React.FC<RomanVictoryScreenProps> = ({
+export const BeastVictoryScreen: React.FC<BeastVictoryScreenProps> = ({
   isVisible,
   monsterDefeated,
   reward = 0,
@@ -311,4 +311,4 @@ export const RomanVictoryScreen: React.FC<RomanVictoryScreenProps> = ({
   );
 };
 
-export default RomanVictoryScreen;
+export default BeastVictoryScreen;

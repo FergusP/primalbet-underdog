@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { RomanDesignSystem } from '../../styles/romanDesignSystem';
 
-interface RomanButtonProps {
+interface ForestButtonProps {
   children: React.ReactNode;
   onClick: () => void;
   variant?: 'primary' | 'secondary' | 'imperial' | 'bronze' | 'marble';
@@ -12,7 +12,7 @@ interface RomanButtonProps {
   style?: React.CSSProperties;
 }
 
-export const RomanButton: React.FC<RomanButtonProps> = ({
+export const ForestButton: React.FC<ForestButtonProps> = ({
   children,
   onClick,
   variant = 'primary',
@@ -271,20 +271,20 @@ export const RomanButton: React.FC<RomanButtonProps> = ({
 };
 
 // Specific Roman button variants for common actions
-export const RomanFightButton: React.FC<Omit<RomanButtonProps, 'variant' | 'icon'>> = (props) => (
-  <RomanButton {...props} variant="imperial" icon="⚔️" />
+export const ForestFightButton: React.FC<Omit<ForestButtonProps, 'variant' | 'icon'>> = (props) => (
+  <ForestButton {...props} variant="imperial" icon="⚔️" />
 );
 
-export const RomanContinueButton: React.FC<Omit<RomanButtonProps, 'variant' | 'icon'>> = (props) => (
-  <RomanButton {...props} variant="bronze" icon="→" />
+export const ForestContinueButton: React.FC<Omit<ForestButtonProps, 'variant' | 'icon'>> = (props) => (
+  <ForestButton {...props} variant="bronze" icon="→" />
 );
 
-export const RomanGoldButton: React.FC<Omit<RomanButtonProps, 'variant' | 'icon'>> = (props) => (
-  <RomanButton {...props} variant="primary" icon="👑" />
+export const ForestGoldButton: React.FC<Omit<ForestButtonProps, 'variant' | 'icon'>> = (props) => (
+  <ForestButton {...props} variant="primary" icon="👑" />
 );
 
-export const RomanMarbleButton: React.FC<Omit<RomanButtonProps, 'variant'>> = (props) => (
-  <RomanButton {...props} variant="marble" />
+export const ForestWoodButton: React.FC<Omit<ForestButtonProps, 'variant'>> = (props) => (
+  <ForestButton {...props} variant="marble" />
 );
 
-export default RomanButton;
+export default ForestButton;
