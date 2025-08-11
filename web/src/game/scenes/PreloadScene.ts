@@ -11,6 +11,7 @@ export class PreloadScene extends Scene {
     // UI elements
     this.load.image('arena-bg', '/assets/backgrounds/arena.png');
     this.load.image('forest-bg', '/assets/backgrounds/lobby.png');
+    this.load.image('landing-bg', '/assets/backgrounds/landingPage.jpg');
     this.load.image('ui_panel', '/assets/ui/panel.png');
     this.load.image('gold_coin', '/assets/particles/coin.png');
     this.load.image('vault_closed', '/assets/sprites/vault_closed.png');
@@ -65,6 +66,10 @@ export class PreloadScene extends Scene {
     this.load.image('arrow_yellow', '/assets/sprites/soldier/Arrow01.png');
     this.load.image('arrow_blue', '/assets/sprites/soldier/Arrow02(100x100).png'); // Piercing blue arrow
     this.load.image('arrow_red', '/assets/sprites/soldier/Arrow03(100x100).png'); // Explosive red arrow
+    
+    // UI Assets
+    this.load.image('wooden-button', '/assets/ui/wooden-button.png');
+    this.load.image('torch', '/assets/ui/torch.png');
     
     // Load all monster sprites
     // ORC (Tier 1)

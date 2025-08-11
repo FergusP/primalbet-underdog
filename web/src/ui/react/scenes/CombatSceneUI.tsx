@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ForestDesignSystem, ForestText, ForestIcons } from '../styles/forestDesignSystem';
-import BeastHealthBar from './Forest/BeastHealthBar';
-import BeastVictoryScreen from './Forest/BeastVictoryScreen';
-import { ForestFightButton, ForestButton } from './Forest/ForestButton';
+import { ForestDesignSystem, ForestText, ForestIcons } from '../../styles/forestDesignSystem';
+import BeastHealthBar from '../game/displays/BeastHealthBar';
+import BeastVictoryScreen from '../game/displays/BeastVictoryScreen';
+import { ForestFightButton, ForestButton } from '../game/buttons/ForestButton';
 
 interface CombatSceneUIProps {}
 

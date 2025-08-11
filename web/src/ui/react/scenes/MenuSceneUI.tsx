@@ -76,15 +76,6 @@ export const MenuSceneUI: React.FC<MenuSceneUIProps> = () => {
       >
         {/* Logo Section */}
         <div className="relative mb-8">
-          {/* Decorative Frame */}
-          <div 
-            className="absolute inset-0 -inset-x-20 -inset-y-10"
-            style={{
-              background: `url("data:image/svg+xml,%3Csvg width='400' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50,50 L350,50 L350,150 L50,150 Z' fill='none' stroke='%23B8860B' stroke-width='2' opacity='0.3'/%3E%3C/svg%3E") center no-repeat`,
-              filter: 'drop-shadow(0 0 20px rgba(255, 215, 0, 0.3))',
-            }}
-          />
-          
           {/* Main Title */}
           <h1 
             className="relative text-center select-none"
@@ -132,128 +123,21 @@ export const MenuSceneUI: React.FC<MenuSceneUIProps> = () => {
           </div>
         </div>
 
-        {/* Status Section */}
-        {walletConnected && (
-          <div 
-            className="mb-8 px-6 py-3 rounded-lg animate-fade-in"
-            style={{
-              background: 'rgba(26, 26, 26, 0.8)',
-              border: '1px solid var(--color-dark-gold)',
-              boxShadow: '0 0 20px rgba(255, 215, 0, 0.2)',
-            }}
-          >
-            <div 
-              className="flex items-center gap-3"
-              style={{
-                fontFamily: 'var(--font-system)',
-                fontSize: 'clamp(14px, 1.5vw, 18px)',
-              }}
-            >
-              <div 
-                className="w-3 h-3 rounded-full animate-pulse"
-                style={{ background: 'var(--color-gold)' }}
-              />
-              <span style={{ color: 'var(--color-bronze)' }}>Connected:</span>
-              <span style={{ color: 'var(--color-light-gold)', fontWeight: 600 }}>
-                {shortAddress}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Button Section */}
-        <div className="relative pointer-events-auto">
-          {!walletConnected ? (
-            <button 
-              onClick={handleConnectWallet}
-              className="group relative overflow-hidden transition-all duration-300 hover:scale-105"
-              style={{
-                padding: '24px 64px',
-                background: `linear-gradient(135deg, var(--color-bronze) 0%, var(--color-dark-gold) 100%)`,
-                borderRadius: '8px',
-                border: '2px solid var(--color-gold)',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 12px 48px rgba(255, 215, 0, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4)';
-              }}
-            >
-              {/* Button shine effect */}
-              <div 
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                style={{
-                  background: `linear-gradient(
-                    105deg,
-                    transparent 40%,
-                    rgba(255, 255, 255, 0.7) 50%,
-                    transparent 60%
-                  )`,
-                  animation: 'shine 0.5s',
-                }}
-              />
-              
-              <span 
-                className="relative z-10"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: 'clamp(18px, 2vw, 28px)',
-                  fontWeight: 700,
-                  color: 'var(--color-light-gold)',
-                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.8)',
-                  letterSpacing: '0.05em',
-                }}
-              >
-                CONNECT WALLET
-              </span>
-            </button>
-          ) : (
-            <button 
-              onClick={handleEnterArena}
-              className="group relative overflow-hidden transition-all duration-300 hover:scale-105 animate-pulse"
-              style={{
-                padding: '28px 80px',
-                background: `linear-gradient(135deg, var(--color-blood) 0%, var(--color-crimson) 100%)`,
-                borderRadius: '8px',
-                border: '2px solid var(--color-gold)',
-                boxShadow: '0 8px 32px rgba(139, 0, 0, 0.6), 0 0 48px rgba(255, 215, 0, 0.3)',
-              }}
-            >
-              {/* Animated border glow */}
-              <div 
-                className="absolute inset-0 rounded-lg"
-                style={{
-                  background: 'none',
-                  border: '2px solid var(--color-gold)',
-                  opacity: 0.5,
-                  animation: 'borderGlow 2s ease-in-out infinite',
-                }}
-              />
-              
-              <span 
-                className="relative z-10 flex items-center gap-3"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: 'clamp(20px, 2.5vw, 32px)',
-                  fontWeight: 900,
-                  color: 'var(--color-gold)',
-                  textShadow: '0 0 20px rgba(255, 215, 0, 0.8), 0 2px 4px rgba(0, 0, 0, 0.8)',
-                  letterSpacing: '0.05em',
-                }}
-              >
-                <span style={{ fontSize: '1.2em' }}>⚔️</span>
-                ENTER THE ARENA
-                <span style={{ fontSize: '1.2em' }}>⚔️</span>
-              </span>
-            </button>
-          )}
-        </div>
+        {/* Button Placeholder - Takes up space for Phaser button */}
+        <div 
+          id="menu-button-placeholder"
+          className="relative"
+          style={{
+            height: '80px', // Reserve space for the button
+            width: '100%',
+            marginTop: '60px', // Shift button down
+            marginBottom: '20px',
+          }}
+        />
 
         {/* Lore Text */}
         <div 
-          className="mt-12 text-center max-w-2xl px-8 animate-fade-in"
+          className="mt-12 text-center max-w-3xl px-8 animate-fade-in"
           style={{
             animationDelay: '0.5s',
             opacity: 0,
@@ -263,16 +147,17 @@ export const MenuSceneUI: React.FC<MenuSceneUIProps> = () => {
           <p 
             style={{
               fontFamily: 'var(--font-body)',
-              fontSize: 'clamp(18px, 2vw, 26px)',
+              fontSize: 'clamp(14px, 1.5vw, 18px)',
               fontStyle: 'italic',
-              color: 'var(--color-steel)',
-              lineHeight: 1.6,
-              textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)',
+              color: 'rgba(218, 165, 32, 0.9)',
+              lineHeight: 1.4,
+              textShadow: '2px 2px 8px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 0, 0, 0.7)',
+              margin: 0,
             }}
           >
-            "In the dark depths of the haunted forest, 
+            "In the dark depths of the haunted forest, only the bravest warriors
             <br />
-            only the bravest warriors may claim the Beast's treasure."
+            may claim the Beast's treasure."
           </p>
         </div>
       </div>

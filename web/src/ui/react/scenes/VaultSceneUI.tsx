@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ForestDesignSystem, ForestText, ForestIcons } from '../styles/forestDesignSystem';
-import { ForestButton } from './Forest/ForestButton';
+import { ForestDesignSystem, ForestText, ForestIcons } from '../../styles/forestDesignSystem';
+import { ForestButton } from '../game/buttons/ForestButton';
 
 interface VaultSceneUIProps {}
 

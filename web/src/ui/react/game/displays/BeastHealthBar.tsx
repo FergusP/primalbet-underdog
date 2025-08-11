@@ -1,5 +1,5 @@
 import React from 'react';
-import { ForestDesignSystem, ForestIcons } from '../../styles/forestDesignSystem';
+import { ForestDesignSystem, ForestIcons } from '../../../styles/forestDesignSystem';
 
 interface BeastHealthBarProps {
   currentHealth: number;

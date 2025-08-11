@@ -3,7 +3,7 @@
 // Game Wrapper - React component that integrates Phaser with wallet
 import React, { useEffect, useRef, useState } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
-import { GameService } from '../services/GameService';
+import { GameService } from '../../../services/GameService';
 import { 
   Transaction, 
   LAMPORTS_PER_SOL, 
@@ -11,16 +11,16 @@ import {
   TransactionInstruction,
   SystemProgram 
 } from '@solana/web3.js';
-import { WalletReconnect } from './WalletReconnect';
-import { ClientWalletButton } from './ClientWalletButton';
-import { GameUIOverlay } from './GameUIOverlay';
-import { IntegratedPaymentUI } from './IntegratedPaymentUI';
-import { PDADepositModal } from './PDADepositModal';
-import { PDAWithdrawModal } from './PDAWithdrawModal';
+import { WalletReconnect } from '../wallet/WalletReconnect';
+import { ClientWalletButton } from '../wallet/ClientWalletButton';
+import { GameUIOverlay } from '../scenes/GameUIOverlay';
+import { IntegratedPaymentUI } from '../wallet/IntegratedPaymentUI';
+import { PDADepositModal } from '../wallet/PDADepositModal';
+import { PDAWithdrawModal } from '../wallet/PDAWithdrawModal';
 // Import UI components
-import { MenuSceneUI } from './MenuSceneUI';
-import { CombatSceneUI } from './CombatSceneUI';
-import { VaultSceneUI } from './VaultSceneUI';
+import { MenuSceneUI } from '../scenes/MenuSceneUI';
+import { CombatSceneUI } from '../scenes/CombatSceneUI';
+import { VaultSceneUI } from '../scenes/VaultSceneUI';
 import { LoadingScreen } from './LoadingScreen';
 import type { PaymentOptions } from '../types';
 
@@ -72,7 +72,7 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
 
     const initGame = async () => {
       try {
-        const { BetBeastGame } = await import('../game/Game');
+        const { BetBeastGame } = await import('../../../game/Game');
         
         // Double-check we haven't been cancelled and no game exists
         if (isCancelled || gameInstanceRef.current) return;
@@ -485,9 +485,9 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
         </div>
       )}
 
-      {/* Header with wallet button - Top right - Hide during combat and vault scenes */}
+      {/* Header with wallet button - Moved left to give room for dropdown - Hide during combat and vault scenes */}
       {currentScene !== 'CombatScene' && currentScene !== 'VaultScene' && (
-        <div className="absolute top-4 right-4 flex items-center gap-4" style={{ zIndex: 9999 }}>
+        <div className="absolute top-4 right-32 flex items-center gap-4" style={{ zIndex: 9999 }}>
           {/* Integrated Payment UI - only show in LobbyScene when wallet connected */}
           {currentScene === 'LobbyScene' && connected && publicKey && paymentOptions && (
             <IntegratedPaymentUI

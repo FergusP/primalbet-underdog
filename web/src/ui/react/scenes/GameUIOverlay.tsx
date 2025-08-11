@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { JackpotDisplay } from './GameUI/JackpotDisplay';
-import { ForestFightButtonWrapper } from './GameUI/ForestFightButtonWrapper';
-import { MonsterLabel } from './GameUI/MonsterLabel';
+import { JackpotDisplay } from '../game/displays/JackpotDisplay';
+import { ForestFightButtonWrapper } from '../game/buttons/ForestFightButtonWrapper';
+import { MonsterLabel } from '../game/displays/MonsterLabel';
 
 interface GameState {
   jackpot: number;

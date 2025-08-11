@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ForestDesignSystem, ForestText, ForestIcons } from '../../styles/forestDesignSystem';
+import { ForestDesignSystem, ForestText, ForestIcons } from '../../../styles/forestDesignSystem';
 
 interface BeastVictoryScreenProps {
   isVisible: boolean;

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { BetBeastWalletProvider } from "@/components/WalletProvider";
+import "@/ui/styles/wallet-button.css";
+import { BetBeastWalletProvider } from "@/ui/react/wallet/WalletProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

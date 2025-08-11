@@ -1,7 +1,7 @@
 // Action Combat Scene - Real-time combat with movement
 import { BaseScene } from './BaseScene';
 import { Monster } from '../../types';
-import { SpearRechargeIndicatorHTML } from '../ui/SpearRechargeIndicatorHTML';
+import { SpearRechargeIndicatorHTML } from '../../ui/phaser/SpearRechargeIndicatorHTML';
 import { SkeletonEnemy } from '../sprites/SkeletonEnemy';
 import { SlimeEnemy } from '../sprites/SlimeEnemy';
 

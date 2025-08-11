@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ForestDesignSystem } from '../../styles/forestDesignSystem';
+import { ForestDesignSystem } from '../../../styles/forestDesignSystem';
 
 interface ForestButtonProps {
   children: React.ReactNode;
