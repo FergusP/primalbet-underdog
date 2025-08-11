@@ -88,7 +88,7 @@ export class VaultScene extends BaseScene {
       detail: { sceneName: 'VaultScene' } 
     }));
 
-    // Roman victory chamber background - marble/gold tone
+    // Forest treasure chamber background - wood/gold tone
     this.bgRect = this.add.rectangle(width/2, height/2, width, height, 0x2a2520);
     this.registerUIElement('bg', this.bgRect);
     
@@ -98,7 +98,7 @@ export class VaultScene extends BaseScene {
     gradient.fillRect(0, 0, width, height);
     gradient.setDepth(1);
     
-    // Add golden particles falling like Roman coins
+    // Add golden particles falling like forest treasures
     this.particles = this.add.particles(0, 0, 'spark-placeholder', {
       x: { min: 0, max: width },
       y: 0,
@@ -284,14 +284,13 @@ export class VaultScene extends BaseScene {
   }
   
   private generateSpinnerSymbols(): string[] {
-    // Create a long sequence of symbols for continuous scrolling
-    // Only use miss and win symbols (no fortune)
-    const basePattern = ['miss', 'miss', 'win', 'miss', 'miss', 'miss', 'win', 'miss'];
+    // Generate random pattern instead of fixed repeating pattern
     const symbols: string[] = [];
+    const winProbability = 0.23; // 23% chance for each slot to be a win
     
-    // Repeat pattern many times for wider spinner and longer scroll
-    for (let i = 0; i < 15; i++) {
-      symbols.push(...basePattern);
+    // Generate 120 symbols with random distribution
+    for (let i = 0; i < 120; i++) {
+      symbols.push(Math.random() < winProbability ? 'win' : 'miss');
     }
     
     // Randomize position within safe range (40-70% of array) for variety
@@ -1172,7 +1171,7 @@ export class VaultScene extends BaseScene {
     
     // Small delay to ensure cleanup completes
     this.time.delayedCall(100, () => {
-      this.scene.start('ColosseumScene', {
+      this.scene.start('LobbyScene', {
         walletAddress: this.walletAddress
       });
     });

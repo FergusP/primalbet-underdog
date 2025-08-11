@@ -1,0 +1,120 @@
+/* Forest-themed styling for Solana wallet button */
+.wallet-adapter-button {
+  background: linear-gradient(135deg, #8B4513 0%, #654321 100%) !important;
+  border: 2px solid #B8860B !important;
+  border-radius: 8px !important;
+  color: #FFE4B5 !important;
+  font-family: "Fredoka One", "Luckiest Guy", "Bungee", "MedievalSharp", serif !important;
+  font-weight: 700 !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8) !important;
+  transition: all 0.3s ease !important;
+  padding: 8px 16px 8px 12px !important;
+  font-size: 14px !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* Add pulsing dot indicator when wallet is connected */
+.wallet-adapter-button[data-state="connected"]::before,
+.wallet-adapter-button-trigger::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  background: #FFD700;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+  animation: pulse-dot 2s infinite;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.2);
+  }
+}
+
+/* Style when wallet is connected - show golden glow */
+.wallet-adapter-button-trigger {
+  background: linear-gradient(135deg, #8B4513 0%, #654321 100%) !important;
+  border: 2px solid #FFD700 !important;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.3) !important;
+}
+
+.wallet-adapter-button:not([disabled]):hover {
+  background: linear-gradient(135deg, #A0522D 0%, #8B4513 100%) !important;
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3) !important;
+  transform: translateY(-1px) !important;
+}
+
+.wallet-adapter-button-trigger {
+  background: linear-gradient(135deg, #8B4513 0%, #654321 100%) !important;
+}
+
+/* Dropdown styling */
+.wallet-adapter-dropdown {
+  background: linear-gradient(135deg, #2C1810 0%, #1a0f08 100%) !important;
+  border: 2px solid #B8860B !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 215, 0, 0.1) !important;
+  margin-top: 8px !important;
+}
+
+.wallet-adapter-dropdown-list {
+  background: transparent !important;
+  padding: 4px !important;
+}
+
+.wallet-adapter-dropdown-list-item {
+  color: #FFE4B5 !important;
+  font-family: "Merriweather", serif !important;
+  background: rgba(139, 69, 19, 0.3) !important;
+  margin: 2px 0 !important;
+  border-radius: 4px !important;
+  transition: all 0.2s ease !important;
+  font-size: 14px !important;
+  padding: 8px 12px !important;
+}
+
+.wallet-adapter-dropdown-list-item:not([disabled]):hover {
+  background: linear-gradient(135deg, #8B4513 0%, #654321 100%) !important;
+  transform: translateX(2px) !important;
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.2) !important;
+}
+
+/* Modal styling */
+.wallet-adapter-modal-wrapper {
+  background: rgba(0, 0, 0, 0.8) !important;
+}
+
+.wallet-adapter-modal {
+  background: #2C1810 !important;
+  border: 3px solid #B8860B !important;
+  border-radius: 12px !important;
+}
+
+.wallet-adapter-modal-title {
+  color: #FFD700 !important;
+  font-family: "Fredoka One", "Luckiest Guy", "Bungee", "MedievalSharp", serif !important;
+  font-size: 24px !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8) !important;
+}
+
+.wallet-adapter-modal-list li {
+  background: rgba(139, 69, 19, 0.2) !important;
+  border: 1px solid #654321 !important;
+  margin-bottom: 8px !important;
+  border-radius: 6px !important;
+}
+
+.wallet-adapter-modal-list li:hover {
+  background: rgba(255, 215, 0, 0.1) !important;
+  border-color: #B8860B !important;
+}
