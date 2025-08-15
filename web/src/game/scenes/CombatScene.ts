@@ -8,7 +8,6 @@ import { SlimeEnemy } from '../sprites/SlimeEnemy';
 export class CombatScene extends BaseScene {
   private player!: Phaser.GameObjects.Sprite;
   private monster!: Phaser.GameObjects.Sprite;
-  private vault!: Phaser.GameObjects.Sprite;
 
   // Game objects
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -16,6 +15,7 @@ export class CombatScene extends BaseScene {
   private spaceKey!: Phaser.Input.Keyboard.Key;
   private eKey!: Phaser.Input.Keyboard.Key;
   private qKey!: Phaser.Input.Keyboard.Key;
+  private shiftKey!: Phaser.Input.Keyboard.Key;
 
   // Combat
   private spears!: Phaser.GameObjects.Group;
@@ -105,9 +105,10 @@ export class CombatScene extends BaseScene {
   
   // Crowd control abilities
   private dashCooldown: number = 0;
-  private dashSpeed: number = 450;
+  private dashDistance: number = 180; // Fixed dash distance in pixels
   private dashDuration: number = 300;
   private isDashing: boolean = false;
+  private isInvincible: boolean = false; // Invincibility during dash
   private slamCooldown: number = 0;
   private slamCooldownMax: number = 5000;
   private lastDashDirection: string = '';
@@ -332,25 +333,9 @@ export class CombatScene extends BaseScene {
     this.prevMonsterX = this.monster.x;
     this.prevMonsterY = this.monster.y;
 
-    // Create vault as a graphics object (gold chest)
-    const vaultGraphics = this.add.graphics();
-    vaultGraphics.fillStyle(0xffd700, 1);
-    vaultGraphics.fillRect(-40, -30, 80, 60);
-    vaultGraphics.lineStyle(3, 0x8b7500, 1);
-    vaultGraphics.strokeRect(-40, -30, 80, 60);
-
-    // Convert to texture and create sprite
-    vaultGraphics.generateTexture('vault-texture', 80, 60);
-    vaultGraphics.destroy();
-
-    this.vault = this.add.sprite(width * 0.9, height * 0.5, 'vault-texture');
-    this.vault.setOrigin(0.5, 0.5);
-    this.vault.setScale(1.5);
-
     // Enable physics
     this.physics.add.existing(this.player);
     this.physics.add.existing(this.monster);
-    this.physics.add.existing(this.vault);
 
     // Set player physics properties
     const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
@@ -371,6 +356,9 @@ export class CombatScene extends BaseScene {
     );
     this.eKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.qKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
+    
+    // Add SHIFT key for dash
+    this.shiftKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
 
     // Create spear group for projectiles - NO collision detection
     this.spears = this.physics.add.group();
@@ -385,8 +373,8 @@ export class CombatScene extends BaseScene {
     // Create spear texture once
     this.createSpearTexture();
     
-    // Create arrow type indicator
-    this.createArrowTypeIndicator();
+    // Arrow type indicator removed - now handled by React UI
+    // this.createArrowTypeIndicator();
 
     // Delay creation of HTML spear recharge indicator to ensure DOM is ready
     this.time.delayedCall(500, () => {
@@ -428,9 +416,8 @@ export class CombatScene extends BaseScene {
     console.log('🕹️  WASD or Arrow Keys to move');
     console.log('⚔️  SPACE/Left Click for melee attack');
     console.log(
-      '🏹  E/Right Click to throw spears (Limited: 2 max, slows movement)'
+      '🏹  E/Right Click to throw arrows (Limited: 2 max, slows movement)'
     );
-    console.log('🏛️  Defeat monster to access vault!');
     console.log('💀 Skeletons will spawn to crowd the battle!');
     console.log('💚 Kill slimes for healing!');
 
@@ -442,7 +429,7 @@ export class CombatScene extends BaseScene {
     window.dispatchEvent(
       new CustomEvent('combat-instructions', {
         detail: {
-          text: 'WASD: Move • SPACE/Click: Melee • E/Right-Click: Spear (Limited) • Defeat monster!',
+          text: 'WASD: Move • SPACE/Click: Melee • E/Right-Click: Arrow (Limited) • Defeat monster!',
           visible: true,
         },
       })
@@ -558,34 +545,56 @@ export class CombatScene extends BaseScene {
   }
   
   createArrowTypeIndicator() {
-    // Create UI for showing current arrow type
-    const x = 100;
+    // Create UI for showing current arrow type - positioned bottom-right for better visibility
+    const x = this.cameras.main.width - 120;
     const y = this.cameras.main.height - 50;
     
     this.arrowTypeIndicator = this.add.container(x, y);
     
-    // Background panel
-    const bg = this.add.rectangle(0, 0, 150, 40, 0x000000, 0.7);
-    bg.setStrokeStyle(2, 0xffffff);
+    // Background panel with marble texture style (matching forest theme)
+    const bg = this.add.rectangle(0, 0, 200, 60, 0x3d2817, 0.95);
+    bg.setStrokeStyle(3, 0xffd700); // Gold border
     
-    // Arrow icon
-    const arrowIcon = this.add.image(-50, 0, this.arrowTypes[this.currentArrowType].sprite);
-    arrowIcon.setScale(0.5);
+    // Add subtle glow effect
+    const glow = this.add.rectangle(0, 0, 205, 65, 0xffd700, 0.2);
     
-    // Arrow type text
-    const typeText = this.add.text(10, 0, this.arrowTypes[this.currentArrowType].description, {
-      fontSize: '14px',
-      color: this.getArrowColor(this.currentArrowType)
-    }).setOrigin(0, 0.5);
-    
-    // Q key hint
-    const keyHint = this.add.text(-50, -25, '[Q] Switch', {
-      fontSize: '10px',
-      color: '#888888'
+    // Arrow emoji instead of sprite (since sprites don't exist)
+    const arrowEmoji = this.add.text(-70, 0, '🏹', {
+      fontSize: '24px'
     }).setOrigin(0.5, 0.5);
     
-    this.arrowTypeIndicator.add([bg, arrowIcon, typeText, keyHint]);
-    this.arrowTypeIndicator.setDepth(10);
+    // Arrow type text - bigger and brighter
+    const typeText = this.add.text(-20, 0, this.arrowTypes[this.currentArrowType].description, {
+      fontSize: '20px',
+      fontWeight: 'bold',
+      color: this.getArrowColor(this.currentArrowType),
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0, 0.5);
+    
+    // Damage indicator
+    const damageText = this.add.text(50, 0, `DMG: ${this.arrowTypes[this.currentArrowType].damage}x`, {
+      fontSize: '16px',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 1
+    }).setOrigin(0, 0.5);
+    
+    // Q key hint - more visible
+    const keyHint = this.add.text(0, -35, '[Q] SWITCH TYPE', {
+      fontSize: '14px',
+      fontWeight: 'bold',
+      color: '#ffd700',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5, 0.5);
+    
+    this.arrowTypeIndicator.add([glow, bg, arrowEmoji, typeText, damageText, keyHint]);
+    this.arrowTypeIndicator.setDepth(100); // Higher depth for better visibility
+    
+    // Store references for updating
+    (this.arrowTypeIndicator as any).typeText = typeText;
+    (this.arrowTypeIndicator as any).damageText = damageText;
   }
   
   getArrowColor(type: 'yellow' | 'blue' | 'red'): string {
@@ -602,8 +611,13 @@ export class CombatScene extends BaseScene {
     const currentIndex = types.indexOf(this.currentArrowType);
     this.currentArrowType = types[(currentIndex + 1) % types.length];
     
-    // Update indicator
-    this.updateArrowTypeIndicator();
+    // Emit event to React UI
+    window.dispatchEvent(new CustomEvent('arrow-type-changed', {
+      detail: {
+        type: this.currentArrowType,
+        damage: this.arrowTypes[this.currentArrowType].damage
+      }
+    }));
     
     // Show feedback
     const feedbackText = this.add.text(
@@ -630,13 +644,28 @@ export class CombatScene extends BaseScene {
   updateArrowTypeIndicator() {
     if (!this.arrowTypeIndicator) return;
     
-    const children = this.arrowTypeIndicator.list as Phaser.GameObjects.GameObject[];
-    const arrowIcon = children[1] as Phaser.GameObjects.Image;
-    const typeText = children[2] as Phaser.GameObjects.Text;
+    // Get stored references
+    const typeText = (this.arrowTypeIndicator as any).typeText;
+    const damageText = (this.arrowTypeIndicator as any).damageText;
     
-    arrowIcon.setTexture(this.arrowTypes[this.currentArrowType].sprite);
-    typeText.setText(this.arrowTypes[this.currentArrowType].description);
-    typeText.setColor(this.getArrowColor(this.currentArrowType));
+    if (typeText) {
+      typeText.setText(this.arrowTypes[this.currentArrowType].description);
+      typeText.setColor(this.getArrowColor(this.currentArrowType));
+    }
+    
+    if (damageText) {
+      damageText.setText(`DMG: ${this.arrowTypes[this.currentArrowType].damage}x`);
+    }
+    
+    // Add a pulse effect when switching
+    this.tweens.add({
+      targets: this.arrowTypeIndicator,
+      scaleX: 1.1,
+      scaleY: 1.1,
+      duration: 150,
+      yoyo: true,
+      ease: 'Power2'
+    });
   }
 
   createExplosion(x: number, y: number) {
@@ -770,6 +799,12 @@ export class CombatScene extends BaseScene {
   update(time: number, delta: number) {
     if (this.isGameOver) return;
 
+    // Update dash cooldown
+    if (this.dashCooldown > 0) {
+      this.dashCooldown -= delta;
+      if (this.dashCooldown < 0) this.dashCooldown = 0;
+    }
+
     this.handlePlayerMovement();
     this.handleMonsterAI();
     this.handleInputAttacks(time);
@@ -797,6 +832,15 @@ export class CombatScene extends BaseScene {
         this.prevMonsterY = this.monster.y;
       }
     }
+  }
+
+  // Helper methods for cleaner evolution protection
+  canDamageMonster(): boolean {
+    return !this.isEvolving && this.monsterHealth > 0;
+  }
+
+  canMonsterAct(): boolean {
+    return !this.isEvolving && !this.isGameOver && this.monsterHealth > 0;
   }
 
   updateRangeIndicator() {
@@ -895,24 +939,43 @@ export class CombatScene extends BaseScene {
     playerBody.setVelocity(0);
 
     let isMoving = false;
+    let moveX = 0;
+    let moveY = 0;
 
     // Handle input
     if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
-      playerBody.setVelocityX(-speed);
+      moveX = -1;
       this.player.setFlipX(true); // Face left
       isMoving = true;
     } else if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
-      playerBody.setVelocityX(speed);
+      moveX = 1;
       this.player.setFlipX(false); // Face right
       isMoving = true;
     }
 
     if (this.cursors.up.isDown || this.wasdKeys.W.isDown) {
-      playerBody.setVelocityY(-speed);
+      moveY = -1;
       isMoving = true;
     } else if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
-      playerBody.setVelocityY(speed);
+      moveY = 1;
       isMoving = true;
+    }
+
+    // Check for dash (SHIFT + direction)
+    if (this.shiftKey && this.shiftKey.isDown && isMoving && !this.isDashing && this.dashCooldown <= 0) {
+      // Normalize the direction vector
+      const length = Math.sqrt(moveX * moveX + moveY * moveY);
+      if (length > 0) {
+        const dashDirection = {
+          x: moveX / length,
+          y: moveY / length
+        };
+        this.performDash(dashDirection);
+      }
+    } else if (!this.isDashing) {
+      // Normal movement (only if not dashing)
+      playerBody.setVelocityX(moveX * speed);
+      playerBody.setVelocityY(moveY * speed);
     }
 
     // Handle soldier animations based on movement
@@ -1348,8 +1411,8 @@ export class CombatScene extends BaseScene {
   }
 
   dealMeleeDamage() {
-    // Don't attack if monster is already dead
-    if (this.monsterHealth <= 0) {
+    // Don't attack if we can't damage the monster
+    if (!this.canDamageMonster()) {
       return;
     }
 
@@ -1469,6 +1532,11 @@ export class CombatScene extends BaseScene {
   }
 
   performMonsterAttack() {
+    // Don't attack if monster can't act
+    if (!this.canMonsterAct()) {
+      return;
+    }
+    
     console.log('Monster attacking! Player health before:', this.playerHealth);
 
     // Set attacking flag to prevent idle animation override
@@ -1526,6 +1594,14 @@ export class CombatScene extends BaseScene {
   }
 
   private applyMonsterDamage() {
+    // Check if player is invincible (from dash)
+    if (this.isInvincible) {
+      console.log('Player dodged with invincibility frames!');
+      // Show dodge feedback
+      this.showBonusText('DODGED!', 0x00ffff);
+      return;
+    }
+    
     // Check if player is still in range (they might have moved away)
     const distance = this.getPlayerMonsterDistance();
     if (distance > this.monsterAttackRange * 1.5) {
@@ -1942,8 +2018,8 @@ export class CombatScene extends BaseScene {
           this.monsterHealth
         );
 
-        // Only damage if monster is alive and still exists
-        if (this.monsterHealth > 0 && this.monster && this.monster.active) {
+        // Only damage if we can damage the monster and it still exists
+        if (this.canDamageMonster() && this.monster && this.monster.active) {
           // Critical hit calculation (20% chance)
           const isCrit = Math.random() < 0.2;
 
@@ -2134,7 +2210,6 @@ export class CombatScene extends BaseScene {
       this.monster.x,
       this.monster.y
     );
-    const vaultScreenPos = camera.getWorldPoint(this.vault.x, this.vault.y);
 
     window.dispatchEvent(
       new CustomEvent('sprite-positions', {
@@ -2145,7 +2220,6 @@ export class CombatScene extends BaseScene {
             y: monsterScreenPos.y,
             alive: this.monsterHealth > 0,
           },
-          vault: { x: vaultScreenPos.x, y: vaultScreenPos.y },
         },
       })
     );
@@ -2180,8 +2254,8 @@ export class CombatScene extends BaseScene {
 
     if (this.playerHealth <= 0) {
       this.gameOver(false); // Player died
-    } else if (this.monsterHealth <= 0) {
-      // Main monster is dead, but check if there are any remaining hostile enemies (skeletons)
+    } else if (this.monsterHealth <= 0 && !this.isEvolving) {
+      // Main monster is dead (and not evolving), check if there are any remaining hostile enemies (skeletons)
       const remainingSkeletons = this.skeletons ? this.skeletons.getLength() : 0;
       
       if (remainingSkeletons === 0) {
@@ -2438,7 +2512,7 @@ export class CombatScene extends BaseScene {
         this.monsterHealth = this.monsterData.evolution.hp;
         this.monsterMaxHealth = this.monsterData.evolution.hp;
         
-        // Store the evolved monster type for vault scene
+        // Store the evolved monster type
         window.localStorage.setItem('currentMonsterType', this.monsterData.type);
         
         // Emit updated monster info to UI
@@ -2614,8 +2688,8 @@ export class CombatScene extends BaseScene {
       duration: 500,
       ease: 'Power2.easeOut',
       onComplete: () => {
-        // Phase 2: Animate vault to center (500-1500ms)
-        this.animateVaultToCenter(width, height, backgroundOverlay);
+        // Show victory screen directly
+        this.showVictoryText(width / 2, height / 2);
       },
     });
 
@@ -2643,48 +2717,6 @@ export class CombatScene extends BaseScene {
     }
   }
 
-  animateVaultToCenter(
-    width: number,
-    height: number,
-    backgroundOverlay: Phaser.GameObjects.Rectangle
-  ) {
-    const centerX = width / 2;
-    const centerY = height / 2;
-
-    // Remove golden glow - keep only the vault sprite for consistency
-
-    // Ensure vault is above everything else
-    this.vault.setDepth(100);
-
-    // Animate vault movement and scaling
-    this.tweens.add({
-      targets: this.vault,
-      x: centerX,
-      y: height * 0.52, // Moved higher to avoid button overlap
-      scaleX: 1.8,
-      scaleY: 1.8,
-      alpha: 0.85, // Higher opacity to draw attention
-      duration: 1000,
-      ease: 'Back.easeOut',
-      onComplete: () => {
-        // Phase 3: Add particle explosion (1500-2000ms)
-        this.createParticleExplosion(centerX, centerY);
-        // Phase 4: Show victory text (2000ms+)
-        this.showVictoryText(centerX, centerY);
-      },
-    });
-
-    // Add golden tint to vault
-    this.vault.setTint(0xffffff);
-    this.vault.setAlpha(1); // Ensure vault is fully visible
-    this.tweens.add({
-      targets: this.vault,
-      duration: 1000,
-      onComplete: () => {
-        this.vault.setTint(0xffd700);
-      },
-    });
-  }
 
   createParticleExplosion(centerX: number, centerY: number) {
     // Create multiple sparkle effects
@@ -2754,7 +2786,8 @@ export class CombatScene extends BaseScene {
   }
 
   showVictoryText(centerX: number, centerY: number) {
-    // Keep vault visible - don't hide it
+    // Add particle explosion first
+    this.createParticleExplosion(centerX, centerY);
 
     // Emit victory UI event with monster type
     window.dispatchEvent(
@@ -2784,8 +2817,6 @@ export class CombatScene extends BaseScene {
     };
     window.addEventListener('continue-from-vault', handleContinue);
   }
-
-  // Remove handleVaultChoice and enableVaultInteraction methods as they're no longer needed
 
   hideUIElements() {
     // Emit UI visibility event
@@ -2878,11 +2909,6 @@ export class CombatScene extends BaseScene {
         // Update position tracking
         this.prevMonsterX = this.monster.x;
         this.prevMonsterY = this.monster.y;
-      }
-      if (this.vault) {
-        const vaultRelX = this.vault.x / this.previousWidth;
-        const vaultRelY = this.vault.y / this.previousHeight;
-        this.vault.setPosition(width * vaultRelX, height * vaultRelY);
       }
     }
 
@@ -3719,14 +3745,16 @@ export class CombatScene extends BaseScene {
     allEnemies.forEach((enemy, index) => {
       this.time.delayedCall(index * 50, () => {
         if (enemy.type === 'monster') {
-          // Damage monster
-          this.monsterHealth = Math.max(0, this.monsterHealth - spinDamage);
-          this.showDamageNumber(enemy.target.x, enemy.target.y - 40, spinDamage, 0xff00ff, true);
-          this.emitGameState();
-          
-          // Check for monster death
-          if (this.monsterHealth <= 0) {
-            this.checkGameOver();
+          // Damage monster if we can
+          if (this.canDamageMonster()) {
+            this.monsterHealth = Math.max(0, this.monsterHealth - spinDamage);
+            this.showDamageNumber(enemy.target.x, enemy.target.y - 40, spinDamage, 0xff00ff, true);
+            this.emitGameState();
+            
+            // Check for monster death
+            if (this.monsterHealth <= 0) {
+              this.checkGameOver();
+            }
           }
         } else if (enemy.type === 'skeleton' && enemy.target instanceof SkeletonEnemy) {
           enemy.target.takeDamage(spinDamage);
@@ -3876,8 +3904,10 @@ export class CombatScene extends BaseScene {
         enemy.target.takeDamage(damage);
       } else if (enemy.type === 'monster') {
         // Damage monster but no knockback (too heavy)
-        this.monsterHealth = Math.max(0, this.monsterHealth - damage);
-        this.emitGameState();
+        if (this.canDamageMonster()) {
+          this.monsterHealth = Math.max(0, this.monsterHealth - damage);
+          this.emitGameState();
+        }
       }
       
       // Show damage
@@ -3893,44 +3923,68 @@ export class CombatScene extends BaseScene {
     
     console.log('💨 DASH!');
     this.isDashing = true;
+    this.isInvincible = true; // Enable invincibility
     this.dashCooldown = 2000; // 2 second cooldown
     
-    // Calculate dash velocity
-    const body = this.player.body as Phaser.Physics.Arcade.Body;
-    body.setVelocity(direction.x * this.dashSpeed, direction.y * this.dashSpeed);
+    // Calculate target position
+    const targetX = this.player.x + direction.x * this.dashDistance;
+    const targetY = this.player.y + direction.y * this.dashDistance;
     
-    // Visual trail effect
-    for (let i = 0; i < 5; i++) {
-      this.time.delayedCall(i * 40, () => {
-        const afterimage = this.add.sprite(this.player.x, this.player.y, 'soldier_idle');
-        afterimage.setScale(this.player.scale);
-        afterimage.setAlpha(0.5 - i * 0.1);
-        afterimage.setTint(0x0099ff);
-        afterimage.setDepth(this.player.depth - 1);
-        
-        this.tweens.add({
-          targets: afterimage,
-          alpha: 0,
-          duration: 300,
-          onComplete: () => afterimage.destroy()
-        });
+    // Get world bounds
+    const { width, height } = this.cameras.main;
+    const margin = 40; // Account for border width
+    
+    // Clamp to world bounds
+    const finalX = Phaser.Math.Clamp(targetX, margin, width - margin);
+    const finalY = Phaser.Math.Clamp(targetY, margin, height - margin);
+    
+    // Store original position for trail effect
+    const startX = this.player.x;
+    const startY = this.player.y;
+    
+    // Instant teleport to new position
+    this.player.setPosition(finalX, finalY);
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    body.setVelocity(0, 0); // Stop any existing velocity
+    
+    // Visual feedback - make player semi-transparent during invincibility
+    this.player.setAlpha(0.6);
+    this.player.setTint(0x00ffff); // Cyan tint for invincibility
+    
+    // Create trail effect from start to end position
+    const trailSteps = 5;
+    for (let i = 0; i < trailSteps; i++) {
+      const ratio = i / trailSteps;
+      const trailX = startX + (finalX - startX) * ratio;
+      const trailY = startY + (finalY - startY) * ratio;
+      
+      const afterimage = this.add.sprite(trailX, trailY, 'soldier_idle');
+      afterimage.setScale(this.player.scale);
+      afterimage.setAlpha(0.4 - i * 0.08);
+      afterimage.setTint(0x0099ff);
+      afterimage.setDepth(this.player.depth - 1);
+      afterimage.setFlipX(this.player.flipX);
+      
+      this.tweens.add({
+        targets: afterimage,
+        alpha: 0,
+        duration: 400,
+        delay: i * 20,
+        onComplete: () => afterimage.destroy()
       });
     }
     
-    // End dash after duration
+    // Camera shake for impact
+    this.cameras.main.shake(100, 0.003);
+    
+    // End dash and invincibility after duration
     this.time.delayedCall(this.dashDuration, () => {
       this.isDashing = false;
-      // Slow down gradually
-      const currentVelocity = body.velocity;
-      this.tweens.add({
-        targets: currentVelocity,
-        x: currentVelocity.x * 0.3,
-        y: currentVelocity.y * 0.3,
-        duration: 200,
-        onUpdate: () => {
-          body.setVelocity(currentVelocity.x, currentVelocity.y);
-        }
-      });
+      this.isInvincible = false;
+      
+      // Remove invincibility visual effects
+      this.player.setAlpha(1);
+      this.player.clearTint();
     });
   }
   

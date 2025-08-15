@@ -474,9 +474,9 @@ export class PreloadScene extends Scene {
     // ARMORED ORC ANIMATIONS
     this.createMonsterAnimation('armored_orc', 'idle', 0, 5, 8, -1);
     this.createMonsterAnimation('armored_orc', 'walk', 0, 7, 10, -1);
-    this.createMonsterAnimation('armored_orc', 'attack01', 0, 5, 12, 0);
+    this.createMonsterAnimation('armored_orc', 'attack01', 0, 6, 12, 0);  // 7 frames
     this.createMonsterAnimation('armored_orc', 'attack02', 0, 7, 10, 0);  // 8 frames
-    this.createMonsterAnimation('armored_orc', 'attack03', 0, 5, 12, 0);
+    this.createMonsterAnimation('armored_orc', 'attack03', 0, 8, 12, 0);  // 9 frames
     this.createMonsterAnimation('armored_orc', 'block', 0, 3, 10, 0);
     this.createMonsterAnimation('armored_orc', 'hurt', 0, 3, 10, 0);
     this.createMonsterAnimation('armored_orc', 'death', 0, 3, 8, 0);
@@ -484,18 +484,18 @@ export class PreloadScene extends Scene {
     // ELITE ORC ANIMATIONS
     this.createMonsterAnimation('elite_orc', 'idle', 0, 5, 8, -1);
     this.createMonsterAnimation('elite_orc', 'walk', 0, 7, 10, -1);
-    this.createMonsterAnimation('elite_orc', 'attack01', 0, 5, 12, 0);
+    this.createMonsterAnimation('elite_orc', 'attack01', 0, 6, 12, 0);  // 7 frames
     this.createMonsterAnimation('elite_orc', 'attack02', 0, 10, 10, 0);  // 11 frames
-    this.createMonsterAnimation('elite_orc', 'attack03', 0, 5, 12, 0);
+    this.createMonsterAnimation('elite_orc', 'attack03', 0, 8, 12, 0);  // 9 frames
     this.createMonsterAnimation('elite_orc', 'hurt', 0, 3, 10, 0);
     this.createMonsterAnimation('elite_orc', 'death', 0, 3, 8, 0);
     
     // ORC RIDER ANIMATIONS
     this.createMonsterAnimation('orc_rider', 'idle', 0, 5, 8, -1);
     this.createMonsterAnimation('orc_rider', 'walk', 0, 7, 10, -1);
-    this.createMonsterAnimation('orc_rider', 'attack01', 0, 5, 12, 0);
+    this.createMonsterAnimation('orc_rider', 'attack01', 0, 7, 12, 0);  // 8 frames
     this.createMonsterAnimation('orc_rider', 'attack02', 0, 8, 10, 0);  // 9 frames
-    this.createMonsterAnimation('orc_rider', 'attack03', 0, 5, 12, 0);
+    this.createMonsterAnimation('orc_rider', 'attack03', 0, 10, 12, 0);  // 11 frames
     this.createMonsterAnimation('orc_rider', 'block', 0, 3, 10, 0);
     this.createMonsterAnimation('orc_rider', 'hurt', 0, 3, 10, 0);
     this.createMonsterAnimation('orc_rider', 'death', 0, 3, 8, 0);
@@ -503,18 +503,18 @@ export class PreloadScene extends Scene {
     // WEREWOLF ANIMATIONS
     this.createMonsterAnimation('werewolf', 'idle', 0, 5, 8, -1);
     this.createMonsterAnimation('werewolf', 'walk', 0, 7, 10, -1);
-    this.createMonsterAnimation('werewolf', 'attack01', 0, 5, 12, 0);
+    this.createMonsterAnimation('werewolf', 'attack01', 0, 8, 12, 0);  // 9 frames
     this.createMonsterAnimation('werewolf', 'attack02', 0, 12, 10, 0);  // 13 frames, slower for roar
-    this.createMonsterAnimation('werewolf', 'attack03', 0, 5, 12, 0);
+    // werewolf_attack03 sprite doesn't exist - removed
     this.createMonsterAnimation('werewolf', 'hurt', 0, 3, 10, 0);
     this.createMonsterAnimation('werewolf', 'death', 0, 3, 8, 0);
     
     // WEREBEAR ANIMATIONS (Evolution)
     this.createMonsterAnimation('werebear', 'idle', 0, 5, 8, -1);
     this.createMonsterAnimation('werebear', 'walk', 0, 7, 10, -1);
-    this.createMonsterAnimation('werebear', 'attack01', 0, 5, 12, 0);
+    this.createMonsterAnimation('werebear', 'attack01', 0, 8, 12, 0);  // 9 frames
     this.createMonsterAnimation('werebear', 'attack02', 0, 12, 10, 0);  // 13 frames, slower for roar
-    this.createMonsterAnimation('werebear', 'attack03', 0, 5, 12, 0);
+    this.createMonsterAnimation('werebear', 'attack03', 0, 8, 12, 0);  // 9 frames
     this.createMonsterAnimation('werebear', 'hurt', 0, 3, 10, 0);
     this.createMonsterAnimation('werebear', 'death', 0, 3, 8, 0);
     
@@ -522,13 +522,13 @@ export class PreloadScene extends Scene {
     this.createMonsterAnimation('skeleton', 'idle', 0, 5, 8, -1);
     this.createMonsterAnimation('skeleton', 'walk', 0, 7, 10, -1);
     this.createMonsterAnimation('skeleton', 'attack01', 0, 5, 12, 0);
-    this.createMonsterAnimation('skeleton', 'attack02', 0, 5, 12, 0);
+    this.createMonsterAnimation('skeleton', 'attack02', 0, 6, 12, 0);  // 7 frames
     this.createMonsterAnimation('skeleton', 'hurt', 0, 3, 10, 0);
     this.createMonsterAnimation('skeleton', 'death', 0, 3, 8, 0);
     
     // SLIME ANIMATIONS (Healing enemy)
     this.createMonsterAnimation('slime', 'idle', 0, 5, 6, -1);
-    this.createMonsterAnimation('slime', 'walk', 0, 7, 8, -1);
+    this.createMonsterAnimation('slime', 'walk', 0, 5, 8, -1);  // 6 frames
     this.createMonsterAnimation('slime', 'hurt', 0, 3, 10, 0);
     this.createMonsterAnimation('slime', 'death', 0, 3, 8, 0);
   }
@@ -590,7 +590,7 @@ export class PreloadScene extends Scene {
     if (this.textures.exists('soldier_attack03')) {
       this.anims.create({
         key: 'soldier_attack03',
-        frames: this.anims.generateFrameNumbers('soldier_attack03', { start: 3, end: 6 }),
+        frames: this.anims.generateFrameNumbers('soldier_attack03', { start: 0, end: 8 }),  // 9 frames
         frameRate: 10,
         repeat: 0
       });

@@ -19,7 +19,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ progress, isVisibl
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-b from-gray-900 to-black">
       <div className="text-center">
         <h1 className="text-4xl font-bold text-yellow-500 mb-8 animate-pulse">
-          BETBEAST ARENA
+          PRIMALBET
         </h1>
         
         {error ? (
@@ -54,7 +54,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ progress, isVisibl
           // Loading state
           <>
             <div className="mb-4">
-              <div className="text-xl text-yellow-400 mb-2">Preparing the Forest Arena...</div>
+              <div className="text-xl text-yellow-400 mb-2">Preparing the Forest...</div>
             </div>
 
             <div className="w-80 h-12 bg-gray-800 rounded-full overflow-hidden border-2 border-yellow-600 shadow-lg">

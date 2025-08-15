@@ -1,4 +1,4 @@
-// Shared types for BetBeast Forest Arena
+// Shared types for PrimalBet Forest Arena
 // Monster Combat System Types
 
 export interface MonsterTier {

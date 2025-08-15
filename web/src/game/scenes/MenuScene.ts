@@ -99,7 +99,7 @@ export class MenuScene extends BaseScene {
     this.registerUIElement('particles', particles);
 
     // Add main title with cartoon styling - COMMENTED OUT (using React UI instead)
-    // const titleText = this.add.text(width / 2, height * 0.15, 'BETBEAST', {
+    // const titleText = this.add.text(width / 2, height * 0.15, 'PRIMALBET', {
     //   fontSize: '72px',
     //   fontFamily: '"Fredoka One", "Luckiest Guy", "Bungee", "MedievalSharp", serif',
     //   color: '#FFD700',

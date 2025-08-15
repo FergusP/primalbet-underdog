@@ -933,7 +933,7 @@ export class LobbyScene extends BaseScene {
                   {
                     // Jump back - first leap up
                     x: (originalX + landingX) / 2, // Midpoint
-                    y: Math.min(originalY, landingY) - 150, // High arc for return
+                    y: Math.min(originalY, landingY) - 100, // Same arc height as forward jump
                     scaleX: originalScaleX * 1.1,
                     scaleY: originalScaleY * 1.1,
                     duration: 400,

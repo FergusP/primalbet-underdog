@@ -248,7 +248,7 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
               opacity: 0.9,
             }}
           >
-            🌲 BETBEAST 🌲
+            🌲 PRIMALBET 🌲
           </div>
         </div>
       </div>

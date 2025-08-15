@@ -1,4 +1,4 @@
-// Forest Design System for BetBeast
+// Forest Design System for PrimalBet
 // Dark forest theme with mystical elements and beast combat atmosphere
 
 export const ForestDesignSystem = {

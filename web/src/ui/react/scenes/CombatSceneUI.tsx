@@ -34,6 +34,8 @@ interface CombatState {
   showInstructions: boolean;
   debugMode: boolean;
   uiVisible: boolean;
+  arrowType: 'yellow' | 'blue' | 'red';
+  arrowDamage: number;
 }
 
 export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
@@ -48,6 +50,8 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
     showInstructions: false, // Don't show instructions by default
     debugMode: false,
     uiVisible: true,
+    arrowType: 'yellow',
+    arrowDamage: 1.0,
   });
 
   const [damageNumbers, setDamageNumbers] = useState<DamageNumber[]>([]);
@@ -136,6 +140,11 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
       }, 2000);
     };
 
+    const handleArrowTypeChange = (event: CustomEvent) => {
+      const { type, damage } = event.detail;
+      setCombatState((prev) => ({ ...prev, arrowType: type, arrowDamage: damage }));
+    };
+
     // Add event listeners
     window.addEventListener('combat-state-update', handleCombatUpdate as EventListener);
     window.addEventListener('monster-info', handleMonsterInfo as EventListener);
@@ -143,6 +152,7 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
     window.addEventListener('combat-feedback', handleCombatFeedback as EventListener);
     window.addEventListener('victory-ui', handleVictoryUI as EventListener);
     window.addEventListener('defeat-ui', handleDefeatUI as EventListener);
+    window.addEventListener('arrow-type-changed', handleArrowTypeChange as EventListener);
 
     return () => {
       window.removeEventListener('combat-state-update', handleCombatUpdate as EventListener);
@@ -151,6 +161,7 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
       window.removeEventListener('combat-feedback', handleCombatFeedback as EventListener);
       window.removeEventListener('victory-ui', handleVictoryUI as EventListener);
       window.removeEventListener('defeat-ui', handleDefeatUI as EventListener);
+      window.removeEventListener('arrow-type-changed', handleArrowTypeChange as EventListener);
     };
   }, []);
 
@@ -291,7 +302,7 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
           }}
         >
           <span style={{ color: ForestDesignSystem.colors.goldDeep }}>🌲</span>
-          <span>BETBEAST</span>
+          <span>PRIMALBET</span>
           <span style={{ color: ForestDesignSystem.colors.goldDeep, transform: 'scaleX(-1)' }}>🌲</span>
         </div>
       </div>
@@ -300,32 +311,11 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
       <div
         style={{
           position: 'absolute',
-          top: '20px', // Move to very top
-          left: '20px',
+          top: '35px',
+          left: '40px',
           pointerEvents: 'auto',
-          transform: 'scale(0.8)', // Make smaller
-          transformOrigin: 'top left',
         }}
       >
-        {/* Arena Section Title */}
-        <div
-          style={{
-            background: ForestDesignSystem.textures.stone.background,
-            border: `2px solid ${ForestDesignSystem.colors.stoneGray}`,
-            borderRadius: `${ForestDesignSystem.borderRadius.md} ${ForestDesignSystem.borderRadius.md} 0 0`,
-            padding: ForestDesignSystem.spacing.sm,
-            textAlign: 'center',
-            fontSize: ForestDesignSystem.typography.sizes.sm,
-            fontWeight: ForestDesignSystem.typography.weights.bold,
-            color: ForestDesignSystem.colors.textLight,
-            textShadow: ForestDesignSystem.shadows.inscription,
-            letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
-            marginBottom: '-2px',
-          }}
-        >
-          PLAYER
-        </div>
-        
         <BeastHealthBar
           currentHealth={combatState.playerHealth.current}
           maxHealth={combatState.playerHealth.max}
@@ -338,32 +328,11 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
       <div
         style={{
           position: 'absolute',
-          top: '20px', // Move to very top
-          right: '20px',
+          top: '35px',
+          right: '40px',
           pointerEvents: 'auto',
-          transform: 'scale(0.8)', // Make smaller
-          transformOrigin: 'top right',
         }}
       >
-        {/* Arena Section Title */}
-        <div
-          style={{
-            background: `linear-gradient(135deg, ${ForestDesignSystem.colors.bloodRed} 0%, #8B0000 100%)`,
-            border: `2px solid ${ForestDesignSystem.colors.bloodRed}`,
-            borderRadius: `${ForestDesignSystem.borderRadius.md} ${ForestDesignSystem.borderRadius.md} 0 0`,
-            padding: ForestDesignSystem.spacing.sm,
-            textAlign: 'center',
-            fontSize: ForestDesignSystem.typography.sizes.sm,
-            fontWeight: ForestDesignSystem.typography.weights.bold,
-            color: ForestDesignSystem.colors.textLight,
-            textShadow: ForestDesignSystem.shadows.inscription,
-            letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
-            marginBottom: '-2px',
-          }}
-        >
-          MONSTER
-        </div>
-        
         <BeastHealthBar
           currentHealth={combatState.monsterHealth.current}
           maxHealth={combatState.monsterHealth.max}
@@ -372,73 +341,103 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
         />
       </div>
 
-      {/* Spear Arsenal - Bottom Left */}
+      {/* Arrow Arsenal - Bottom Center */}
       <div
         style={{
           position: 'absolute',
           bottom: '32px',
-          left: '24px',
+          left: '50%',
+          transform: 'translateX(-50%)',
           pointerEvents: 'auto',
         }}
       >
         <div
           style={{
-            background: ForestDesignSystem.textures.marble.background,
-            border: `3px solid ${ForestDesignSystem.colors.goldAntique}`,
+            background: 'linear-gradient(135deg, rgba(61, 40, 23, 0.95) 0%, rgba(45, 30, 17, 0.9) 100%)',
+            border: `3px solid ${ForestDesignSystem.colors.goldDeep}`,
             borderRadius: ForestDesignSystem.borderRadius.lg,
-            padding: ForestDesignSystem.spacing.md,
-            boxShadow: ForestDesignSystem.shadows.raised,
+            padding: `${ForestDesignSystem.spacing.sm} ${ForestDesignSystem.spacing.lg}`,
+            boxShadow: `0 0 20px rgba(255, 215, 0, 0.3), ${ForestDesignSystem.shadows.raised}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: ForestDesignSystem.spacing.md,
+            minWidth: '280px',
           }}
         >
-          <div
-            style={{
-              fontSize: ForestDesignSystem.typography.sizes.sm,
-              fontWeight: ForestDesignSystem.typography.weights.bold,
-              color: ForestDesignSystem.colors.textDark,
-              textAlign: 'center',
-              marginBottom: ForestDesignSystem.spacing.sm,
-              letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
-            }}
-          >
-            SPEARS
-          </div>
-          
-          <div style={{ display: 'flex', gap: ForestDesignSystem.spacing.xs }}>
+          {/* Left side - Arrow count */}
+          <div style={{ display: 'flex', gap: ForestDesignSystem.spacing.xs, alignItems: 'center' }}>
             {Array.from({ length: combatState.maxSpears }, (_, i) => (
               <div
                 key={i}
                 style={{
-                  width: '30px',
-                  height: '30px',
+                  width: '35px',
+                  height: '35px',
                   background: i < combatState.spearCount 
                     ? ForestDesignSystem.colors.goldShine 
-                    : ForestDesignSystem.colors.autumnOrange,
-                  border: `2px solid ${ForestDesignSystem.colors.mossGreen}`,
+                    : 'rgba(0, 0, 0, 0.4)',
+                  border: `2px solid ${i < combatState.spearCount ? ForestDesignSystem.colors.goldDeep : ForestDesignSystem.colors.mossGreen}`,
                   borderRadius: ForestDesignSystem.borderRadius.sm,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: ForestDesignSystem.typography.sizes.base,
+                  fontSize: '20px',
                   boxShadow: i < combatState.spearCount 
-                    ? ForestDesignSystem.shadows.raised 
+                    ? `inset 0 0 10px rgba(255, 255, 255, 0.5), ${ForestDesignSystem.shadows.raised}` 
                     : ForestDesignSystem.shadows.carved,
                 }}
               >
-                🔱
+                🏹
               </div>
             ))}
           </div>
           
+          {/* Divider */}
+          <div 
+            style={{
+              width: '2px',
+              height: '40px',
+              background: ForestDesignSystem.colors.goldAntique,
+              opacity: 0.5,
+            }}
+          />
+          
+          {/* Right side - Arrow type info */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <div
+              style={{
+                fontSize: ForestDesignSystem.typography.sizes.sm,
+                fontWeight: ForestDesignSystem.typography.weights.black,
+                color: combatState.arrowType === 'yellow' ? '#ffff00' : 
+                       combatState.arrowType === 'blue' ? '#00aaff' : '#ff4444',
+                textShadow: '2px 2px 4px rgba(0, 0, 0, 0.9)',
+                letterSpacing: ForestDesignSystem.typography.letterSpacing.wide,
+              }}
+            >
+              {combatState.arrowType === 'yellow' ? 'STANDARD' : 
+               combatState.arrowType === 'blue' ? 'PIERCING' : 'EXPLOSIVE'}
+            </div>
+            <div
+              style={{
+                fontSize: ForestDesignSystem.typography.sizes.xs,
+                color: ForestDesignSystem.colors.goldShine,
+                fontWeight: ForestDesignSystem.typography.weights.bold,
+              }}
+            >
+              DMG: {combatState.arrowDamage}x
+            </div>
+          </div>
+          
+          {/* Q key hint */}
           <div
             style={{
               fontSize: ForestDesignSystem.typography.sizes.xs,
-              color: ForestDesignSystem.colors.mossGreen,
-              textAlign: 'center',
-              marginTop: ForestDesignSystem.spacing.xs,
-              letterSpacing: ForestDesignSystem.typography.letterSpacing.wide,
+              color: ForestDesignSystem.colors.goldAntique,
+              fontWeight: ForestDesignSystem.typography.weights.bold,
+              textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)',
+              marginLeft: 'auto',
             }}
           >
-            {ForestIcons.toNumber(combatState.spearCount)} / {ForestIcons.toNumber(combatState.maxSpears)}
+            [Q]
           </div>
         </div>
       </div>

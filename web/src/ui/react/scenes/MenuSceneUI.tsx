@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { ForestDesignSystem } from '../../styles/forestDesignSystem';
 
 interface MenuSceneUIProps {}
 
@@ -41,9 +42,9 @@ export const MenuSceneUI: React.FC<MenuSceneUIProps> = () => {
           className="absolute inset-0"
           style={{
             background: `
-              radial-gradient(circle at 20% 30%, rgba(255, 215, 0, 0.1) 0%, transparent 40%),
-              radial-gradient(circle at 80% 70%, rgba(139, 0, 0, 0.1) 0%, transparent 40%),
-              radial-gradient(circle at 50% 50%, rgba(205, 127, 50, 0.05) 0%, transparent 60%)
+              radial-gradient(circle at 20% 30%, rgba(80, 200, 120, 0.1) 0%, transparent 40%),
+              radial-gradient(circle at 80% 70%, rgba(74, 93, 35, 0.1) 0%, transparent 40%),
+              radial-gradient(circle at 50% 50%, rgba(255, 215, 0, 0.05) 0%, transparent 60%)
             `,
             animation: 'pulse 8s ease-in-out infinite',
           }}
@@ -57,7 +58,7 @@ export const MenuSceneUI: React.FC<MenuSceneUIProps> = () => {
             style={{
               width: `${Math.random() * 4 + 2}px`,
               height: `${Math.random() * 4 + 2}px`,
-              background: i % 2 === 0 ? 'var(--color-gold)' : 'var(--color-bronze)',
+              background: i % 2 === 0 ? ForestDesignSystem.colors.goldShine : ForestDesignSystem.colors.emeraldGlow,
               opacity: Math.random() * 0.5 + 0.1,
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -80,43 +81,37 @@ export const MenuSceneUI: React.FC<MenuSceneUIProps> = () => {
           <h1 
             className="relative text-center select-none"
             style={{
-              fontFamily: 'var(--font-display)',
+              fontFamily: ForestDesignSystem.typography.display,
               fontSize: 'clamp(48px, 8vw, 120px)',
               fontWeight: 900,
-              letterSpacing: '0.02em',
+              letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
               lineHeight: 1,
               background: `linear-gradient(
-                180deg,
-                var(--color-light-gold) 0%,
-                var(--color-gold) 50%,
-                var(--color-dark-gold) 100%
+                135deg,
+                ${ForestDesignSystem.colors.goldShine} 0%,
+                ${ForestDesignSystem.colors.goldDeep} 35%,
+                ${ForestDesignSystem.colors.goldAntique} 65%,
+                ${ForestDesignSystem.colors.goldShine} 100%
               )`,
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8))',
+              filter: `drop-shadow(${ForestDesignSystem.shadows.deep}) drop-shadow(0 0 20px rgba(255, 215, 0, 0.3))`,
+              textShadow: ForestDesignSystem.shadows.glow,
             }}
           >
-            BETBEAST
-            <span 
-              className="block mt-2"
-              style={{
-                fontSize: '0.8em',
-                fontWeight: 600,
-              }}
-            >
-              ARENA
-            </span>
+            PRIMALBET
           </h1>
 
           {/* Subtitle */}
           <div 
             className="text-center mt-4"
             style={{
-              fontFamily: 'var(--font-body)',
+              fontFamily: ForestDesignSystem.typography.body,
               fontSize: 'clamp(16px, 2vw, 24px)',
-              color: 'var(--color-bronze)',
+              color: ForestDesignSystem.colors.emeraldGlow,
               fontStyle: 'italic',
-              letterSpacing: '0.1em',
+              letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
+              textShadow: `2px 2px 4px rgba(0, 0, 0, 0.9), 0 0 10px rgba(80, 200, 120, 0.3)`,
             }}
           >
             HUNT • FIGHT • CLAIM THE FOMO POOL
@@ -146,12 +141,12 @@ export const MenuSceneUI: React.FC<MenuSceneUIProps> = () => {
         >
           <p 
             style={{
-              fontFamily: 'var(--font-body)',
+              fontFamily: ForestDesignSystem.typography.inscription,
               fontSize: 'clamp(14px, 1.5vw, 18px)',
               fontStyle: 'italic',
-              color: 'rgba(218, 165, 32, 0.9)',
+              color: ForestDesignSystem.colors.moonSilver,
               lineHeight: 1.4,
-              textShadow: '2px 2px 8px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 0, 0, 0.7)',
+              textShadow: ForestDesignSystem.shadows.inscription,
               margin: 0,
             }}
           >
