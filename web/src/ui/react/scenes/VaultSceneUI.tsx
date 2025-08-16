@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ForestDesignSystem, ForestText, ForestIcons } from '../../styles/forestDesignSystem';
+import {
+  ForestDesignSystem,
+  ForestText,
+  ForestIcons,
+} from '../../styles/forestDesignSystem';
 import { ForestButton } from '../game/buttons/ForestButton';
 
 interface VaultSceneUIProps {}
@@ -25,9 +29,9 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
     showCrackButton: false,
     isAttempting: false,
     resultState: 'none',
-    jackpotAmount: 0
+    jackpotAmount: 0,
   });
-  
+
   const [isOpening, setIsOpening] = useState(false);
   const [showVaultSelection, setShowVaultSelection] = useState(false);
   const [showResult, setShowResult] = useState(false);
@@ -41,27 +45,27 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
     const timer = setTimeout(() => {
       setIsInitialized(true);
     }, 300); // Increased delay for canvas initialization
-    
+
     return () => clearTimeout(timer);
   }, []);
 
   // Listen for vault state updates from Phaser
   useEffect(() => {
     const handleVaultUpdate = (event: CustomEvent) => {
-      setVaultState(prev => ({ ...prev, ...event.detail }));
+      setVaultState((prev) => ({ ...prev, ...event.detail }));
     };
 
     const handleVaultAttempt = () => {
-      setVaultState(prev => ({ ...prev, isAttempting: true }));
+      setVaultState((prev) => ({ ...prev, isAttempting: true }));
     };
 
     const handleVaultResult = (event: CustomEvent) => {
       const { success, jackpotAmount } = event.detail;
-      setVaultState(prev => ({
+      setVaultState((prev) => ({
         ...prev,
         isAttempting: false,
         resultState: success ? 'success' : 'failure',
-        jackpotAmount: jackpotAmount || 0
+        jackpotAmount: jackpotAmount || 0,
       }));
     };
 
@@ -69,18 +73,18 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
       setIsOpening(true);
       setShowVaultSelection(false);
     };
-    
+
     const handleSpinnerResult = (event: CustomEvent) => {
       setVrfSuccess(event.detail.success);
       if (event.detail.prizeAmount) {
         setJackpotAmount(event.detail.prizeAmount / 1e9); // Convert lamports to SOL
       }
     };
-    
+
     const handleSpinnerReady = () => {
       setShowVaultSelection(true);
     };
-    
+
     const handleVaultResultDisplay = (event: CustomEvent) => {
       const { success } = event.detail;
       setIsOpening(false);
@@ -88,22 +92,61 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
       setVrfSuccess(success);
     };
 
-    window.addEventListener('vaultStateUpdate', handleVaultUpdate as EventListener);
-    window.addEventListener('vaultAttempt', handleVaultAttempt as EventListener);
+    window.addEventListener(
+      'vaultStateUpdate',
+      handleVaultUpdate as EventListener
+    );
+    window.addEventListener(
+      'vaultAttempt',
+      handleVaultAttempt as EventListener
+    );
     window.addEventListener('vaultResult', handleVaultResult as EventListener);
-    window.addEventListener('spinner-ready', handleSpinnerReady as EventListener);
-    window.addEventListener('spinner-started', handleSpinnerStarted as EventListener);
-    window.addEventListener('spinner-result', handleSpinnerResult as EventListener);
-    window.addEventListener('vault-result-display', handleVaultResultDisplay as EventListener);
+    window.addEventListener(
+      'spinner-ready',
+      handleSpinnerReady as EventListener
+    );
+    window.addEventListener(
+      'spinner-started',
+      handleSpinnerStarted as EventListener
+    );
+    window.addEventListener(
+      'spinner-result',
+      handleSpinnerResult as EventListener
+    );
+    window.addEventListener(
+      'vault-result-display',
+      handleVaultResultDisplay as EventListener
+    );
 
     return () => {
-      window.removeEventListener('vaultStateUpdate', handleVaultUpdate as EventListener);
-      window.removeEventListener('vaultAttempt', handleVaultAttempt as EventListener);
-      window.removeEventListener('vaultResult', handleVaultResult as EventListener);
-      window.removeEventListener('spinner-ready', handleSpinnerReady as EventListener);
-      window.removeEventListener('spinner-started', handleSpinnerStarted as EventListener);
-      window.removeEventListener('spinner-result', handleSpinnerResult as EventListener);
-      window.removeEventListener('vault-result-display', handleVaultResultDisplay as EventListener);
+      window.removeEventListener(
+        'vaultStateUpdate',
+        handleVaultUpdate as EventListener
+      );
+      window.removeEventListener(
+        'vaultAttempt',
+        handleVaultAttempt as EventListener
+      );
+      window.removeEventListener(
+        'vaultResult',
+        handleVaultResult as EventListener
+      );
+      window.removeEventListener(
+        'spinner-ready',
+        handleSpinnerReady as EventListener
+      );
+      window.removeEventListener(
+        'spinner-started',
+        handleSpinnerStarted as EventListener
+      );
+      window.removeEventListener(
+        'spinner-result',
+        handleSpinnerResult as EventListener
+      );
+      window.removeEventListener(
+        'vault-result-display',
+        handleVaultResultDisplay as EventListener
+      );
     };
   }, []);
 
@@ -117,9 +160,9 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
   }
 
   return createPortal(
-    <div 
-      className="pointer-events-none" 
-      style={{ 
+    <div
+      className="pointer-events-none"
+      style={{
         position: 'fixed',
         top: 0,
         left: 0,
@@ -128,13 +171,13 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
         zIndex: 100,
         opacity: 0,
         visibility: 'visible',
-        animation: 'fadeIn 0.3s ease-out forwards'
+        animation: 'fadeIn 0.3s ease-out forwards',
       }}
     >
       {/* Premium Casino Atmosphere - Subtle vignette only */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Vignette effect for depth */}
-        <div 
+        <div
           className="absolute inset-0"
           style={{
             background: `
@@ -143,19 +186,20 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
             pointerEvents: 'none',
           }}
         />
-        
+
         {/* Top spotlight effect */}
-        <div 
+        <div
           className="absolute top-0 left-1/2 -translate-x-1/2"
           style={{
             width: '80%',
             height: '40%',
-            background: 'radial-gradient(ellipse at center top, rgba(255, 215, 0, 0.05) 0%, transparent 50%)',
+            background:
+              'radial-gradient(ellipse at center top, rgba(255, 215, 0, 0.05) 0%, transparent 50%)',
             filter: 'blur(40px)',
           }}
         />
       </div>
-      
+
       {/* Luxury Casino Particles - Gold dust effect */}
       {showParticles && (
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -181,22 +225,22 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
       )}
 
       {/* Premium Title Section */}
-      <div 
-        className="absolute top-2 animate-title-entrance"
-        style={{ 
+      <div
+        className="absolute top-10 animate-title-entrance"
+        style={{
           left: '50%',
-          transform: 'translateX(-50%) scale(0.8)', // Scale down and move up
-          width: '90%', 
+          transform: 'translateX(-50%) scale(0.8)', // Scale down
+          width: '90%',
           maxWidth: '600px', // Reduced width
           willChange: 'transform',
           zIndex: 1, // Put title behind vault graphic
-          opacity: 0.9 // Make slightly transparent
+          opacity: 0.9, // Make slightly transparent
         }}
       >
         {/* Ornate Casino Badge */}
         <div className="relative">
           {/* Luxury border decoration */}
-          <div 
+          <div
             className="absolute -inset-4"
             style={{
               background: `
@@ -207,9 +251,9 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
               filter: 'blur(2px)',
             }}
           />
-          
+
           {/* Main title - Forest Temple Style */}
-          <h1 
+          <h1
             className="relative text-center"
             style={{
               fontFamily: ForestDesignSystem.typography.display,
@@ -234,18 +278,19 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
           >
             GROVE OF DESTINY
           </h1>
-          
+
           {/* Forest subtitle */}
-          <div 
+          <div
             className="text-center mt-2"
             style={{
               fontFamily: ForestDesignSystem.typography.inscription,
-              fontSize: ForestDesignSystem.typography.sizes.base,
-              fontStyle: 'italic',
-              color: ForestDesignSystem.colors.mossGreen,
+              fontSize: '20px',
+              fontWeight: 'bold',
+              color: '#ffd700',
               letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
               textTransform: 'uppercase',
-              opacity: 0.9,
+              textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(255, 215, 0, 0.5)',
+              opacity: 1,
             }}
           >
             🌲 PRIMALBET 🌲
@@ -258,7 +303,7 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
         <>
           {/* Top decorative text */}
           {showVaultSelection && !isOpening && (
-            <div 
+            <div
               className="absolute"
               style={{
                 left: '50%',
@@ -275,22 +320,22 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
               🌲 MAY THE FOREST GUIDE YOU 🌲
             </div>
           )}
-          
+
           {/* Animated border frame around slot machine area */}
-          <div 
+          <div
             className="absolute pointer-events-none"
-            style={{ 
+            style={{
               left: '50%',
               top: '50%',
               transform: 'translate(-50%, -50%)',
               width: 'min(90vw, 900px)',
               height: '350px',
               marginTop: '20px',
-              willChange: 'transform'
+              willChange: 'transform',
             }}
           >
             {/* Just decorative corner accents */}
-            <div 
+            <div
               className="absolute top-0 left-0 w-20 h-20"
               style={{
                 borderTop: '3px solid var(--color-gold)',
@@ -299,7 +344,7 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
                 opacity: 0.6,
               }}
             />
-            <div 
+            <div
               className="absolute top-0 right-0 w-20 h-20"
               style={{
                 borderTop: '3px solid var(--color-gold)',
@@ -308,7 +353,7 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
                 opacity: 0.6,
               }}
             />
-            <div 
+            <div
               className="absolute bottom-0 left-0 w-20 h-20"
               style={{
                 borderBottom: '3px solid var(--color-gold)',
@@ -317,7 +362,7 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
                 opacity: 0.6,
               }}
             />
-            <div 
+            <div
               className="absolute bottom-0 right-0 w-20 h-20"
               style={{
                 borderBottom: '3px solid var(--color-gold)',
@@ -327,25 +372,26 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
               }}
             />
           </div>
-          
+
           {/* Spinning status */}
           {isOpening && (
-            <div 
+            <div
               className="absolute"
               style={{
                 left: '50%',
                 transform: 'translateX(-50%)',
-                bottom: '25%',
+                bottom: '20%',
                 fontFamily: 'var(--font-display)',
-                fontSize: 'clamp(18px, 2.5vw, 28px)',
-                fontWeight: 700,
-                background: 'linear-gradient(90deg, var(--color-gold) 0%, var(--color-light-gold) 50%, var(--color-gold) 100%)',
-                backgroundSize: '200% 100%',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                animation: 'goldShimmer 2s linear infinite',
+                fontSize: 'clamp(24px, 3vw, 32px)',
+                fontWeight: 900,
+                color: '#ffd700',
+                textShadow: '3px 3px 6px rgba(0, 0, 0, 0.9), 0 0 20px rgba(255, 215, 0, 0.6)',
                 letterSpacing: '0.05em',
                 textAlign: 'center',
+                padding: '10px 20px',
+                background: 'rgba(0, 0, 0, 0.7)',
+                borderRadius: '10px',
+                border: '2px solid rgba(255, 215, 0, 0.5)',
               }}
             >
               🌲 THE FOREST DECIDES... 🌲
@@ -360,46 +406,49 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
           {/* Luxury celebration effects */}
           <div className="absolute inset-0 overflow-hidden">
             {/* Radial burst */}
-            <div 
+            <div
               className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
               style={{
                 width: '200%',
                 height: '200%',
-                background: 'radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 50%)',
+                background:
+                  'radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 50%)',
                 animation: 'burst 1s ease-out',
               }}
             />
-            
+
             {/* Confetti particles */}
             {[...Array(100)].map((_, i) => (
               <div
                 key={`win-${i}`}
                 className="absolute"
-                style={{
-                  left: '50%',
-                  top: '50%',
-                  width: `${4 + Math.random() * 4}px`,
-                  height: `${8 + Math.random() * 8}px`,
-                  background: [
-                    'var(--color-gold)',
-                    'var(--color-light-gold)',
-                    'var(--color-bark)',
-                    '#FFFFFF',
-                  ][Math.floor(Math.random() * 4)],
-                  borderRadius: '2px',
-                  transform: 'translate(-50%, -50%)',
-                  animation: `confetti 2s ease-out forwards`,
-                  animationDelay: `${Math.random() * 0.5}s`,
-                  '--angle': `${Math.random() * 360}deg`,
-                  '--distance': `${200 + Math.random() * 400}px`,
-                } as React.CSSProperties}
+                style={
+                  {
+                    left: '50%',
+                    top: '50%',
+                    width: `${4 + Math.random() * 4}px`,
+                    height: `${8 + Math.random() * 8}px`,
+                    background: [
+                      'var(--color-gold)',
+                      'var(--color-light-gold)',
+                      'var(--color-bark)',
+                      '#FFFFFF',
+                    ][Math.floor(Math.random() * 4)],
+                    borderRadius: '2px',
+                    transform: 'translate(-50%, -50%)',
+                    animation: `confetti 2s ease-out forwards`,
+                    animationDelay: `${Math.random() * 0.5}s`,
+                    '--angle': `${Math.random() * 360}deg`,
+                    '--distance': `${200 + Math.random() * 400}px`,
+                  } as React.CSSProperties
+                }
               />
             ))}
           </div>
 
           <div className="relative z-10 text-center animate-victory-entrance pointer-events-auto">
             {/* Luxury backdrop */}
-            <div 
+            <div
               className="absolute -inset-x-20 -inset-y-16 -z-10"
               style={{
                 background: `
@@ -418,9 +467,9 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
                 backdropFilter: 'blur(20px)',
               }}
             />
-            
+
             {/* Victory crown */}
-            <div 
+            <div
               className="text-8xl mb-4 animate-crown-appear"
               style={{
                 filter: 'drop-shadow(0 10px 30px rgba(255, 215, 0, 0.5))',
@@ -428,7 +477,7 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
             >
               👑
             </div>
-            
+
             {/* Victory text */}
             <h1
               className="mb-6"
@@ -452,20 +501,21 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
             >
               Magnificent!
             </h1>
-            
+
             {/* Prize display */}
             {jackpotAmount > 0 && (
               <div className="mb-8">
-                <div 
+                <div
                   className="inline-block px-12 py-6"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.05) 100%)',
+                    background:
+                      'linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.05) 100%)',
                     borderRadius: '15px',
                     border: '2px solid var(--color-gold)',
                     boxShadow: '0 10px 40px rgba(255, 215, 0, 0.2)',
                   }}
                 >
-                  <div 
+                  <div
                     style={{
                       fontFamily: 'var(--font-display)',
                       fontSize: 'clamp(36px, 4.5vw, 64px)',
@@ -476,7 +526,7 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
                   >
                     {jackpotAmount.toFixed(2)} SOL
                   </div>
-                  <div 
+                  <div
                     style={{
                       fontFamily: 'var(--font-body)',
                       fontSize: 'clamp(16px, 2vw, 20px)',
@@ -491,9 +541,9 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
                 </div>
               </div>
             )}
-            
+
             {/* Forest continue button */}
-            <ForestButton 
+            <ForestButton
               onClick={handleContinue}
               variant="primary"
               size="large"
@@ -509,16 +559,17 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
       {showResult && !vrfSuccess && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           {/* Subtle defeat atmosphere */}
-          <div 
+          <div
             className="absolute inset-0"
             style={{
-              background: 'radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.3) 100%)',
+              background:
+                'radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.3) 100%)',
             }}
           />
 
           <div className="relative z-10 text-center animate-defeat-entrance pointer-events-auto">
             {/* Elegant backdrop */}
-            <div 
+            <div
               className="absolute -inset-x-20 -inset-y-16 -z-10"
               style={{
                 background: `
@@ -536,9 +587,9 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
                 backdropFilter: 'blur(20px)',
               }}
             />
-            
+
             {/* Near miss indicator */}
-            <div 
+            <div
               className="text-6xl mb-6 opacity-50"
               style={{
                 filter: 'grayscale(1)',
@@ -546,7 +597,7 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
             >
               🎰
             </div>
-            
+
             {/* Elegant defeat message */}
             <h1
               className="mb-4"
@@ -561,9 +612,9 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
             >
               So Close!
             </h1>
-            
+
             {/* Encouraging message */}
-            <p 
+            <p
               className="mb-8 mx-auto"
               style={{
                 fontFamily: 'var(--font-body)',
@@ -579,9 +630,9 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
               <br />
               Your contribution grows the vault!
             </p>
-            
+
             {/* Jackpot teaser */}
-            <div 
+            <div
               className="mb-8 inline-block px-8 py-4"
               style={{
                 background: 'rgba(255, 215, 0, 0.05)',
@@ -589,7 +640,7 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
                 border: '1px solid rgba(255, 215, 0, 0.2)',
               }}
             >
-              <div 
+              <div
                 style={{
                   fontFamily: 'var(--font-display)',
                   fontSize: 'clamp(16px, 2vw, 22px)',
@@ -601,10 +652,10 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
                 Next Spin Could Be The One
               </div>
             </div>
-            
+
             {/* Try again button - Forest style */}
             <div>
-              <ForestButton 
+              <ForestButton
                 onClick={handleContinue}
                 variant="secondary"
                 size="medium"
@@ -627,7 +678,7 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
             opacity: 1;
           }
         }
-        
+
         @keyframes luxury-float {
           0% {
             transform: translateY(0) translateX(0);
@@ -644,7 +695,7 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
             opacity: 0;
           }
         }
-        
+
         @keyframes title-entrance {
           0% {
             opacity: 0;
@@ -655,13 +706,19 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
             transform: translateX(-50%) translateY(0);
           }
         }
-        
+
         @keyframes gradient-shift {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
+          0% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+          100% {
+            background-position: 0% 50%;
+          }
         }
-        
+
         @keyframes burst {
           0% {
             transform: translate(-50%, -50%) scale(0);
@@ -672,24 +729,22 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
             opacity: 0;
           }
         }
-        
+
         @keyframes confetti {
           0% {
             transform: translate(-50%, -50%) rotate(0deg) scale(0);
             opacity: 1;
           }
           100% {
-            transform: 
-              translate(
-                calc(-50% + var(--distance) * cos(var(--angle))), 
+            transform: translate(
+                calc(-50% + var(--distance) * cos(var(--angle))),
                 calc(-50% + var(--distance) * sin(var(--angle)) + 100px)
-              ) 
-              rotate(720deg) 
-              scale(1);
+              )
+              rotate(720deg) scale(1);
             opacity: 0;
           }
         }
-        
+
         @keyframes victory-entrance {
           0% {
             opacity: 0;
@@ -703,7 +758,7 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
             transform: scale(1);
           }
         }
-        
+
         @keyframes crown-appear {
           0% {
             transform: translateY(-50px) scale(0);
@@ -717,7 +772,7 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
             opacity: 1;
           }
         }
-        
+
         @keyframes defeat-entrance {
           0% {
             opacity: 0;
@@ -728,27 +783,27 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
             transform: translateY(0);
           }
         }
-        
+
         .animate-title-entrance {
           animation: title-entrance 0.8s ease-out;
         }
-        
+
         .animate-luxury-float {
           animation: luxury-float linear;
         }
-        
+
         .animate-victory-entrance {
           animation: victory-entrance 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        
+
         .animate-crown-appear {
           animation: crown-appear 0.6s ease-out;
         }
-        
+
         .animate-defeat-entrance {
           animation: defeat-entrance 0.6s ease-out;
         }
-        
+
         .group-hover\\:text-gold:hover {
           color: var(--color-gold) !important;
         }

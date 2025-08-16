@@ -32,7 +32,10 @@ router.get('/state', async (req: Request, res: Response) => {
       totalCombats: 0,
       victories: 0,
       // Include evolution data if this is a werewolf
-      evolution: currentMonster.name === 'Werewolf' ? MONSTER_TIERS[6] : undefined
+      evolution: currentMonster.name === 'Werewolf' ? {
+        ...MONSTER_TIERS[6],
+        baseHealth: MONSTER_TIERS[6].hp  // Convert hp to baseHealth for consistency
+      } : undefined
     };
 
     res.json({

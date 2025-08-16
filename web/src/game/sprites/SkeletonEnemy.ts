@@ -27,7 +27,7 @@ export class SkeletonEnemy extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
     
-    this.setScale(2);
+    this.setScale(1.8); // Smaller than boss for clear differentiation
     this.setDepth(5);
     
     // Physics setup

@@ -12,6 +12,7 @@ export class PreloadScene extends Scene {
     this.load.image('arena-bg', '/assets/backgrounds/arena.png');
     this.load.image('forest-bg', '/assets/backgrounds/lobby.png');
     this.load.image('landing-bg', '/assets/backgrounds/landingPage.jpg');
+    this.load.image('vault-room-bg', '/assets/backgrounds/vault-room.png');
     this.load.image('ui_panel', '/assets/ui/panel.png');
     this.load.image('gold_coin', '/assets/particles/coin.png');
     this.load.image('vault_closed', '/assets/sprites/vault_closed.png');
@@ -303,7 +304,17 @@ export class PreloadScene extends Scene {
       console.error('Failed to load file:', file.key, file.url);
     });
     
+    // Add load complete listener for debugging
+    this.load.on('filecomplete', (key: string, type: string, data: any) => {
+      if (key === 'arena-bg') {
+        console.log('Arena background loaded successfully:', key, type);
+      }
+    });
+    
     // Only 5 monsters exist in backend - removed hydra, dragon, titan
+    
+    // Arena background
+    this.load.image('arena-bg', '/assets/backgrounds/arena.png');
     
     // Effects
     this.load.spritesheet('impact', '/assets/effects/impact.png', {

@@ -132,7 +132,7 @@ export const MenuSceneUI: React.FC<MenuSceneUIProps> = () => {
 
         {/* Lore Text */}
         <div 
-          className="mt-12 text-center max-w-3xl px-8 animate-fade-in"
+          className="mt-20 text-center max-w-3xl px-8 animate-fade-in"
           style={{
             animationDelay: '0.5s',
             opacity: 0,

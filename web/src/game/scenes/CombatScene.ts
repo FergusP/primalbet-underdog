@@ -248,23 +248,46 @@ export class CombatScene extends BaseScene {
     this.previousWidth = width;
     this.previousHeight = height;
 
-    // Create arena background
-    const bgRect = this.add.rectangle(
-      width / 2,
-      height / 2,
-      width,
-      height,
-      0x2a2a3a
-    );
-    this.registerUIElement('bg', bgRect);
+    // Create arena background with forest image
+    // Check if texture exists
+    if (this.textures.exists('arena-bg')) {
+      console.log('Arena texture found, creating background');
+      const arenaBg = this.add.tileSprite(
+        width / 2,
+        height / 2,
+        width,
+        height,
+        'arena-bg'
+      );
+      arenaBg.setOrigin(0.5, 0.5);
+      // Darken the background to reduce distraction
+      arenaBg.setTint(0x808080); // 50% darker
+      this.registerUIElement('bg', arenaBg);
+    } else {
+      console.error('Arena texture not found! Creating fallback background');
+      // Fallback to solid color
+      const bgRect = this.add.rectangle(
+        width / 2,
+        height / 2,
+        width,
+        height,
+        0x8B7355
+      );
+      this.registerUIElement('bg', bgRect);
+    }
 
-    // Add arena borders and store references
+    // Add arena borders with forest theme colors
     this.borders = [
-      this.add.rectangle(width / 2, 20, width - 40, 40, 0x444444),
-      this.add.rectangle(width / 2, height - 20, width - 40, 40, 0x444444),
-      this.add.rectangle(20, height / 2, 40, height - 40, 0x444444),
-      this.add.rectangle(width - 20, height / 2, 40, height - 40, 0x444444),
+      this.add.rectangle(width / 2, 20, width - 40, 40, 0x2d1810, 0.7),
+      this.add.rectangle(width / 2, height - 20, width - 40, 40, 0x2d1810, 0.7),
+      this.add.rectangle(20, height / 2, 40, height - 40, 0x2d1810, 0.7),
+      this.add.rectangle(width - 20, height / 2, 40, height - 40, 0x2d1810, 0.7),
     ];
+    
+    // Add border outlines for better visibility
+    this.borders.forEach(border => {
+      border.setStrokeStyle(2, 0x8b4513, 0.5); // Saddle brown outline
+    });
 
     // Register borders for proper management
     this.borders.forEach((border, index) => {
@@ -283,41 +306,65 @@ export class CombatScene extends BaseScene {
     this.prevPlayerX = this.player.x;
     this.prevPlayerY = this.player.y;
 
-    // Create monster using Orc sprite for all monster types
-    const monsterName = this.monsterData.tier.name.toLowerCase();
+    // Create monster using appropriate sprite for each monster type
+    // Add null safety for tier check
+    const monsterName = (this.monsterData.tier?.name || this.monsterData.type || 'orc').toLowerCase();
 
     // Determine sprite key for animations based on new monster names
     let spriteKey = 'orc';
-    if (monsterName.toLowerCase().includes('werewolf')) {
+    if (monsterName.includes('werewolf')) {
       spriteKey = 'werewolf';
-    } else if (monsterName.toLowerCase().includes('orc rider')) {
+    } else if (monsterName.includes('orc rider')) {
       spriteKey = 'orc_rider';
-    } else if (monsterName.toLowerCase().includes('elite orc')) {
+    } else if (monsterName.includes('elite orc')) {
       spriteKey = 'elite_orc';
-    } else if (monsterName.toLowerCase().includes('armored orc')) {
+    } else if (monsterName.includes('armored orc')) {
       spriteKey = 'armored_orc';
-    } else if (monsterName.toLowerCase().includes('orc')) {
+    } else if (monsterName.includes('orc')) {
       spriteKey = 'orc';
     }
 
     // Store sprite key for animations
     this.monsterSpriteKey = spriteKey;
 
-    // Create monster sprite using orc texture
-    this.monster = this.add.sprite(width * 0.7, height * 0.5, 'orc', 0);
+    // Create monster sprite using the correct texture
+    this.monster = this.add.sprite(width * 0.7, height * 0.5, spriteKey, 0);
 
     // Set the origin to center for proper positioning
     this.monster.setOrigin(0.5, 0.5);
 
-    // Scale based on monster type
+    // Scale based on monster type - increased for better differentiation
     const scales: Record<string, number> = {
-      orc: 2.0,
-      armored_orc: 2.2,
-      elite_orc: 2.5,
-      orc_rider: 3.0,
-      werewolf: 2.8,
+      orc: 3.0,
+      armored_orc: 3.2,
+      elite_orc: 3.5,
+      orc_rider: 3.8,
+      werewolf: 3.5,
     };
-    this.monster.setScale(scales[spriteKey] || 2.0);
+    this.monster.setScale(scales[spriteKey] || 3.0);
+    
+    // Add subtle red tint to boss for differentiation
+    this.monster.setTint(0xffcccc);
+    
+    // Add simple shadow under the boss
+    const shadow = this.add.ellipse(
+      this.monster.x, 
+      this.monster.y + 40, 
+      80, 
+      30, 
+      0x000000, 
+      0.3
+    );
+    shadow.setDepth(4); // Below the monster
+    this.registerUIElement('bossShadow', shadow);
+    
+    // Make shadow follow monster
+    this.events.on('postupdate', () => {
+      if (shadow && this.monster) {
+        shadow.x = this.monster.x;
+        shadow.y = this.monster.y + 40;
+      }
+    });
 
     // Play idle animation
     const idleAnimKey = `${spriteKey}_idle`;
@@ -1428,16 +1475,24 @@ export class CombatScene extends BaseScene {
     }
 
     // For werewolf, check evolution threshold and cap damage
+    console.log('Evolution check:', {
+      tierName: this.monsterData.tier?.name,
+      monsterType: this.monsterData.type,
+      hasEvolutionData: !!this.monsterData.evolution,
+      isEvolved: this.isEvolved,
+      isEvolving: this.isEvolving,
+      currentHealth: this.monsterHealth,
+      maxHealth: this.monsterMaxHealth
+    });
+    
     if (
       this.monsterData.tier.name === 'Werewolf' &&
       !this.isEvolved &&
       !this.isEvolving
     ) {
-      const evolutionThreshold = Math.floor(this.monsterMaxHealth * 0.25); // 25% health
-      if (
-        this.monsterHealth > evolutionThreshold &&
-        this.monsterHealth - damage <= evolutionThreshold
-      ) {
+      const evolutionThreshold = Math.floor(this.monsterMaxHealth * 0.1); // 10% health
+      // If damage would bring health to or below 10%, cap at exactly 10%
+      if (this.monsterHealth - damage <= evolutionThreshold) {
         // Cap damage to exactly reach threshold
         damage = this.monsterHealth - evolutionThreshold;
         this.monsterHealth = evolutionThreshold;
@@ -1475,16 +1530,18 @@ export class CombatScene extends BaseScene {
 
     // Play hurt or death animation
     if (this.monsterHealth <= 0) {
-      // Check if this is a werewolf that should evolve (safety check, shouldn't reach here)
+      // Monster died - play death animation
+      // Werewolves should never reach here due to evolution at 10%
       if (
         this.monsterData.tier.name === 'Werewolf' &&
         !this.isEvolved &&
         !this.isEvolving
       ) {
-        // This shouldn't happen with threshold check, but keep as safety
-        this.evolveToWerebear();
-      } else {
-        // Monster died - play death animation
+        console.error('Warning: Werewolf died without evolving - this should not happen!');
+      }
+      
+      {
+        // Play death animation
         // Use the current sprite key which is 'werebear' if evolved
         const deathKey = `${this.monsterSpriteKey}_death`;
         if (this.anims.exists(deathKey)) {
@@ -2051,21 +2108,29 @@ export class CombatScene extends BaseScene {
           }
 
           // For werewolf, check evolution threshold and cap damage
+          console.log('Spear evolution check:', {
+            tierName: this.monsterData.tier?.name,
+            monsterType: this.monsterData.type,
+            hasEvolutionData: !!this.monsterData.evolution,
+            isEvolved: this.isEvolved,
+            isEvolving: this.isEvolving,
+            currentHealth: this.monsterHealth,
+            maxHealth: this.monsterMaxHealth
+          });
+          
           if (
             this.monsterData.tier.name === 'Werewolf' &&
             !this.isEvolved &&
             !this.isEvolving
           ) {
-            const evolutionThreshold = Math.floor(this.monsterMaxHealth * 0.25); // 25% health
-            if (
-              this.monsterHealth > evolutionThreshold &&
-              this.monsterHealth - damage <= evolutionThreshold
-            ) {
+            const evolutionThreshold = Math.floor(this.monsterMaxHealth * 0.1); // 10% health
+            // If damage would bring health to or below 10%, cap at exactly 10%
+            if (this.monsterHealth - damage <= evolutionThreshold) {
               // Cap damage to exactly reach threshold
               damage = this.monsterHealth - evolutionThreshold;
               this.monsterHealth = evolutionThreshold;
 
-              console.log('Werewolf evolution triggered at 25% health');
+              console.log('Werewolf evolution triggered at 10% health');
 
               // Show capped damage
               this.showDamageNumber(
@@ -2111,16 +2176,18 @@ export class CombatScene extends BaseScene {
           // Play hurt or death animation (ensure monster still exists)
           if (this.monster && this.monster.active) {
             if (this.monsterHealth <= 0) {
-              // Check if this is a werewolf that should evolve (safety check, shouldn't reach here)
+              // Monster died - play death animation
+              // Werewolves should never reach here due to evolution at 10%
               if (
                 this.monsterData.tier.name === 'Werewolf' &&
                 !this.isEvolved &&
                 !this.isEvolving
               ) {
-                // This shouldn't happen with threshold check, but keep as safety
-                this.evolveToWerebear();
-              } else {
-                // Monster died - play death animation
+                console.error('Warning: Werewolf died without evolving - this should not happen!');
+              }
+              
+              {
+                // Play death animation
                 // Use the current sprite key which is 'werebear' if evolved
                 const deathKey = `${this.monsterSpriteKey}_death`;
                 if (this.anims.exists(deathKey)) {
@@ -2509,8 +2576,8 @@ export class CombatScene extends BaseScene {
         this.isEvolved = true;
 
         // Reset health to werebear's max from evolution data
-        this.monsterHealth = this.monsterData.evolution.hp;
-        this.monsterMaxHealth = this.monsterData.evolution.hp;
+        this.monsterHealth = this.monsterData.evolution.baseHealth || 100;
+        this.monsterMaxHealth = this.monsterData.evolution.baseHealth || 100;
         
         // Store the evolved monster type
         window.localStorage.setItem('currentMonsterType', this.monsterData.type);
@@ -3745,8 +3812,30 @@ export class CombatScene extends BaseScene {
     allEnemies.forEach((enemy, index) => {
       this.time.delayedCall(index * 50, () => {
         if (enemy.type === 'monster') {
-          // Damage monster if we can
+          // Check for werewolf evolution at 10% health
           if (this.canDamageMonster()) {
+            const prevHealth = this.monsterHealth;
+            
+            // Check if this is a werewolf that should evolve
+            if (
+              this.monsterData.tier?.name === 'Werewolf' &&
+              !this.isEvolved &&
+              !this.isEvolving
+            ) {
+              const evolutionThreshold = Math.floor(this.monsterMaxHealth * 0.1);
+              if (this.monsterHealth - spinDamage <= evolutionThreshold) {
+                // Cap damage to exactly reach threshold
+                const cappedDamage = this.monsterHealth - evolutionThreshold;
+                this.monsterHealth = evolutionThreshold;
+                this.showDamageNumber(enemy.target.x, enemy.target.y - 40, cappedDamage, 0xff00ff, true);
+                this.emitGameState();
+                console.log('Werewolf evolution triggered at 10% health (spin attack)');
+                this.evolveToWerebear();
+                return; // Exit early
+              }
+            }
+            
+            // Apply normal damage if not evolving
             this.monsterHealth = Math.max(0, this.monsterHealth - spinDamage);
             this.showDamageNumber(enemy.target.x, enemy.target.y - 40, spinDamage, 0xff00ff, true);
             this.emitGameState();
@@ -3903,15 +3992,39 @@ export class CombatScene extends BaseScene {
       } else if (enemy.type === 'slime' && enemy.target instanceof SlimeEnemy) {
         enemy.target.takeDamage(damage);
       } else if (enemy.type === 'monster') {
-        // Damage monster but no knockback (too heavy)
+        // Check for werewolf evolution at 10% health
         if (this.canDamageMonster()) {
+          // Check if this is a werewolf that should evolve
+          if (
+            this.monsterData.tier?.name === 'Werewolf' &&
+            !this.isEvolved &&
+            !this.isEvolving
+          ) {
+            const evolutionThreshold = Math.floor(this.monsterMaxHealth * 0.1);
+            if (this.monsterHealth - damage <= evolutionThreshold) {
+              // Cap damage to exactly reach threshold
+              const cappedDamage = this.monsterHealth - evolutionThreshold;
+              this.monsterHealth = evolutionThreshold;
+              this.showDamageNumber(enemy.target.x, enemy.target.y - 40, cappedDamage, 0xffffff, false);
+              this.emitGameState();
+              console.log('Werewolf evolution triggered at 10% health (slam attack)');
+              this.evolveToWerebear();
+              return; // Exit early
+            }
+          }
+          
+          // Apply normal damage if not evolving
           this.monsterHealth = Math.max(0, this.monsterHealth - damage);
+          this.showDamageNumber(enemy.target.x, enemy.target.y - 40, damage, 0xffffff, false);
           this.emitGameState();
+        } else {
+          // Still show damage number even if can't damage
+          this.showDamageNumber(enemy.target.x, enemy.target.y - 40, damage, 0xffffff, false);
         }
+      } else {
+        // Show damage for other enemy types
+        this.showDamageNumber(enemy.target.x, enemy.target.y - 40, damage, 0xffffff, false);
       }
-      
-      // Show damage
-      this.showDamageNumber(enemy.target.x, enemy.target.y - 40, damage, 0xffffff, false);
     });
     
     // Show cooldown indicator
