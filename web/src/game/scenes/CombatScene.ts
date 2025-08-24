@@ -39,7 +39,7 @@ export class CombatScene extends BaseScene {
 
   // Monster attack properties (adjusted based on difficulty)
   private monsterAttackRange: number = 80; // Monster attacks when this close
-  private monsterAttackCooldown: number = 1500; // Base cooldown, adjusted per monster
+  private monsterAttackCooldown: number = 2500; // Base cooldown, increased for balance
   private lastMonsterAttackTime: number = 0;
   private isMonsterAttacking: boolean = false; // Track if monster is currently attacking
 
@@ -49,7 +49,7 @@ export class CombatScene extends BaseScene {
 
   // Range indicators (for development)
   private meleeRangeIndicator!: Phaser.GameObjects.Graphics;
-  private meleeRange: number = 100; // Tighter range requiring closer positioning
+  private meleeRange: number = 110; // Increased by 10px for better reach
   private debugGraphics!: Phaser.GameObjects.Graphics;
   private debugMode: boolean = false; // Toggle for debug visualization
   private attackRangeIndicator!: Phaser.GameObjects.Graphics; // Shows where player can attack
@@ -1301,9 +1301,24 @@ export class CombatScene extends BaseScene {
 
       // Try to attack if cooldown is over
       const currentTime = this.time.now;
-      // Adjust cooldown based on monster difficulty (harder monsters attack faster)
-      const cooldownMultiplier = this.monsterData.tier.defenseMultiplier;
-      const adjustedCooldown = this.monsterAttackCooldown * cooldownMultiplier;
+      // Adjust cooldown based on monster tier - higher tiers attack slightly faster but not too much
+      const monsterName = (this.monsterData.tier?.name || '').toLowerCase();
+      let adjustedCooldown = this.monsterAttackCooldown;
+      
+      // Set specific cooldowns for each tier for better balance
+      if (monsterName.includes('orc') && !monsterName.includes('armored') && !monsterName.includes('elite') && !monsterName.includes('rider')) {
+        adjustedCooldown = 2500; // Tier 1: 2.5 seconds
+      } else if (monsterName.includes('armored orc')) {
+        adjustedCooldown = 2400; // Tier 2: 2.4 seconds
+      } else if (monsterName.includes('elite orc')) {
+        adjustedCooldown = 2300; // Tier 3: 2.3 seconds
+      } else if (monsterName.includes('orc rider')) {
+        adjustedCooldown = 2200; // Tier 4: 2.2 seconds
+      } else if (monsterName.includes('werewolf')) {
+        adjustedCooldown = 2100; // Tier 5: 2.1 seconds
+      } else if (monsterName.includes('werebear')) {
+        adjustedCooldown = 2000; // Tier 6: 2.0 seconds
+      }
 
       if (currentTime > this.lastMonsterAttackTime + adjustedCooldown) {
         this.performMonsterAttack();
@@ -1597,7 +1612,7 @@ export class CombatScene extends BaseScene {
             // Calculate damage with combo multiplier
             const baseDamage =
               enemy.type === 'monster'
-                ? Math.floor(Math.random() * 25) + 15 // 15-40 for monster
+                ? Math.floor(Math.random() * 15) + 10 // 10-25 for monster (reduced)
                 : Math.floor(Math.random() * 10) + 15; // 15-25 for others
             const damage = Math.floor(baseDamage * this.comboMultiplier);
             const isCrit = this.comboCount >= 2; // 3rd hit is always crit
@@ -1647,6 +1662,11 @@ export class CombatScene extends BaseScene {
         });
 
         if (hitSomething) {
+          // Play sword hit sound
+          if (this.cache.audio.exists('sword_hit')) {
+            this.sound.play('sword_hit', { volume: 0.4 });
+          }
+          
           // Successful hit - update combo
           this.comboCount++;
           this.lastHitTime = this.time.now;
@@ -1685,6 +1705,11 @@ export class CombatScene extends BaseScene {
   }
 
   showMissFeedback() {
+    // Play sword miss sound
+    if (this.cache.audio.exists('sword_miss')) {
+      this.sound.play('sword_miss', { volume: 0.3 });
+    }
+    
     // Subtle miss indicators
     const missText = this.add.text(
       this.player.x + 50,
@@ -1717,7 +1742,7 @@ export class CombatScene extends BaseScene {
     const isCrit = Math.random() < 0.2;
 
     // Calculate base damage
-    let damage = Math.floor(Math.random() * 25) + 15;
+    let damage = Math.floor(Math.random() * 15) + 10; // 10-25 damage (reduced)
 
     // Apply critical multiplier
     if (isCrit) {
@@ -1929,7 +1954,19 @@ export class CombatScene extends BaseScene {
     });
 
     // Deal damage to player based on monster's attack power
-    const baseDamage = this.monsterData.tier.attackPower;
+    let baseDamage = this.monsterData.tier.attackPower;
+    
+    // Balance adjustment for higher tier monsters
+    const monsterName = (this.monsterData.tier?.name || '').toLowerCase();
+    if (monsterName.includes('werewolf')) {
+      baseDamage = Math.min(baseDamage, 30); // Cap werewolf damage
+    } else if (monsterName.includes('werebear')) {
+      baseDamage = Math.min(baseDamage, 35); // Cap werebear damage  
+    } else if (monsterName.includes('orc rider')) {
+      baseDamage = Math.min(baseDamage, 25); // Cap orc rider damage
+    }
+    
+    // Calculate actual damage: (baseDamage/2) to (baseDamage + baseDamage/2)
     let damage =
       Math.floor(Math.random() * baseDamage) + Math.floor(baseDamage / 2);
     
@@ -2189,6 +2226,11 @@ export class CombatScene extends BaseScene {
         Math.cos(actualAngle) * speed,
         Math.sin(actualAngle) * speed
       );
+
+      // Play arrow shoot sound
+      if (this.cache.audio.exists('arrow_shoot')) {
+        this.sound.play('arrow_shoot', { volume: 0.3 });
+      }
 
       // Update spear count
       const beforeCount = this.currentSpears;

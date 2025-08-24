@@ -39,6 +39,7 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
   const [mounted, setMounted] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [preloadProgress, setPreloadProgress] = useState(0);
   const [loadingError, setLoadingError] = useState<{
     message: string;
     canRetry: boolean;
@@ -64,6 +65,25 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
   // Set mounted state
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Listen for preload progress
+  useEffect(() => {
+    const handlePreloadProgress = (event: CustomEvent) => {
+      setPreloadProgress(event.detail.progress);
+    };
+
+    window.addEventListener(
+      'preloadProgress',
+      handlePreloadProgress as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        'preloadProgress',
+        handlePreloadProgress as EventListener
+      );
+    };
   }, []);
 
   // Initialize Phaser game - client-side only
@@ -634,16 +654,44 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       {isGameReady && currentScene === 'CombatScene' && <CombatSceneUI />}
       {isGameReady && currentScene === 'VaultScene' && <VaultSceneUI />}
 
-
-      {/* Loading overlay */}
+      {/* Initial Loading overlay - shows immediately */}
       {!isGameReady && (
-        <div className="absolute inset-0 bg-black flex items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-900 to-black flex items-center justify-center z-50">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-yellow-500 mx-auto mb-4"></div>
-            <h2 className="text-2xl font-bold text-white mb-2">
+            <h1 className="text-5xl font-bold text-yellow-500 mb-8 animate-pulse">
               🌲 PRIMALBET 🌲
-            </h2>
-            <p className="text-gray-400">Loading the game...</p>
+            </h1>
+
+            <div className="mb-8 flex justify-center">
+              <div className="w-80 h-4 bg-gray-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 rounded-full transition-all duration-300"
+                  style={{ width: `${preloadProgress}%` }}
+                />
+              </div>
+            </div>
+
+            <p className="text-xl text-yellow-400 mb-2">
+              Preparing the Forest Arena...
+            </p>
+            <p className="text-gray-400 text-sm">
+              Loading warriors, beasts, and treasures ({preloadProgress}%)
+            </p>
+
+            <div className="mt-8 flex justify-center space-x-4">
+              <div
+                className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce"
+                style={{ animationDelay: '0ms' }}
+              ></div>
+              <div
+                className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce"
+                style={{ animationDelay: '200ms' }}
+              ></div>
+              <div
+                className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce"
+                style={{ animationDelay: '400ms' }}
+              ></div>
+            </div>
           </div>
         </div>
       )}

@@ -7,17 +7,32 @@ export class PreloadScene extends Scene {
   }
 
   preload() {
-    // Load assets without showing loading screen
+    // Emit real loading progress to React
+    this.load.on('progress', (value: number) => {
+      // value is between 0 and 1, convert to percentage
+      const progress = Math.floor(value * 100);
+      window.dispatchEvent(new CustomEvent('preloadProgress', {
+        detail: { progress }
+      }));
+    });
+    
+    this.load.on('complete', () => {
+      // Ensure 100% when complete
+      window.dispatchEvent(new CustomEvent('preloadProgress', {
+        detail: { progress: 100 }
+      }));
+    });
+    
+    // Load assets
     // UI elements
     this.load.image('arena-bg', '/assets/backgrounds/arena.png');
     this.load.image('forest-bg', '/assets/backgrounds/lobby.png');
     this.load.image('landing-bg', '/assets/backgrounds/landingPage.jpg');
     this.load.image('vault-room-bg', '/assets/backgrounds/vault-room.png');
-    // Commented out - files don't exist
-    // this.load.image('ui_panel', '/assets/ui/panel.png');
-    // this.load.image('gold_coin', '/assets/particles/coin.png');
-    // this.load.image('vault_closed', '/assets/sprites/vault_closed.png');
-    // this.load.image('vault_open', '/assets/sprites/vault_open.png');
+    this.load.image('ui_panel', '/assets/ui/panel.png');
+    this.load.image('gold_coin', '/assets/particles/coin.png');
+    this.load.image('vault_closed', '/assets/sprites/vault_closed.png');
+    this.load.image('vault_open', '/assets/sprites/vault_open.png');
     
     
     // Soldier sprites for player in CombatScene
@@ -305,6 +320,11 @@ export class PreloadScene extends Scene {
       console.error('Failed to load file:', file.key, file.url);
     });
     
+    // Audio load complete listener (kept for debugging if needed)
+    // this.load.on('filecomplete-audio', (key: string) => {
+    //   console.log('PreloadScene: Audio loaded:', key);
+    // });
+    
     // Add load complete listener for debugging
     this.load.on('filecomplete', (key: string, type: string, data: any) => {
       if (key === 'arena-bg') {
@@ -317,22 +337,26 @@ export class PreloadScene extends Scene {
     // Arena background
     this.load.image('arena-bg', '/assets/backgrounds/arena.png');
     
-    // Effects - commented out as files don't exist
-    // this.load.spritesheet('impact', '/assets/effects/impact.png', {
-    //   frameWidth: 64,
-    //   frameHeight: 64
-    // });
+    // Effects
+    this.load.spritesheet('impact', '/assets/effects/impact.png', {
+      frameWidth: 64,
+      frameHeight: 64
+    });
     
     
-    // this.load.image('spark', '/assets/particles/spark.png');
+    this.load.image('spark', '/assets/particles/spark.png');
     
     // Audio
+    this.load.audio('menu_music', '/assets/audio/base_scene.mp3'); // Music for MenuScene
+    this.load.audio('lobby_music', '/assets/audio/lobby.mp3'); // Music for LobbyScene
     this.load.audio('combat_music', '/assets/audio/combat.mp3');
     this.load.audio('monster_roar', '/assets/audio/roar.mp3');
-    this.load.audio('sword_hit', '/assets/audio/hit.mp3');
+    this.load.audio('sword_hit', '/assets/audio/hit-swing-sword-small-2-95566.mp3'); // Updated to new hit sound
+    this.load.audio('sword_miss', '/assets/audio/sword-sound-2-36274.mp3'); // Sword swing miss sound
+    this.load.audio('arrow_shoot', '/assets/audio/arrow-swish_03-306040.mp3'); // Arrow shooting sound
     this.load.audio('jackpot_win', '/assets/audio/fanfare.mp3');
     this.load.audio('monster_attack', '/assets/audio/monster_attack.mp3');
-    // this.load.audio('monster_death', '/assets/audio/monster_death.mp3'); // Not needed
+    this.load.audio('monster_death', '/assets/audio/monster_death.mp3');
     // Removed dragon_breath audio - dragon doesn't exist in backend
 
     // No placeholders - only real assets
@@ -346,9 +370,9 @@ export class PreloadScene extends Scene {
       detail: { sceneName: 'PreloadScene' } 
     }));
     
-    // Debug: Check if skeleton texture loaded
-    console.log('PreloadScene - Skeleton texture loaded?', this.textures.exists('skeleton'));
-    console.log('PreloadScene - Available textures:', this.textures.getTextureKeys());
+    // Debug checks (commented out - uncomment if needed for debugging)
+    // console.log('PreloadScene create() - menu_music loaded?', this.cache.audio.exists('menu_music'));
+    // console.log('PreloadScene create() - Available audio keys:', this.cache.audio.getKeys());
     
     // Create all animations
     this.createAnimations();

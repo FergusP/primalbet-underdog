@@ -39,6 +39,7 @@ export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({
   const [mounted, setMounted] = useState(false);
   const [isFightButtonDisabled, setIsFightButtonDisabled] = useState(false);
   const [hasReceivedGameState, setHasReceivedGameState] = useState(false);
+  const [isGuideVisible, setIsGuideVisible] = useState(false);
   const [gameState, setGameState] = useState<GameState>({
     jackpot: 0,
     monsterName: 'SKELETON WARRIOR'
@@ -102,6 +103,19 @@ export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({
     };
   }, []);
 
+  // Listen for guide visibility toggle
+  useEffect(() => {
+    const handleGuideToggled = (event: CustomEvent) => {
+      setIsGuideVisible(event.detail.isVisible);
+    };
+
+    window.addEventListener('guideToggled', handleGuideToggled as EventListener);
+
+    return () => {
+      window.removeEventListener('guideToggled', handleGuideToggled as EventListener);
+    };
+  }, []);
+
   const handleFightClick = () => {
     // Include payment method in the event
     window.dispatchEvent(new CustomEvent('fightButtonClicked', {
@@ -111,7 +125,7 @@ export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({
     }));
   };
 
-  if (!mounted || !hasReceivedGameState) return null;
+  if (!mounted || !hasReceivedGameState || isGuideVisible) return null;
 
   const uiContent = (
     <div

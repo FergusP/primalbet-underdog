@@ -11,6 +11,8 @@ export class MenuScene extends BaseScene {
   constructor() {
     super({ key: 'MenuScene' });
   }
+  
+  // Remove preload - audio is already loaded in PreloadScene
 
   protected createScene() {
     const { width, height } = this.cameras.main;
@@ -144,6 +146,52 @@ export class MenuScene extends BaseScene {
     // taglineText.setOrigin(0.5);
     // this.registerUIElement('taglineText', taglineText);
 
+    // Try to start background music (might be blocked by browser autoplay policy)
+    const tryPlayMusic = () => {
+      // Use cache.audio.exists to check, then just play directly
+      if (this.cache.audio.exists('menu_music')) {
+        this.sound.stopAll(); // Stop any existing music
+        
+        // Just play it directly - Phaser will find it in the cache
+        this.sound.play('menu_music', { 
+          loop: true, 
+          volume: 0.2 // Lower volume for background music
+        });
+        return true;
+      }
+      return false;
+    };
+    
+    // Try to play immediately
+    const musicStarted = tryPlayMusic();
+    
+    // If music didn't start, show a subtle hint and wait for interaction
+    if (!musicStarted) {
+      // Try again after a tiny delay (sometimes helps)
+      this.time.delayedCall(100, () => {
+        if (!this.sound.get('menu_music')?.isPlaying) {
+          tryPlayMusic();
+        }
+      });
+    }
+    
+    // Also try on first user interaction (handles browser autoplay policy)
+    this.input.once('pointerdown', () => {
+      // Check if any music is playing (use get() method which is safe)
+      const menuMusic = this.sound.get('menu_music');
+      if (!menuMusic || !(menuMusic as any).isPlaying) {
+        tryPlayMusic();
+      }
+    });
+    
+    // Also try on pointer move (some browsers allow audio on any interaction)
+    this.input.once('pointermove', () => {
+      const menuMusic = this.sound.get('menu_music');
+      if (!menuMusic || !(menuMusic as any).isPlaying) {
+        tryPlayMusic();
+      }
+    });
+
     // Create wooden button for wallet connection or arena entry
     this.createWoodenButton(width, height);
 
@@ -237,13 +285,11 @@ export class MenuScene extends BaseScene {
         // Clear progress interval
         clearInterval(progressInterval);
         
-        // Complete the progress
+        // Don't send 100% here - let LobbyScene handle the full loading
+        // Just keep at 80% until LobbyScene takes over
         window.dispatchEvent(new CustomEvent('loadingProgress', {
-          detail: { progress: 100 }
+          detail: { progress: 80 }
         }));
-        
-        // Small delay to show 100% before transitioning
-        await new Promise(resolve => setTimeout(resolve, 300));
         
         // Proceed to Lobby scene with pre-loaded data
         // Don't hide loading here - let the UI component hide it when ready
@@ -399,8 +445,6 @@ export class MenuScene extends BaseScene {
     });
     
     // DEV: Add buttons to jump directly to scenes (always show during development)
-    // TEMPORARILY HIDDEN FOR SCREENSHOTS
-    /*
     // Vault Scene button
     const devVaultButton = this.add.text(width / 2 - 100, buttonY + 120, '[DEV] Vault', {
       fontSize: '24px',
@@ -470,7 +514,6 @@ export class MenuScene extends BaseScene {
     });
     
     this.registerUIElement('devArenaButton', devArenaButton);
-    */
   }
   
   private updateWoodenButtonState() {

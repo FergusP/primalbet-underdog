@@ -10,8 +10,8 @@ export class LobbyScene extends BaseScene {
   private bgImage!: Phaser.GameObjects.Image;
   
   preload() {
-    // Everything should be loaded from PreloadScene
-    // Just verify orc texture exists
+    // Load lobby-specific audio
+    this.load.audio('lobby_music', '/assets/audio/lobby.mp3');
   }
   private warriorGroup: Phaser.GameObjects.Sprite[] = [];
   private spearTimer?: Phaser.Time.TimerEvent;
@@ -630,6 +630,20 @@ export class LobbyScene extends BaseScene {
 
   protected createScene() {
     const { width, height } = this.cameras.main;
+    
+    // Animations are already created in PreloadScene
+    // Assets are already loaded
+    
+    // Complete the loading progress that was started in MenuScene
+    // Send 100% first
+    window.dispatchEvent(new CustomEvent('loadingProgress', {
+      detail: { progress: 100 }
+    }));
+    
+    // Small delay to show 100% before hiding
+    this.time.delayedCall(500, () => {
+      window.dispatchEvent(new CustomEvent('loadingComplete'));
+    });
 
     // Emit scene change event
     window.dispatchEvent(new CustomEvent('sceneChanged', { 
@@ -707,10 +721,27 @@ export class LobbyScene extends BaseScene {
       loop: true
     });
 
-    // Play ambient music if available
-    if (this.sound.get('combat_music')) {
-      this.sound.play('combat_music', { loop: true, volume: 0.3 });
-    }
+    // Start lobby music (transition from menu music)
+    const tryPlayLobbyMusic = () => {
+      // Check cache first, then play directly
+      if (this.cache.audio.exists('lobby_music')) {
+        this.sound.stopAll(); // Stop menu music
+        this.sound.play('lobby_music', { 
+          loop: true, 
+          volume: 0.25 // Slightly louder than menu music
+        });
+      }
+    };
+    
+    // Try to play immediately
+    tryPlayLobbyMusic();
+    
+    // Also try on first user interaction (handles browser autoplay policy)
+    this.input.once('pointerdown', () => {
+      if (!this.sound.get('lobby_music')?.isPlaying) {
+        tryPlayLobbyMusic();
+      }
+    });
   }
 
   private createMonsterDisplay() {
@@ -809,6 +840,10 @@ export class LobbyScene extends BaseScene {
   }
   
   private createGuideDisplay(width: number, height: number) {
+    // Create a second camera for UI that doesn't shake
+    const uiCamera = this.cameras.add(0, 0, width, height);
+    uiCamera.setName('ui');
+    
     // Create guide container at center of screen
     const guideContainer = this.add.container(width/2, height/2);
     guideContainer.setDepth(1000); // Much higher depth to be above everything
@@ -819,8 +854,8 @@ export class LobbyScene extends BaseScene {
     guideContainer.add(overlay);
     
     // Create guide popup panel
-    const panelWidth = 400;
-    const panelHeight = 500;
+    const panelWidth = 480;
+    const panelHeight = 580;
     
     // Main panel background
     const bgPanel = this.add.graphics();
@@ -860,11 +895,12 @@ export class LobbyScene extends BaseScene {
     
     yOffset += 30;
     movements.forEach(control => {
-      const text = this.add.text(-panelWidth/2 + 40, yOffset, 
+      const text = this.add.text(-panelWidth/2 + 50, yOffset, 
         `[${control.key}]  ${control.desc}`, {
-        fontSize: '13px',
+        fontSize: '12px',
         fontFamily: 'Arial, sans-serif',
-        color: '#ffffff'
+        color: '#ffffff',
+        wordWrap: { width: panelWidth - 100 }
       });
       guideContainer.add(text);
       yOffset += 25;
@@ -889,11 +925,12 @@ export class LobbyScene extends BaseScene {
     ];
     
     combat.forEach(control => {
-      const text = this.add.text(-panelWidth/2 + 40, yOffset,
+      const text = this.add.text(-panelWidth/2 + 50, yOffset,
         `[${control.key}]  ${control.desc}`, {
-        fontSize: '13px',
+        fontSize: '12px',
         fontFamily: 'Arial, sans-serif',
-        color: '#ffffff'
+        color: '#ffffff',
+        wordWrap: { width: panelWidth - 100 }
       });
       guideContainer.add(text);
       yOffset += 25;
@@ -918,18 +955,19 @@ export class LobbyScene extends BaseScene {
     ];
     
     arrows.forEach(arrow => {
-      const nameText = this.add.text(-panelWidth/2 + 40, yOffset, arrow.name, {
-        fontSize: '13px',
+      const nameText = this.add.text(-190, yOffset, arrow.name, {
+        fontSize: '12px',
         fontFamily: 'Arial, sans-serif',
         color: arrow.color,
         fontStyle: 'bold'
       });
       guideContainer.add(nameText);
       
-      const descText = this.add.text(-panelWidth/2 + 100, yOffset, arrow.desc, {
-        fontSize: '13px',
+      const descText = this.add.text(-120, yOffset, arrow.desc, {
+        fontSize: '12px',
         fontFamily: 'Arial, sans-serif',
-        color: '#ffffff'
+        color: '#ffffff',
+        wordWrap: { width: 200 }
       });
       guideContainer.add(descText);
       yOffset += 25;
@@ -954,17 +992,18 @@ export class LobbyScene extends BaseScene {
     ];
     
     tips.forEach(tip => {
-      const text = this.add.text(-panelWidth/2 + 40, yOffset, tip, {
-        fontSize: '12px',
+      const text = this.add.text(-panelWidth/2 + 50, yOffset, tip, {
+        fontSize: '11px',
         fontFamily: 'Arial, sans-serif',
-        color: '#aaffaa'
+        color: '#aaffaa',
+        wordWrap: { width: panelWidth - 100 }
       });
       guideContainer.add(text);
       yOffset += 20;
     });
     
     // Close instruction
-    const closeHint = this.add.text(0, panelHeight/2 - 30, 
+    const closeHint = this.add.text(0, panelHeight/2 - 45, 
       'Press [G] or [ESC] to close', {
       fontSize: '14px',
       fontFamily: 'Arial, sans-serif',
@@ -976,6 +1015,11 @@ export class LobbyScene extends BaseScene {
     
     // Start hidden
     guideContainer.visible = false;
+    
+    // Make the main camera ignore the guide container
+    this.cameras.main.ignore(guideContainer);
+    // Make the UI camera only render the guide container
+    uiCamera.ignore(this.children.list.filter(child => child !== guideContainer));
     
     // Toggle guide visibility with G key
     const gKey = this.input.keyboard?.addKey('G');
