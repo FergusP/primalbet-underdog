@@ -72,7 +72,6 @@ export const PDAWithdrawModal: React.FC<PDAWithdrawModalProps> = ({
       const signature = await sendTransaction(transaction, connection);
       await connection.confirmTransaction(signature, 'confirmed');
       
-      console.log('Withdraw successful:', signature);
       onSuccess();
       onClose();
     } catch (error: any) {

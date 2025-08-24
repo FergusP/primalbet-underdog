@@ -69,7 +69,6 @@ export const PDADepositModal: React.FC<PDADepositModalProps> = ({
       const signature = await sendTransaction(transaction, connection);
       await connection.confirmTransaction(signature, 'confirmed');
       
-      console.log('Deposit successful:', signature);
       onSuccess();
       onClose();
     } catch (error: any) {

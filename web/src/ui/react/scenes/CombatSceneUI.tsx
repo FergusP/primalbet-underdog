@@ -85,7 +85,6 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
 
     const handleDamageNumber = (event: CustomEvent) => {
       const { damage, x, y, type, isCrit } = event.detail;
-      console.log('Damage event received:', event.detail); // Debug log
       const damageNumber: DamageNumber = {
         id: Date.now() + Math.random().toString(),
         value: damage,
@@ -121,7 +120,6 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
     };
 
     const handleMonsterInfo = (event: CustomEvent) => {
-      console.log('Monster info received:', event.detail);
       setCombatState((prev) => ({ 
         ...prev, 
         monsterName: event.detail.type,
@@ -182,8 +180,6 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
                          (combatState.monsterName !== 'Monster' ? combatState.monsterName : 
                          window.localStorage.getItem('currentMonsterType')) || 
                          'Cyclops Titan'; // Default to a valid monster type
-      console.log('Vault attempt with monster:', monsterType, 'Full info:', combatState.monsterInfo);
-      console.log('Full combat state:', combatState);
 
       if (!walletAddress) {
         console.error('No wallet address found');
@@ -211,7 +207,6 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
       });
 
       const result = await response.json();
-      console.log('Vault attempt result:', result);
 
       // Continue to vault scene with actual VRF result
       window.dispatchEvent(
@@ -414,7 +409,7 @@ export const CombatSceneUI: React.FC<CombatSceneUIProps> = () => {
               }}
             >
               {combatState.arrowType === 'yellow' ? 'STANDARD' : 
-               combatState.arrowType === 'blue' ? 'PIERCING' : 'EXPLOSIVE'}
+               combatState.arrowType === 'blue' ? 'FROST' : 'HEAVY'}
             </div>
             <div
               style={{

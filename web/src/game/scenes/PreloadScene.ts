@@ -13,10 +13,11 @@ export class PreloadScene extends Scene {
     this.load.image('forest-bg', '/assets/backgrounds/lobby.png');
     this.load.image('landing-bg', '/assets/backgrounds/landingPage.jpg');
     this.load.image('vault-room-bg', '/assets/backgrounds/vault-room.png');
-    this.load.image('ui_panel', '/assets/ui/panel.png');
-    this.load.image('gold_coin', '/assets/particles/coin.png');
-    this.load.image('vault_closed', '/assets/sprites/vault_closed.png');
-    this.load.image('vault_open', '/assets/sprites/vault_open.png');
+    // Commented out - files don't exist
+    // this.load.image('ui_panel', '/assets/ui/panel.png');
+    // this.load.image('gold_coin', '/assets/particles/coin.png');
+    // this.load.image('vault_closed', '/assets/sprites/vault_closed.png');
+    // this.load.image('vault_open', '/assets/sprites/vault_open.png');
     
     
     // Soldier sprites for player in CombatScene
@@ -316,14 +317,14 @@ export class PreloadScene extends Scene {
     // Arena background
     this.load.image('arena-bg', '/assets/backgrounds/arena.png');
     
-    // Effects
-    this.load.spritesheet('impact', '/assets/effects/impact.png', {
-      frameWidth: 64,
-      frameHeight: 64
-    });
+    // Effects - commented out as files don't exist
+    // this.load.spritesheet('impact', '/assets/effects/impact.png', {
+    //   frameWidth: 64,
+    //   frameHeight: 64
+    // });
     
     
-    this.load.image('spark', '/assets/particles/spark.png');
+    // this.load.image('spark', '/assets/particles/spark.png');
     
     // Audio
     this.load.audio('combat_music', '/assets/audio/combat.mp3');
@@ -331,7 +332,7 @@ export class PreloadScene extends Scene {
     this.load.audio('sword_hit', '/assets/audio/hit.mp3');
     this.load.audio('jackpot_win', '/assets/audio/fanfare.mp3');
     this.load.audio('monster_attack', '/assets/audio/monster_attack.mp3');
-    this.load.audio('monster_death', '/assets/audio/monster_death.mp3');
+    // this.load.audio('monster_death', '/assets/audio/monster_death.mp3'); // Not needed
     // Removed dragon_breath audio - dragon doesn't exist in backend
 
     // No placeholders - only real assets

@@ -22,7 +22,7 @@ import { MenuSceneUI } from '../scenes/MenuSceneUI';
 import { CombatSceneUI } from '../scenes/CombatSceneUI';
 import { VaultSceneUI } from '../scenes/VaultSceneUI';
 import { LoadingScreen } from './LoadingScreen';
-import type { PaymentOptions } from '../types';
+import type { PaymentOptions } from '../../../types';
 
 interface Props {
   className?: string;
@@ -43,6 +43,7 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
     message: string;
     canRetry: boolean;
   } | null>(null);
+  const [isGuideVisible, setIsGuideVisible] = useState(false);
 
   // Payment UI states - only for LobbyScene
   const [paymentOptions, setPaymentOptions] = useState<PaymentOptions | null>(
@@ -171,26 +172,16 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
 
         // Check localStorage first for last used payment method
         const savedPaymentMethod = localStorage.getItem('lastPaymentMethod');
-        console.log(
-          'Loading payment method - saved:',
-          savedPaymentMethod,
-          'canUsePDA:',
-          options.canUsePDA
-        );
 
         // Always respect the user's saved preference if it exists
         if (savedPaymentMethod === 'pda') {
-          console.log('Setting payment method to PDA (from localStorage)');
           setSelectedPaymentMethod('pda');
         } else if (savedPaymentMethod === 'wallet') {
-          console.log('Setting payment method to wallet (from localStorage)');
           setSelectedPaymentMethod('wallet');
         } else if (options.lastPaymentMethod === 'pda' && options.canUsePDA) {
           // Fall back to backend's last method only if no saved preference
-          console.log('Setting payment method to PDA (from backend)');
           setSelectedPaymentMethod('pda');
         } else {
-          console.log('Setting payment method to wallet (default)');
           setSelectedPaymentMethod('wallet');
         }
       } catch (error) {
@@ -433,7 +424,6 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
   // Listen for scene changes
   useEffect(() => {
     const handleSceneChange = (event: CustomEvent) => {
-      console.log('Scene changed to:', event.detail.sceneName);
       setCurrentScene(event.detail.sceneName);
 
       // Refresh payment options when returning to LobbyScene
@@ -565,8 +555,6 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
 
       {/* PDA Payment UI - Left side - only show in LobbyScene when wallet connected */}
       {currentScene === 'LobbyScene' &&
-        currentScene !== 'CombatScene' &&
-        currentScene !== 'VaultScene' &&
         connected &&
         publicKey &&
         paymentOptions && (
@@ -646,15 +634,6 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       {isGameReady && currentScene === 'CombatScene' && <CombatSceneUI />}
       {isGameReady && currentScene === 'VaultScene' && <VaultSceneUI />}
 
-      {/* Debug: Show current scene */}
-      {process.env.NODE_ENV === 'development' && (
-        <div
-          className="absolute bottom-4 left-4 text-white bg-black bg-opacity-50 px-2 py-1 rounded text-sm"
-          style={{ zIndex: 9999 }}
-        >
-          Current Scene: {currentScene || 'None'}
-        </div>
-      )}
 
       {/* Loading overlay */}
       {!isGameReady && (

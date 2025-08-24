@@ -54,7 +54,7 @@ export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
         {/* Label Section */}
         <div
           style={{
-            fontSize: ForestDesignSystem.typography.sizes.md,
+            fontSize: ForestDesignSystem.typography.sizes.base,
             fontWeight: ForestDesignSystem.typography.weights.black,
             color: '#FFFFFF',
             textShadow: '2px 2px 4px rgba(0, 0, 0, 0.9)',
@@ -141,7 +141,7 @@ export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
           </span>
           <span
             style={{
-              fontSize: ForestDesignSystem.typography.sizes.md,
+              fontSize: ForestDesignSystem.typography.sizes.base,
               color: '#CCCCCC',
               fontWeight: ForestDesignSystem.typography.weights.bold,
             }}

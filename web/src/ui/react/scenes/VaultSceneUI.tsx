@@ -289,7 +289,8 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
               color: '#ffd700',
               letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
               textTransform: 'uppercase',
-              textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(255, 215, 0, 0.5)',
+              textShadow:
+                '2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(255, 215, 0, 0.5)',
               opacity: 1,
             }}
           >
@@ -385,7 +386,8 @@ export const VaultSceneUI: React.FC<VaultSceneUIProps> = () => {
                 fontSize: 'clamp(24px, 3vw, 32px)',
                 fontWeight: 900,
                 color: '#ffd700',
-                textShadow: '3px 3px 6px rgba(0, 0, 0, 0.9), 0 0 20px rgba(255, 215, 0, 0.6)',
+                textShadow:
+                  '3px 3px 6px rgba(0, 0, 0, 0.9), 0 0 20px rgba(255, 215, 0, 0.6)',
                 letterSpacing: '0.05em',
                 textAlign: 'center',
                 padding: '10px 20px',

@@ -12,7 +12,6 @@ export class LobbyScene extends BaseScene {
   preload() {
     // Everything should be loaded from PreloadScene
     // Just verify orc texture exists
-    console.log('LobbyScene preload - orc exists?', this.textures.exists('orc_idle'));
   }
   private warriorGroup: Phaser.GameObjects.Sprite[] = [];
   private spearTimer?: Phaser.Time.TimerEvent;
@@ -229,9 +228,9 @@ export class LobbyScene extends BaseScene {
     // Play idle animation
     warrior.play('soldier_idle');
     
-    // Store position data
-    warrior.setData('originalAngle', angle);
-    warrior.setData('originalRadius', radius);
+    // Store final position data
+    warrior.setData('finalX', finalX);
+    warrior.setData('finalY', finalY);
     
     // Fade in while moving to position
     this.tweens.add({
@@ -260,24 +259,26 @@ export class LobbyScene extends BaseScene {
     
     // Death animation - fade and fall after death animation plays
     this.currentWarrior.once('animationcomplete', () => {
-      this.tweens.add({
-        targets: this.currentWarrior,
-        alpha: 0,
-        y: this.currentWarrior.y + 50,
-        scaleX: 0.5,
-        scaleY: 0.5,
-        duration: 600,
-        ease: 'Power2',
-        onComplete: () => {
-          // Destroy the dead warrior
-          if (this.currentWarrior) {
-            this.currentWarrior.destroy();
+      if (this.currentWarrior) {
+        this.tweens.add({
+          targets: this.currentWarrior,
+          alpha: 0,
+          y: this.currentWarrior.y + 50,
+          scaleX: 0.5,
+          scaleY: 0.5,
+          duration: 600,
+          ease: 'Power2',
+          onComplete: () => {
+            // Destroy the dead warrior
+            if (this.currentWarrior) {
+              this.currentWarrior.destroy();
+            }
+            
+            // Bring in next warrior from queue
+            this.bringNextWarrior();
           }
-          
-          // Bring in next warrior from queue
-          this.bringNextWarrior();
-        }
-      });
+        });
+      }
     });
     
     // Create death particles
@@ -511,7 +512,6 @@ export class LobbyScene extends BaseScene {
                         const shouldRoar = Phaser.Math.Between(1, 2) === 1;
                         
                         if (shouldRoar) {
-                          console.log('Playing roar effect');
                           
                           // Store original scale
                           const origScaleX = this.monsterSprite.scaleX;
@@ -536,7 +536,6 @@ export class LobbyScene extends BaseScene {
                               this.cameras.main.shake(600, 0.015);
                             },
                             onComplete: () => {
-                              console.log('Roar effect completed');
                               
                               // Ensure scale is restored
                               this.monsterSprite.setScale(origScaleX, origScaleY);
@@ -626,7 +625,6 @@ export class LobbyScene extends BaseScene {
     // If we have preloaded state, use it immediately
     if (data?.preloadedState) {
       this.forestArenaState = data.preloadedState;
-      console.log('Using preloaded game state:', this.forestArenaState);
     }
   }
 
@@ -739,10 +737,6 @@ export class LobbyScene extends BaseScene {
       }
       
       // Debug logging
-      console.log('Monster name:', monsterName);
-      console.log('Actual sprite key:', actualSpriteKey);
-      console.log('Texture exists in scene?', actualSpriteKey ? this.textures.exists(actualSpriteKey) : false);
-      console.log('Available textures:', this.textures.getTextureKeys());
       
       // Create monster with Orc sprite
       if (actualSpriteKey) {
@@ -808,13 +802,231 @@ export class LobbyScene extends BaseScene {
       this.emitSpritePositions();
     });
     
+    // Create the in-game guide display
+    this.createGuideDisplay(width, height);
+    
     // Monster now only attacks as counter-attack after being hit
+  }
+  
+  private createGuideDisplay(width: number, height: number) {
+    // Create guide container at center of screen
+    const guideContainer = this.add.container(width/2, height/2);
+    guideContainer.setDepth(1000); // Much higher depth to be above everything
+    
+    // Create fullscreen dark overlay that covers entire screen
+    const overlay = this.add.rectangle(0, 0, width * 3, height * 3, 0x000000, 0.85);
+    overlay.setInteractive(); // Block clicks behind it
+    guideContainer.add(overlay);
+    
+    // Create guide popup panel
+    const panelWidth = 400;
+    const panelHeight = 500;
+    
+    // Main panel background
+    const bgPanel = this.add.graphics();
+    bgPanel.fillStyle(0x1a1a1a, 0.95);
+    bgPanel.fillRoundedRect(-panelWidth/2, -panelHeight/2, panelWidth, panelHeight, 15);
+    bgPanel.lineStyle(3, 0xffd700, 1);
+    bgPanel.strokeRoundedRect(-panelWidth/2, -panelHeight/2, panelWidth, panelHeight, 15);
+    guideContainer.add(bgPanel);
+    
+    // Title
+    const title = this.add.text(0, -panelHeight/2 + 30, '⚔️ COMBAT CONTROLS ⚔️', {
+      fontSize: '22px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#ffd700',
+      fontStyle: 'bold',
+      align: 'center'
+    });
+    title.setOrigin(0.5);
+    guideContainer.add(title);
+    
+    // Movement Section
+    let yOffset = -panelHeight/2 + 80;
+    const movementTitle = this.add.text(0, yOffset, '— MOVEMENT —', {
+      fontSize: '16px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#ffaa00',
+      fontStyle: 'bold'
+    });
+    movementTitle.setOrigin(0.5);
+    guideContainer.add(movementTitle);
+    
+    // Movement controls
+    const movements = [
+      { key: 'WASD / Arrows', desc: 'Move in all directions' },
+      { key: 'SHIFT + Direction', desc: 'Dash (invincibility frames)' }
+    ];
+    
+    yOffset += 30;
+    movements.forEach(control => {
+      const text = this.add.text(-panelWidth/2 + 40, yOffset, 
+        `[${control.key}]  ${control.desc}`, {
+        fontSize: '13px',
+        fontFamily: 'Arial, sans-serif',
+        color: '#ffffff'
+      });
+      guideContainer.add(text);
+      yOffset += 25;
+    });
+    
+    // Combat Section
+    yOffset += 20;
+    const combatTitle = this.add.text(0, yOffset, '— COMBAT —', {
+      fontSize: '16px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#ffaa00',
+      fontStyle: 'bold'
+    });
+    combatTitle.setOrigin(0.5);
+    guideContainer.add(combatTitle);
+    
+    yOffset += 30;
+    const combat = [
+      { key: 'SPACE / Click', desc: 'Melee attack (combos!)' },
+      { key: 'E / Right Click', desc: 'Shoot arrows' },
+      { key: 'Q', desc: 'Switch arrow types' }
+    ];
+    
+    combat.forEach(control => {
+      const text = this.add.text(-panelWidth/2 + 40, yOffset,
+        `[${control.key}]  ${control.desc}`, {
+        fontSize: '13px',
+        fontFamily: 'Arial, sans-serif',
+        color: '#ffffff'
+      });
+      guideContainer.add(text);
+      yOffset += 25;
+    });
+    
+    // Arrow Types Section
+    yOffset += 20;
+    const arrowTitle = this.add.text(0, yOffset, '— ARROW TYPES —', {
+      fontSize: '16px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#ffaa00',
+      fontStyle: 'bold'
+    });
+    arrowTitle.setOrigin(0.5);
+    guideContainer.add(arrowTitle);
+    
+    yOffset += 30;
+    const arrows = [
+      { color: '#ffff00', name: 'Yellow:', desc: 'Standard damage' },
+      { color: '#00aaff', name: 'Blue:', desc: 'Frost (slows monster)' },
+      { color: '#ff4444', name: 'Red:', desc: 'Explosive (area damage)' }
+    ];
+    
+    arrows.forEach(arrow => {
+      const nameText = this.add.text(-panelWidth/2 + 40, yOffset, arrow.name, {
+        fontSize: '13px',
+        fontFamily: 'Arial, sans-serif',
+        color: arrow.color,
+        fontStyle: 'bold'
+      });
+      guideContainer.add(nameText);
+      
+      const descText = this.add.text(-panelWidth/2 + 100, yOffset, arrow.desc, {
+        fontSize: '13px',
+        fontFamily: 'Arial, sans-serif',
+        color: '#ffffff'
+      });
+      guideContainer.add(descText);
+      yOffset += 25;
+    });
+    
+    // Tips Section
+    yOffset += 20;
+    const tipsTitle = this.add.text(0, yOffset, '— TIPS —', {
+      fontSize: '16px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#ffaa00',
+      fontStyle: 'bold'
+    });
+    tipsTitle.setOrigin(0.5);
+    guideContainer.add(tipsTitle);
+    
+    yOffset += 30;
+    const tips = [
+      '• 3-hit combo triggers spin attack',
+      '• Red arrows one-shot skeletons',
+      '• Shield powerup blocks 2 hits (80% reduction)'
+    ];
+    
+    tips.forEach(tip => {
+      const text = this.add.text(-panelWidth/2 + 40, yOffset, tip, {
+        fontSize: '12px',
+        fontFamily: 'Arial, sans-serif',
+        color: '#aaffaa'
+      });
+      guideContainer.add(text);
+      yOffset += 20;
+    });
+    
+    // Close instruction
+    const closeHint = this.add.text(0, panelHeight/2 - 30, 
+      'Press [G] or [ESC] to close', {
+      fontSize: '14px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#888888',
+      align: 'center'
+    });
+    closeHint.setOrigin(0.5);
+    guideContainer.add(closeHint);
+    
+    // Start hidden
+    guideContainer.visible = false;
+    
+    // Toggle guide visibility with G key
+    const gKey = this.input.keyboard?.addKey('G');
+    const escKey = this.input.keyboard?.addKey('ESC');
+    
+    if (gKey) {
+      gKey.on('down', () => {
+        guideContainer.visible = !guideContainer.visible;
+        // Notify React to hide/show UI elements when guide toggles
+        window.dispatchEvent(new CustomEvent('guideToggled', { 
+          detail: { isVisible: guideContainer.visible } 
+        }));
+      });
+    }
+    
+    if (escKey) {
+      escKey.on('down', () => {
+        if (guideContainer.visible) {
+          guideContainer.visible = false;
+          // Notify React to show UI elements again
+          window.dispatchEvent(new CustomEvent('guideToggled', { 
+            detail: { isVisible: false } 
+          }));
+        }
+      });
+    }
+    
+    // Create a separate toggle hint below the center bottom (where battle button is)
+    const toggleHintText = this.add.text(width/2, height - 60, 
+      'Press [G] for controls guide', {
+      fontSize: '12px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#888888',
+      align: 'center'
+    });
+    toggleHintText.setOrigin(0.5);
+    toggleHintText.setDepth(99); // Just below the guide
+    
+    // Add shadow for better visibility
+    toggleHintText.setShadow(2, 2, '#000000', 2, true, true);
+    
+    // Store reference but not in guide container so it stays visible
+    this.registerUIElement('toggleHint', toggleHintText);
+    
+    // Store reference
+    this.registerUIElement('guideDisplay', guideContainer);
   }
   
   private triggerMonsterCounterAttack(spriteKey: string) {
     // Check if monster is not already attacking (not in a tween)
     if (!this.tweens.isTweening(this.monsterSprite)) {
-      console.log('Monster counter-attack triggered');
       
       // Store original position and scale for return jump
       const originalX = this.monsterSprite.x;
@@ -856,7 +1068,6 @@ export class LobbyScene extends BaseScene {
                       // Now on platform - play a random attack animation
                       const attackNum = Phaser.Math.Between(1, 3);
                       const meleeAnim = `${spriteKey}_attack0${attackNum}`;
-                      console.log('Attempting to play attack animation:', meleeAnim, 'exists:', this.anims.exists(meleeAnim));
                       
                       // Try the selected animation, fallback to attack01, then idle
                       let animToPlay = meleeAnim;
@@ -1071,7 +1282,6 @@ export class LobbyScene extends BaseScene {
   private setupFightButtonListener() {
     // Listen for fight button clicks from HTML overlay
     const handleFightClick = (event: CustomEvent) => {
-      console.log('Fight button clicked from HTML overlay', event.detail);
       // Don't start combat immediately - payment will be handled first
       // Store pending combat data
       if (this.forestArenaState?.currentMonster) {
@@ -1081,13 +1291,11 @@ export class LobbyScene extends BaseScene {
           combatId: combatId,
           walletAddress: this.walletAddress
         });
-        console.log('Combat pending payment:', combatId);
       }
     };
     
     // Listen for successful payment confirmation
     const handleCombatStarted = (event: CustomEvent) => {
-      console.log('Payment successful, starting combat', event.detail);
       const pendingCombat = this.registry.get('pendingCombat');
       if (pendingCombat && pendingCombat.monster) {
         // Clear pending combat
@@ -1132,10 +1340,7 @@ export class LobbyScene extends BaseScene {
       }
       
       const stateData = await response.json();
-      console.log('Raw API response:', stateData);
-      console.log('currentPot in response:', stateData.currentPot);
       this.forestArenaState = stateData;
-      console.log('After assignment - currentPot:', (this.forestArenaState as any)['currentPot']);
       
       // Store current monster type for combat scene
       if (this.forestArenaState.currentMonster?.tier?.name) {
@@ -1156,10 +1361,8 @@ export class LobbyScene extends BaseScene {
   private updateGameStateForUI() {
     if (!this.forestArenaState) return;
 
-    console.log('LobbyScene raw state:', this.forestArenaState);
     // Use bracket notation to access currentPot from backend without TypeScript errors
     const jackpotValue = (this.forestArenaState as any)['currentPot'] || this.forestArenaState.currentJackpot || 0;
-    console.log('Sending jackpot value:', jackpotValue);
 
     // Emit event with game state for HTML UI
     window.dispatchEvent(new CustomEvent('gameStateUpdate', {
@@ -1214,7 +1417,6 @@ export class LobbyScene extends BaseScene {
   }
 
   private async startCombat() {
-    console.log('Starting combat...', this.forestArenaState);
     
     if (!this.forestArenaState?.currentMonster) {
       console.error('No monster data available');
@@ -1269,13 +1471,11 @@ export class LobbyScene extends BaseScene {
   }
 
   private handleSceneWake() {
-    console.log('Scene waking up');
     // Scene is waking up from sleep - reload game state
     this.loadGameState();
   }
   
   private handleSceneResume() {
-    console.log('Scene resuming');
     // Scene is resuming - reload game state
     this.loadGameState();
   }
@@ -1300,7 +1500,7 @@ export class LobbyScene extends BaseScene {
     // Update background rect
     const bgRect = this.getUIElement('bgRect');
     if (bgRect && 'setPosition' in bgRect) {
-      bgRect.setPosition(this.centerX(width), this.centerY(height));
+      (bgRect as any).setPosition(this.centerX(width), this.centerY(height));
       if ('setSize' in bgRect) {
         (bgRect as any).setSize(width * 1.2, height * 1.2);
       }
@@ -1320,7 +1520,7 @@ export class LobbyScene extends BaseScene {
     // Update overlay
     const overlay = this.getUIElement('overlay');
     if (overlay && 'setPosition' in overlay) {
-      overlay.setPosition(this.centerX(width), this.centerY(height));
+      (overlay as any).setPosition(this.centerX(width), this.centerY(height));
       if ('setSize' in overlay) {
         (overlay as any).setSize(width * 1.2, height * 1.2);
       }

@@ -120,20 +120,38 @@ export class VaultScene extends BaseScene {
     gradient.fillRect(0, 0, width, height);
     gradient.setDepth(1);
     
-    // Add golden particles falling like forest treasures
-    this.particles = this.add.particles(0, 0, 'spark-placeholder', {
-      x: { min: 0, max: width },
-      y: 0,
-      lifespan: 4000,
-      speed: { min: 30, max: 80 },
-      scale: { start: 0.8, end: 0.3 },
-      blendMode: 'ADD',
-      tint: [0xffd700, 0xffaa00, 0xffcc00],
-      quantity: 1,
-      frequency: 500
+    // Add golden falling sparkles using simple circles
+    const particleContainer = this.add.container(0, 0);
+    particleContainer.setDepth(2);
+    this.registerUIElement('particles', particleContainer);
+    
+    // Create falling gold sparkles
+    this.time.addEvent({
+      delay: 500,
+      loop: true,
+      callback: () => {
+        const sparkle = this.add.circle(
+          Phaser.Math.Between(0, width),
+          0,
+          Phaser.Math.Between(2, 4),
+          Phaser.Math.RND.pick([0xffd700, 0xffaa00, 0xffcc00]),
+          1
+        );
+        sparkle.setBlendMode(Phaser.BlendModes.ADD);
+        particleContainer.add(sparkle);
+        
+        // Animate falling
+        this.tweens.add({
+          targets: sparkle,
+          y: height + 20,
+          scale: 0.3,
+          alpha: 0,
+          duration: 4000,
+          ease: 'Linear',
+          onComplete: () => sparkle.destroy()
+        });
+      }
     });
-    this.registerUIElement('particles', this.particles);
-    this.particles.setDepth(2);
 
     // Hide the single vault sprite (we'll show 3 vaults instead)
     this.vault = this.add.sprite(0, 0, 'vault-placeholder');
@@ -1111,21 +1129,47 @@ export class VaultScene extends BaseScene {
       });
     }
     
-    // Create sparkle particles
-    const sparkles = this.add.particles(vaultX, vaultY - 30, 'spark-placeholder', {
-      speed: { min: 100, max: 300 },
-      scale: { start: 0.8, end: 0 },
-      blendMode: 'ADD',
-      lifespan: 1000,
-      quantity: 3,
-      frequency: 100,
-      x: { min: -30, max: 30 },
-      y: { min: -30, max: 30 },
-      tint: [0xffd700, 0xffff00, 0xffaa00]
+    // Create sparkle effect with simple circles
+    const sparkleContainer = this.add.container(vaultX, vaultY - 30);
+    this.registerUIElement('sparkles', sparkleContainer);
+    
+    // Create sparkles periodically
+    const sparkleTimer = this.time.addEvent({
+      delay: 100,
+      loop: true,
+      callback: () => {
+        // Create 3 sparkles
+        for (let i = 0; i < 3; i++) {
+          const sparkle = this.add.circle(
+            Phaser.Math.Between(-30, 30),
+            Phaser.Math.Between(-30, 30),
+            Phaser.Math.Between(2, 4),
+            Phaser.Math.RND.pick([0xffd700, 0xffff00, 0xffaa00]),
+            1
+          );
+          sparkle.setBlendMode(Phaser.BlendModes.ADD);
+          sparkleContainer.add(sparkle);
+          
+          // Animate sparkle
+          const angle = Math.random() * Math.PI * 2;
+          const distance = Phaser.Math.Between(100, 300);
+          
+          this.tweens.add({
+            targets: sparkle,
+            x: sparkle.x + Math.cos(angle) * distance,
+            y: sparkle.y + Math.sin(angle) * distance,
+            scale: 0,
+            alpha: 0,
+            duration: 1000,
+            ease: 'Power2',
+            onComplete: () => sparkle.destroy()
+          });
+        }
+      }
     });
     
-    // Store sparkles reference to stop when leaving scene
-    this.registerUIElement('sparkles', sparkles);
+    // Store timer reference for cleanup (not as UI element since it's not a GameObject)
+    (this as any).sparkleTimer = sparkleTimer;
   }
 
   private async vaultEmpty() {

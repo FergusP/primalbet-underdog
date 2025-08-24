@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 
 export class SlimeEnemy extends Phaser.Physics.Arcade.Sprite {
   public health: number = 15;
@@ -100,7 +100,7 @@ export class SlimeEnemy extends Phaser.Physics.Arcade.Sprite {
     this.setAlpha(0);
     
     // Particle effect for spawn
-    const particles = this.scene.add.particles(this.x, this.y, 'spark', {
+    const particles = this.scene.add.particles(this.x, this.y, 'spark-placeholder', {
       color: [0x00ff00, 0x88ff88],
       scale: { start: 0.3, end: 0 },
       speed: { min: 20, max: 50 },
@@ -213,17 +213,13 @@ export class SlimeEnemy extends Phaser.Physics.Arcade.Sprite {
     this.dropHealingOrb();
     
     // Splat particles
-    const particles = this.scene.add.particles(this.x, this.y, 'spark', {
+    const particles = this.scene.add.particles(this.x, this.y, 'spark-placeholder', {
       color: [0x00ff00, 0x88ff88, 0xaaffaa],
       scale: { start: 0.8, end: 0 },
       speed: { min: 100, max: 200 },
       quantity: 20,
       lifespan: 800,
-      blendMode: 'ADD',
-      emitZone: {
-        type: 'random',
-        source: new Phaser.Geom.Circle(0, 0, 20)
-      }
+      blendMode: 'ADD'
     });
     
     // Splat effect - flatten and expand
