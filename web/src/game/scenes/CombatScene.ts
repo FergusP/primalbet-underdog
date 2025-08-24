@@ -8,7 +8,6 @@ import { SlimeEnemy } from '../sprites/SlimeEnemy';
 export class CombatScene extends BaseScene {
   private player!: Phaser.GameObjects.Sprite;
   private monster!: Phaser.GameObjects.Sprite;
-  private vault!: Phaser.GameObjects.Sprite;
 
   // Game objects
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -16,6 +15,7 @@ export class CombatScene extends BaseScene {
   private spaceKey!: Phaser.Input.Keyboard.Key;
   private eKey!: Phaser.Input.Keyboard.Key;
   private qKey!: Phaser.Input.Keyboard.Key;
+  private shiftKey!: Phaser.Input.Keyboard.Key;
 
   // Combat
   private spears!: Phaser.GameObjects.Group;
@@ -86,15 +86,25 @@ export class CombatScene extends BaseScene {
   private isMonsterMoving: boolean = false;
   private currentMonsterAnimation: string = '';
   private monsterSpriteKey: string = 'orc';
+
+  // Monster slow effect
+  private monsterSlowedUntil: number = 0;
+  private monsterBaseSpeed: number = 60;
+  private monsterCurrentSpeed: number = 60;
   
+  // Shield powerup
+  private shieldStacks: number = 0;
+  private shieldOrbs: Phaser.GameObjects.Graphics[] = [];
+  private shieldTimer?: Phaser.Time.TimerEvent;
+
   // Enemy spawn system
-  private skeletons: Phaser.GameObjects.Group;
-  private slimes: Phaser.GameObjects.Group;
+  private skeletons!: Phaser.GameObjects.Group;
+  private slimes!: Phaser.GameObjects.Group;
   private spawnTimers: Phaser.Time.TimerEvent[] = [];
   private continuousSpawnTimer?: Phaser.Time.TimerEvent;
   private isMainMonsterDead: boolean = false;
   private waveNumber: number = 0;
-  
+
   // Combo system
   private comboCount: number = 0;
   private lastHitTime: number = 0;
@@ -102,24 +112,41 @@ export class CombatScene extends BaseScene {
   private comboMultiplier: number = 1.0;
   private maxCombo: number = 3;
   private comboText?: Phaser.GameObjects.Text;
-  
+
   // Crowd control abilities
   private dashCooldown: number = 0;
-  private dashSpeed: number = 450;
+  private dashDistance: number = 180; // Fixed dash distance in pixels
   private dashDuration: number = 300;
   private isDashing: boolean = false;
+  private isInvincible: boolean = false; // Invincibility during dash
   private slamCooldown: number = 0;
   private slamCooldownMax: number = 5000;
   private lastDashDirection: string = '';
   private lastDashTime: number = 0;
   private doubleTapTime: number = 300; // Time window for double tap
-  
+
   // Projectile variety system
   private currentArrowType: 'yellow' | 'blue' | 'red' = 'yellow';
   private arrowTypes = {
-    yellow: { sprite: 'arrow_yellow', damage: 1.0, description: 'Standard' },
-    blue: { sprite: 'arrow_blue', damage: 0.8, description: 'Piercing', piercing: true },
-    red: { sprite: 'arrow_red', damage: 1.5, description: 'Explosive', aoe: true }
+    yellow: {
+      sprite: 'arrow_yellow',
+      damage: 1.0,
+      description: 'Standard',
+      slowDuration: 400,
+    }, // Half slow (400ms)
+    blue: {
+      sprite: 'arrow_blue',
+      damage: 0.6,
+      description: 'Frost',
+      slowDuration: 0,
+    }, // Low damage but slows monster, no player slow
+    red: {
+      sprite: 'arrow_red',
+      damage: 1.5,
+      description: 'Heavy',
+      aoe: true,
+      slowDuration: 800,
+    }, // Full slow (800ms) - heavy draw
   };
   private arrowTypeIndicator?: Phaser.GameObjects.Container;
 
@@ -128,8 +155,6 @@ export class CombatScene extends BaseScene {
   }
 
   init(data: { monster: Monster; combatId: string; walletAddress?: string }) {
-    console.log('CombatScene init data:', data);
-
     if (!data || !data.monster) {
       console.error('No monster data provided to CombatScene');
       // Return to lobby if no monster data
@@ -138,7 +163,6 @@ export class CombatScene extends BaseScene {
     }
 
     this.monsterData = data.monster;
-    console.log('CombatScene received monster data:', this.monsterData);
     this.monsterHealth = this.monsterData.baseHealth;
     this.monsterMaxHealth = this.monsterData.baseHealth;
 
@@ -165,26 +189,26 @@ export class CombatScene extends BaseScene {
     this.cachedPlayerMonsterDistance = 0;
     this.lastDistanceCalculation = 0;
     this.lastSpritePositionEmit = 0;
-    
+
     // Reset spawn system
     this.isMainMonsterDead = false;
     this.waveNumber = 0;
-    
+
     // Clear any existing spawn timers
     if (this.spawnTimers) {
-      this.spawnTimers.forEach(timer => timer?.destroy());
+      this.spawnTimers.forEach((timer) => timer?.destroy());
       this.spawnTimers = [];
     }
     if (this.continuousSpawnTimer) {
       this.continuousSpawnTimer.destroy();
       this.continuousSpawnTimer = undefined;
     }
-    
+
     // Reset combo system
     this.comboCount = 0;
     this.lastHitTime = 0;
     this.comboMultiplier = 1.0;
-    
+
     // Reset crowd control
     this.dashCooldown = 0;
     this.slamCooldown = 0;
@@ -208,11 +232,6 @@ export class CombatScene extends BaseScene {
 
     // Wait for UI to be ready before sending monster info
     const sendMonsterInfo = () => {
-      console.log('Dispatching monster-info with:', {
-        type: this.monsterData.tier.name,
-        baseHealth: this.monsterData.baseHealth,
-        fullMonsterData: this.monsterData,
-      });
       window.dispatchEvent(
         new CustomEvent('monster-info', {
           detail: {
@@ -247,23 +266,52 @@ export class CombatScene extends BaseScene {
     this.previousWidth = width;
     this.previousHeight = height;
 
-    // Create arena background
-    const bgRect = this.add.rectangle(
-      width / 2,
-      height / 2,
-      width,
-      height,
-      0x2a2a3a
-    );
-    this.registerUIElement('bg', bgRect);
+    // Create arena background with forest image
+    // Check if texture exists
+    if (this.textures.exists('arena-bg')) {
+      const arenaBg = this.add.tileSprite(
+        width / 2,
+        height / 2,
+        width,
+        height,
+        'arena-bg'
+      );
+      arenaBg.setOrigin(0.5, 0.5);
+      // Darken the background to reduce distraction
+      arenaBg.setTint(0x808080); // 50% darker
+      this.registerUIElement('bg', arenaBg);
+    } else {
+      console.error('Arena texture not found! Creating fallback background');
+      // Fallback to solid color
+      const bgRect = this.add.rectangle(
+        width / 2,
+        height / 2,
+        width,
+        height,
+        0x8b7355
+      );
+      this.registerUIElement('bg', bgRect);
+    }
 
-    // Add arena borders and store references
+    // Add arena borders with forest theme colors
     this.borders = [
-      this.add.rectangle(width / 2, 20, width - 40, 40, 0x444444),
-      this.add.rectangle(width / 2, height - 20, width - 40, 40, 0x444444),
-      this.add.rectangle(20, height / 2, 40, height - 40, 0x444444),
-      this.add.rectangle(width - 20, height / 2, 40, height - 40, 0x444444),
+      this.add.rectangle(width / 2, 20, width - 40, 40, 0x2d1810, 0.7),
+      this.add.rectangle(width / 2, height - 20, width - 40, 40, 0x2d1810, 0.7),
+      this.add.rectangle(20, height / 2, 40, height - 40, 0x2d1810, 0.7),
+      this.add.rectangle(
+        width - 20,
+        height / 2,
+        40,
+        height - 40,
+        0x2d1810,
+        0.7
+      ),
     ];
+
+    // Add border outlines for better visibility
+    this.borders.forEach((border) => {
+      border.setStrokeStyle(2, 0x8b4513, 0.5); // Saddle brown outline
+    });
 
     // Register borders for proper management
     this.borders.forEach((border, index) => {
@@ -282,41 +330,69 @@ export class CombatScene extends BaseScene {
     this.prevPlayerX = this.player.x;
     this.prevPlayerY = this.player.y;
 
-    // Create monster using Orc sprite for all monster types
-    const monsterName = this.monsterData.tier.name.toLowerCase();
+    // Create monster using appropriate sprite for each monster type
+    // Add null safety for tier check
+    const monsterName = (
+      this.monsterData.tier?.name ||
+      this.monsterData.type ||
+      'orc'
+    ).toLowerCase();
 
     // Determine sprite key for animations based on new monster names
     let spriteKey = 'orc';
-    if (monsterName.toLowerCase().includes('werewolf')) {
+    if (monsterName.includes('werewolf')) {
       spriteKey = 'werewolf';
-    } else if (monsterName.toLowerCase().includes('orc rider')) {
+    } else if (monsterName.includes('orc rider')) {
       spriteKey = 'orc_rider';
-    } else if (monsterName.toLowerCase().includes('elite orc')) {
+    } else if (monsterName.includes('elite orc')) {
       spriteKey = 'elite_orc';
-    } else if (monsterName.toLowerCase().includes('armored orc')) {
+    } else if (monsterName.includes('armored orc')) {
       spriteKey = 'armored_orc';
-    } else if (monsterName.toLowerCase().includes('orc')) {
+    } else if (monsterName.includes('orc')) {
       spriteKey = 'orc';
     }
 
     // Store sprite key for animations
     this.monsterSpriteKey = spriteKey;
 
-    // Create monster sprite using orc texture
-    this.monster = this.add.sprite(width * 0.7, height * 0.5, 'orc', 0);
+    // Create monster sprite using the correct texture
+    this.monster = this.add.sprite(width * 0.7, height * 0.5, spriteKey, 0);
 
     // Set the origin to center for proper positioning
     this.monster.setOrigin(0.5, 0.5);
 
-    // Scale based on monster type
+    // Scale based on monster type - increased for better differentiation
     const scales: Record<string, number> = {
-      orc: 2.0,
-      armored_orc: 2.2,
-      elite_orc: 2.5,
-      orc_rider: 3.0,
-      werewolf: 2.8,
+      orc: 3.0,
+      armored_orc: 3.2,
+      elite_orc: 3.5,
+      orc_rider: 3.8,
+      werewolf: 3.5,
     };
-    this.monster.setScale(scales[spriteKey] || 2.0);
+    this.monster.setScale(scales[spriteKey] || 3.0);
+
+    // Add subtle red tint to boss for differentiation
+    this.monster.setTint(0xffcccc);
+
+    // Add simple shadow under the boss
+    const shadow = this.add.ellipse(
+      this.monster.x,
+      this.monster.y + 40,
+      80,
+      30,
+      0x000000,
+      0.3
+    );
+    shadow.setDepth(4); // Below the monster
+    this.registerUIElement('bossShadow', shadow);
+
+    // Make shadow follow monster
+    this.events.on('postupdate', () => {
+      if (shadow && this.monster) {
+        shadow.x = this.monster.x;
+        shadow.y = this.monster.y + 40;
+      }
+    });
 
     // Play idle animation
     const idleAnimKey = `${spriteKey}_idle`;
@@ -332,25 +408,9 @@ export class CombatScene extends BaseScene {
     this.prevMonsterX = this.monster.x;
     this.prevMonsterY = this.monster.y;
 
-    // Create vault as a graphics object (gold chest)
-    const vaultGraphics = this.add.graphics();
-    vaultGraphics.fillStyle(0xffd700, 1);
-    vaultGraphics.fillRect(-40, -30, 80, 60);
-    vaultGraphics.lineStyle(3, 0x8b7500, 1);
-    vaultGraphics.strokeRect(-40, -30, 80, 60);
-
-    // Convert to texture and create sprite
-    vaultGraphics.generateTexture('vault-texture', 80, 60);
-    vaultGraphics.destroy();
-
-    this.vault = this.add.sprite(width * 0.9, height * 0.5, 'vault-texture');
-    this.vault.setOrigin(0.5, 0.5);
-    this.vault.setScale(1.5);
-
     // Enable physics
     this.physics.add.existing(this.player);
     this.physics.add.existing(this.monster);
-    this.physics.add.existing(this.vault);
 
     // Set player physics properties
     const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
@@ -372,6 +432,11 @@ export class CombatScene extends BaseScene {
     this.eKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.qKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
 
+    // Add SHIFT key for dash
+    this.shiftKey = this.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.SHIFT
+    );
+
     // Create spear group for projectiles - NO collision detection
     this.spears = this.physics.add.group();
 
@@ -384,9 +449,9 @@ export class CombatScene extends BaseScene {
 
     // Create spear texture once
     this.createSpearTexture();
-    
-    // Create arrow type indicator
-    this.createArrowTypeIndicator();
+
+    // Arrow type indicator removed - now handled by React UI
+    // this.createArrowTypeIndicator();
 
     // Delay creation of HTML spear recharge indicator to ensure DOM is ready
     this.time.delayedCall(500, () => {
@@ -401,8 +466,6 @@ export class CombatScene extends BaseScene {
 
       // Set up spear recharge event listener
       this.events.on('spear-recharged', this.onSpearRecharged, this);
-
-      console.log('SpearRechargeIndicatorHTML created after delay');
     });
 
     // Emit initial game state for UI
@@ -428,9 +491,8 @@ export class CombatScene extends BaseScene {
     console.log('🕹️  WASD or Arrow Keys to move');
     console.log('⚔️  SPACE/Left Click for melee attack');
     console.log(
-      '🏹  E/Right Click to throw spears (Limited: 2 max, slows movement)'
+      '🏹  E/Right Click to throw arrows (Limited: 2 max, slows movement)'
     );
-    console.log('🏛️  Defeat monster to access vault!');
     console.log('💀 Skeletons will spawn to crowd the battle!');
     console.log('💚 Kill slimes for healing!');
 
@@ -442,37 +504,37 @@ export class CombatScene extends BaseScene {
     window.dispatchEvent(
       new CustomEvent('combat-instructions', {
         detail: {
-          text: 'WASD: Move • SPACE/Click: Melee • E/Right-Click: Spear (Limited) • Defeat monster!',
+          text: 'WASD: Move • SPACE/Click: Melee • E/Right-Click: Arrow (Limited) • Defeat monster!',
           visible: true,
         },
       })
     );
-    
+
     // Initialize enemy groups
     this.skeletons = this.add.group({
       classType: SkeletonEnemy,
       maxSize: 10,
-      runChildUpdate: true
+      runChildUpdate: true,
     });
-    
+
     this.slimes = this.add.group({
       classType: SlimeEnemy,
       maxSize: 3,
-      runChildUpdate: true
+      runChildUpdate: true,
     });
-    
+
     // Set up collision detection for additional enemies
     this.setupEnemyCollisions();
-    
+
     // Initialize spawn system
     this.initializeSpawnSystem();
-    
+
     // Listen for skeleton attacks
     this.events.on('skeleton-attack', this.handleSkeletonAttack, this);
-    
+
     // Listen for bonus drops
     this.events.on('bonus-dropped', this.handleBonusDrop, this);
-    
+
     // Listen for healing orb drops
     this.events.on('healing-orb-dropped', this.handleHealingOrbDrop, this);
   }
@@ -520,7 +582,6 @@ export class CombatScene extends BaseScene {
   }
 
   emitMonsterInfo() {
-    console.log('Emitting monster info:', this.monsterData);
     window.dispatchEvent(
       new CustomEvent('monster-info', {
         detail: {
@@ -556,134 +617,331 @@ export class CombatScene extends BaseScene {
     graphics.generateTexture('spear-texture', 20, 4);
     graphics.destroy();
   }
-  
+
   createArrowTypeIndicator() {
-    // Create UI for showing current arrow type
-    const x = 100;
+    // Create UI for showing current arrow type - positioned bottom-right for better visibility
+    const x = this.cameras.main.width - 120;
     const y = this.cameras.main.height - 50;
-    
+
     this.arrowTypeIndicator = this.add.container(x, y);
-    
-    // Background panel
-    const bg = this.add.rectangle(0, 0, 150, 40, 0x000000, 0.7);
-    bg.setStrokeStyle(2, 0xffffff);
-    
-    // Arrow icon
-    const arrowIcon = this.add.image(-50, 0, this.arrowTypes[this.currentArrowType].sprite);
-    arrowIcon.setScale(0.5);
-    
-    // Arrow type text
-    const typeText = this.add.text(10, 0, this.arrowTypes[this.currentArrowType].description, {
-      fontSize: '14px',
-      color: this.getArrowColor(this.currentArrowType)
-    }).setOrigin(0, 0.5);
-    
-    // Q key hint
-    const keyHint = this.add.text(-50, -25, '[Q] Switch', {
-      fontSize: '10px',
-      color: '#888888'
-    }).setOrigin(0.5, 0.5);
-    
-    this.arrowTypeIndicator.add([bg, arrowIcon, typeText, keyHint]);
-    this.arrowTypeIndicator.setDepth(10);
+
+    // Background panel with marble texture style (matching forest theme)
+    const bg = this.add.rectangle(0, 0, 200, 60, 0x3d2817, 0.95);
+    bg.setStrokeStyle(3, 0xffd700); // Gold border
+
+    // Add subtle glow effect
+    const glow = this.add.rectangle(0, 0, 205, 65, 0xffd700, 0.2);
+
+    // Arrow emoji instead of sprite (since sprites don't exist)
+    const arrowEmoji = this.add
+      .text(-70, 0, '🏹', {
+        fontSize: '24px',
+      })
+      .setOrigin(0.5, 0.5);
+
+    // Arrow type text - bigger and brighter
+    const typeText = this.add
+      .text(-20, 0, this.arrowTypes[this.currentArrowType].description, {
+        fontSize: '20px',
+        fontFamily: 'Arial, sans-serif',
+        color: this.getArrowColor(this.currentArrowType),
+        stroke: '#000000',
+        strokeThickness: 2,
+      })
+      .setOrigin(0, 0.5);
+
+    // Damage indicator
+    const damageText = this.add
+      .text(50, 0, `DMG: ${this.arrowTypes[this.currentArrowType].damage}x`, {
+        fontSize: '16px',
+        color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 1,
+      })
+      .setOrigin(0, 0.5);
+
+    // Q key hint - more visible
+    const keyHint = this.add
+      .text(0, -35, '[Q] SWITCH TYPE', {
+        fontSize: '14px',
+        fontFamily: 'Arial, sans-serif',
+        color: '#ffd700',
+        stroke: '#000000',
+        strokeThickness: 2,
+      })
+      .setOrigin(0.5, 0.5);
+
+    this.arrowTypeIndicator.add([
+      glow,
+      bg,
+      arrowEmoji,
+      typeText,
+      damageText,
+      keyHint,
+    ]);
+    this.arrowTypeIndicator.setDepth(100); // Higher depth for better visibility
+
+    // Store references for updating
+    (this.arrowTypeIndicator as any).typeText = typeText;
+    (this.arrowTypeIndicator as any).damageText = damageText;
   }
-  
+
   getArrowColor(type: 'yellow' | 'blue' | 'red'): string {
-    switch(type) {
-      case 'yellow': return '#ffff00';
-      case 'blue': return '#00aaff';
-      case 'red': return '#ff4444';
+    switch (type) {
+      case 'yellow':
+        return '#ffff00';
+      case 'blue':
+        return '#00aaff';
+      case 'red':
+        return '#ff4444';
     }
   }
-  
+
   switchArrowType() {
     // Cycle through arrow types
     const types: ('yellow' | 'blue' | 'red')[] = ['yellow', 'blue', 'red'];
     const currentIndex = types.indexOf(this.currentArrowType);
     this.currentArrowType = types[(currentIndex + 1) % types.length];
-    
-    // Update indicator
-    this.updateArrowTypeIndicator();
-    
+
+    // Emit event to React UI
+    window.dispatchEvent(
+      new CustomEvent('arrow-type-changed', {
+        detail: {
+          type: this.currentArrowType,
+          damage: this.arrowTypes[this.currentArrowType].damage,
+        },
+      })
+    );
+
     // Show feedback
-    const feedbackText = this.add.text(
-      this.player.x,
-      this.player.y - 60,
-      `${this.arrowTypes[this.currentArrowType].description} Arrows`,
-      {
-        fontSize: '16px',
-        color: this.getArrowColor(this.currentArrowType),
-        stroke: '#000000',
-        strokeThickness: 3
-      }
-    ).setOrigin(0.5);
-    
+    const feedbackText = this.add
+      .text(
+        this.player.x,
+        this.player.y - 60,
+        `${this.arrowTypes[this.currentArrowType].description} Arrows`,
+        {
+          fontSize: '16px',
+          color: this.getArrowColor(this.currentArrowType),
+          stroke: '#000000',
+          strokeThickness: 3,
+        }
+      )
+      .setOrigin(0.5);
+
     this.tweens.add({
       targets: feedbackText,
       y: feedbackText.y - 20,
       alpha: 0,
       duration: 800,
-      onComplete: () => feedbackText.destroy()
+      onComplete: () => feedbackText.destroy(),
     });
   }
-  
+
   updateArrowTypeIndicator() {
     if (!this.arrowTypeIndicator) return;
-    
-    const children = this.arrowTypeIndicator.list as Phaser.GameObjects.GameObject[];
-    const arrowIcon = children[1] as Phaser.GameObjects.Image;
-    const typeText = children[2] as Phaser.GameObjects.Text;
-    
-    arrowIcon.setTexture(this.arrowTypes[this.currentArrowType].sprite);
-    typeText.setText(this.arrowTypes[this.currentArrowType].description);
-    typeText.setColor(this.getArrowColor(this.currentArrowType));
+
+    // Get stored references
+    const typeText = (this.arrowTypeIndicator as any).typeText;
+    const damageText = (this.arrowTypeIndicator as any).damageText;
+
+    if (typeText) {
+      typeText.setText(this.arrowTypes[this.currentArrowType].description);
+      typeText.setColor(this.getArrowColor(this.currentArrowType));
+    }
+
+    if (damageText) {
+      damageText.setText(
+        `DMG: ${this.arrowTypes[this.currentArrowType].damage}x`
+      );
+    }
+
+    // Add a pulse effect when switching
+    this.tweens.add({
+      targets: this.arrowTypeIndicator,
+      scaleX: 1.1,
+      scaleY: 1.1,
+      duration: 150,
+      yoyo: true,
+      ease: 'Power2',
+    });
   }
 
   createExplosion(x: number, y: number) {
-    // Create explosion visual effect
-    const explosion = this.add.circle(x, y, 10, 0xff4444, 1);
-    explosion.setDepth(8);
+    // Fixed position explosion effect
     
-    // Expand and fade
+    // Store the exact position to prevent movement
+    const explosionX = x;
+    const explosionY = y;
+    
+    // 1. Main explosion - bright orange/red expanding circle
+    const explosion = this.add.circle(explosionX, explosionY, 20, 0xff4444, 1);
+    explosion.setDepth(10);
+    explosion.setBlendMode(Phaser.BlendModes.ADD);
+    explosion.setScrollFactor(1, 1); // Make sure it follows world coordinates
+    
+    // 2. Inner bright core
+    const core = this.add.circle(explosionX, explosionY, 10, 0xffff00, 1);
+    core.setDepth(11);
+    core.setBlendMode(Phaser.BlendModes.ADD);
+    core.setScrollFactor(1, 1);
+    
+    // 3. Damage radius ring to show actual range
+    const ring = this.add.graphics();
+    ring.setDepth(9);
+    ring.lineStyle(3, 0xff8800, 1);
+    ring.strokeCircle(0, 0, 30);
+    ring.setPosition(explosionX, explosionY);
+    ring.setScrollFactor(1, 1);
+    
+    // Animate explosion expansion (scale only, not position)
     this.tweens.add({
       targets: explosion,
-      scaleX: 8,
-      scaleY: 8,
+      scaleX: 5,
+      scaleY: 5,
       alpha: 0,
       duration: 400,
       ease: 'Power2',
-      onComplete: () => explosion.destroy()
+      onComplete: () => {
+        if (explosion && explosion.active) explosion.destroy();
+      },
     });
     
-    // Particles
-    const particles = this.add.particles(x, y, 'spark', {
-      color: [0xff4444, 0xff8800, 0xffaa00],
-      scale: { start: 0.8, end: 0 },
-      speed: { min: 100, max: 250 },
-      quantity: 20,
-      lifespan: 600,
-      blendMode: 'ADD'
+    // Animate core (scale only)
+    this.tweens.add({
+      targets: core,
+      scaleX: 3,
+      scaleY: 3,
+      alpha: 0,
+      duration: 250,
+      ease: 'Power2',
+      onComplete: () => {
+        if (core && core.active) core.destroy();
+      },
     });
     
-    this.time.delayedCall(700, () => particles.destroy());
+    // Animate ring to show 100 pixel damage radius (scale only)
+    this.tweens.add({
+      targets: ring,
+      scaleX: 3.3,  // ~100 pixel radius
+      scaleY: 3.3,
+      alpha: 0,
+      duration: 500,
+      ease: 'Sine.easeOut',
+      onComplete: () => {
+        if (ring && ring.active) ring.destroy();
+      },
+    });
+    
+    // Create fire effect with circles at fixed positions
+    for (let i = 0; i < 8; i++) {
+      const angle = (Math.PI * 2 * i) / 8;
+      const startX = explosionX + Math.cos(angle) * 20;
+      const startY = explosionY + Math.sin(angle) * 20;
+      
+      const spark = this.add.circle(
+        startX,
+        startY,
+        4,
+        Phaser.Math.Between(0xff0000, 0xffaa00),
+        1
+      );
+      spark.setDepth(8);
+      spark.setScrollFactor(1, 1);
+      
+      const distance = Phaser.Math.Between(60, 100);
+      const endX = explosionX + Math.cos(angle) * distance;
+      const endY = explosionY + Math.sin(angle) * distance;
+      
+      this.tweens.add({
+        targets: spark,
+        x: endX,
+        y: endY,
+        scale: 0,
+        alpha: 0,
+        duration: Phaser.Math.Between(300, 500),
+        ease: 'Power2',
+        onComplete: () => {
+          if (spark && spark.active) spark.destroy();
+        },
+      });
+    }
     
     // Screen shake
-    this.cameras.main.shake(200, 0.005);
+    this.cameras.main.shake(200, 0.01);
   }
-  
+
   damageNearbyEnemies(x: number, y: number, damage: number, range: number) {
+    // Damage the main monster if it's in range and not at the explosion center
+    if (this.monster && this.monsterHealth > 0) {
+      const monsterDist = Phaser.Math.Distance.Between(
+        x,
+        y,
+        this.monster.x,
+        this.monster.y
+      );
+      // Only damage if monster is nearby but not the primary target (avoid double damage)
+      if (monsterDist > 10 && monsterDist <= range) {
+        // Deal explosion damage to monster
+        this.monsterHealth = Math.max(0, this.monsterHealth - damage);
+        
+        // Show damage number
+        this.showDamageNumber(
+          this.monster.x,
+          this.monster.y - 40,
+          damage,
+          0xff8800
+        );
+        
+        // Flash effect
+        this.monster.setTint(0xff8800);
+        this.time.delayedCall(100, () => {
+          if (this.monster && this.monster.active && this.monsterHealth > 0) {
+            this.monster.clearTint();
+          }
+        });
+        
+        // Emit updated game state
+        this.emitGameState();
+        
+        // Knockback effect on monster
+        const monsterBody = this.monster.body as Phaser.Physics.Arcade.Body;
+        if (monsterBody) {
+          const angle = Phaser.Math.Angle.Between(
+            x,
+            y,
+            this.monster.x,
+            this.monster.y
+          );
+          monsterBody.setVelocity(Math.cos(angle) * 150, Math.sin(angle) * 150);
+          // Reset velocity after knockback
+          this.time.delayedCall(200, () => {
+            if (monsterBody) {
+              monsterBody.setVelocity(0, 0);
+            }
+          });
+        }
+      }
+    }
+    
     // Damage skeletons in range
     if (this.skeletons) {
       this.skeletons.children.entries.forEach((skeleton: any) => {
         if (skeleton.active) {
-          const dist = Phaser.Math.Distance.Between(x, y, skeleton.x, skeleton.y);
+          const dist = Phaser.Math.Distance.Between(
+            x,
+            y,
+            skeleton.x,
+            skeleton.y
+          );
           if (dist <= range) {
             const killed = skeleton.takeDamage(Math.floor(damage));
             if (killed) {
               // Check if all enemies are defeated after skeleton dies
               this.time.delayedCall(600, () => {
                 if (this.isMainMonsterDead && !this.isGameOver) {
-                  const remainingSkeletons = this.skeletons ? this.skeletons.getLength() : 0;
+                  const remainingSkeletons = this.skeletons
+                    ? this.skeletons.getLength()
+                    : 0;
                   if (remainingSkeletons === 0) {
                     this.gameOver(true);
                   }
@@ -692,18 +950,20 @@ export class CombatScene extends BaseScene {
             }
             // Knockback (check if body exists)
             if (skeleton.body) {
-              const angle = Phaser.Math.Angle.Between(x, y, skeleton.x, skeleton.y);
-              const body = skeleton.body as Phaser.Physics.Arcade.Body;
-              body.setVelocity(
-                Math.cos(angle) * 200,
-                Math.sin(angle) * 200
+              const angle = Phaser.Math.Angle.Between(
+                x,
+                y,
+                skeleton.x,
+                skeleton.y
               );
+              const body = skeleton.body as Phaser.Physics.Arcade.Body;
+              body.setVelocity(Math.cos(angle) * 200, Math.sin(angle) * 200);
             }
           }
         }
       });
     }
-    
+
     // Damage slimes in range
     if (this.slimes) {
       this.slimes.children.entries.forEach((slime: any) => {
@@ -716,36 +976,43 @@ export class CombatScene extends BaseScene {
       });
     }
   }
-  
+
   triggerRevengeBoost(x: number, y: number) {
     // Boost nearby skeletons when one dies
     const revengeRange = 150;
-    
+
     if (this.skeletons) {
       this.skeletons.children.entries.forEach((skeleton: any) => {
         if (skeleton.active && skeleton instanceof SkeletonEnemy) {
-          const dist = Phaser.Math.Distance.Between(x, y, skeleton.x, skeleton.y);
+          const dist = Phaser.Math.Distance.Between(
+            x,
+            y,
+            skeleton.x,
+            skeleton.y
+          );
           if (dist <= revengeRange) {
             skeleton.applyRevengeBoost();
           }
         }
       });
     }
-    
+
     // Visual indicator of revenge trigger
-    const revengeText = this.add.text(x, y - 40, 'REVENGE!', {
-      fontSize: '16px',
-      color: '#ff0000',
-      stroke: '#000000',
-      strokeThickness: 3
-    }).setOrigin(0.5);
-    
+    const revengeText = this.add
+      .text(x, y - 40, 'REVENGE!', {
+        fontSize: '16px',
+        color: '#ff0000',
+        stroke: '#000000',
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5);
+
     this.tweens.add({
       targets: revengeText,
       y: revengeText.y - 30,
       alpha: 0,
       duration: 800,
-      onComplete: () => revengeText.destroy()
+      onComplete: () => revengeText.destroy(),
     });
   }
 
@@ -769,6 +1036,12 @@ export class CombatScene extends BaseScene {
 
   update(time: number, delta: number) {
     if (this.isGameOver) return;
+
+    // Update dash cooldown
+    if (this.dashCooldown > 0) {
+      this.dashCooldown -= delta;
+      if (this.dashCooldown < 0) this.dashCooldown = 0;
+    }
 
     this.handlePlayerMovement();
     this.handleMonsterAI();
@@ -797,6 +1070,15 @@ export class CombatScene extends BaseScene {
         this.prevMonsterY = this.monster.y;
       }
     }
+  }
+
+  // Helper methods for cleaner evolution protection
+  canDamageMonster(): boolean {
+    return !this.isEvolving && this.monsterHealth > 0;
+  }
+
+  canMonsterAct(): boolean {
+    return !this.isEvolving && !this.isGameOver && this.monsterHealth > 0;
   }
 
   updateRangeIndicator() {
@@ -895,24 +1177,49 @@ export class CombatScene extends BaseScene {
     playerBody.setVelocity(0);
 
     let isMoving = false;
+    let moveX = 0;
+    let moveY = 0;
 
     // Handle input
     if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
-      playerBody.setVelocityX(-speed);
+      moveX = -1;
       this.player.setFlipX(true); // Face left
       isMoving = true;
     } else if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
-      playerBody.setVelocityX(speed);
+      moveX = 1;
       this.player.setFlipX(false); // Face right
       isMoving = true;
     }
 
     if (this.cursors.up.isDown || this.wasdKeys.W.isDown) {
-      playerBody.setVelocityY(-speed);
+      moveY = -1;
       isMoving = true;
     } else if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
-      playerBody.setVelocityY(speed);
+      moveY = 1;
       isMoving = true;
+    }
+
+    // Check for dash (SHIFT + direction)
+    if (
+      this.shiftKey &&
+      this.shiftKey.isDown &&
+      isMoving &&
+      !this.isDashing &&
+      this.dashCooldown <= 0
+    ) {
+      // Normalize the direction vector
+      const length = Math.sqrt(moveX * moveX + moveY * moveY);
+      if (length > 0) {
+        const dashDirection = {
+          x: moveX / length,
+          y: moveY / length,
+        };
+        this.performDash(dashDirection);
+      }
+    } else if (!this.isDashing) {
+      // Normal movement (only if not dashing)
+      playerBody.setVelocityX(moveX * speed);
+      playerBody.setVelocityY(moveY * speed);
     }
 
     // Handle soldier animations based on movement
@@ -999,12 +1306,6 @@ export class CombatScene extends BaseScene {
       const adjustedCooldown = this.monsterAttackCooldown * cooldownMultiplier;
 
       if (currentTime > this.lastMonsterAttackTime + adjustedCooldown) {
-        console.log(
-          'Monster in range! Distance:',
-          distance,
-          'Attack range:',
-          this.monsterAttackRange
-        );
         this.performMonsterAttack();
         this.lastMonsterAttackTime = currentTime;
       }
@@ -1016,10 +1317,31 @@ export class CombatScene extends BaseScene {
         this.player.x,
         this.player.y
       );
-      // Adjust speed based on monster tier (harder monsters are faster)
+      // Calculate base speed for this monster
       const baseSpeed = 80;
       const speedMultiplier = 1.5 - this.monsterData.tier.defenseMultiplier; // Inverse relationship
-      const speed = baseSpeed * (1 + speedMultiplier);
+      const normalSpeed = baseSpeed * (1 + speedMultiplier);
+
+      // Check if monster is slowed by frost arrow
+      const currentTime = this.time.now;
+      let speed: number;
+
+      if (currentTime < this.monsterSlowedUntil) {
+        // Monster is slowed - use 50% speed
+        speed = normalSpeed * 0.5;
+      } else {
+        // Use normal speed
+        speed = normalSpeed;
+        // Clear tint if slow expired
+        if (
+          this.monsterSlowedUntil > 0 &&
+          this.monster.tintTopLeft === 0x88ccff
+        ) {
+          this.monster.clearTint();
+          this.monsterSlowedUntil = 0; // Reset slow timer
+        }
+      }
+
       monsterBody.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
 
       // Play walk animation (only if alive)
@@ -1049,7 +1371,7 @@ export class CombatScene extends BaseScene {
     if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
       this.attemptMeleeAttack();
     }
-    
+
     // Arrow type switching with Q key
     if (Phaser.Input.Keyboard.JustDown(this.qKey)) {
       this.switchArrowType();
@@ -1062,7 +1384,7 @@ export class CombatScene extends BaseScene {
       this.time.delayedCall(500, () => {
         (this as any).isPlayerAiming = false;
       });
-      
+
       // Safety check: ensure monster exists before calculating angle
       if (this.monster && this.monster.active && this.monsterHealth > 0) {
         const angle = Phaser.Math.Angle.Between(
@@ -1079,7 +1401,7 @@ export class CombatScene extends BaseScene {
   attemptMeleeAttack() {
     const time = this.time.now;
     if (time < this.lastMeleeTime + this.meleeCooldown) return;
-    
+
     // Check combo timing
     if (time - this.lastHitTime > this.comboResetTime) {
       // Combo expired, reset
@@ -1089,34 +1411,46 @@ export class CombatScene extends BaseScene {
 
     // Get all enemies in range (including main monster, skeletons, and slimes)
     const enemiesInRange: any[] = [];
-    
+
     // Check main monster
     if (this.monsterHealth > 0) {
       const distance = this.getPlayerMonsterDistance();
       if (distance < this.meleeRange) {
-        enemiesInRange.push({ target: this.monster, type: 'monster', distance });
+        enemiesInRange.push({
+          target: this.monster,
+          type: 'monster',
+          distance,
+        });
       }
     }
-    
+
     // Check skeletons
     this.skeletons.getChildren().forEach((skeleton: any) => {
       if (skeleton.active) {
         const dist = Phaser.Math.Distance.Between(
-          this.player.x, this.player.y,
-          skeleton.x, skeleton.y
+          this.player.x,
+          this.player.y,
+          skeleton.x,
+          skeleton.y
         );
         if (dist < this.meleeRange) {
-          enemiesInRange.push({ target: skeleton, type: 'skeleton', distance: dist });
+          enemiesInRange.push({
+            target: skeleton,
+            type: 'skeleton',
+            distance: dist,
+          });
         }
       }
     });
-    
-    // Check slimes  
+
+    // Check slimes
     this.slimes.getChildren().forEach((slime: any) => {
       if (slime.active) {
         const dist = Phaser.Math.Distance.Between(
-          this.player.x, this.player.y,
-          slime.x, slime.y
+          this.player.x,
+          this.player.y,
+          slime.x,
+          slime.y
         );
         if (dist < this.meleeRange) {
           enemiesInRange.push({ target: slime, type: 'slime', distance: dist });
@@ -1133,7 +1467,9 @@ export class CombatScene extends BaseScene {
     // Calculate angle - if enemies in range, face the closest one
     let angleToTarget = 0;
     if (enemiesInRange.length > 0) {
-      const closest = enemiesInRange.reduce((a, b) => a.distance < b.distance ? a : b);
+      const closest = enemiesInRange.reduce((a, b) =>
+        a.distance < b.distance ? a : b
+      );
       angleToTarget = Phaser.Math.Angle.Between(
         this.player.x,
         this.player.y,
@@ -1243,54 +1579,78 @@ export class CombatScene extends BaseScene {
       // Delay damage to sync with animation (6 frames at 12fps = 500ms, hit at frame 3 = ~250ms)
       this.time.delayedCall(250, () => {
         let hitSomething = false;
-        
+
         // Deal damage to all enemies that are still in range
-        enemiesInRange.forEach(enemy => {
+        enemiesInRange.forEach((enemy) => {
           // Re-check distance for each enemy
           const currentDist = Phaser.Math.Distance.Between(
-            this.player.x, this.player.y,
-            enemy.target.x, enemy.target.y
+            this.player.x,
+            this.player.y,
+            enemy.target.x,
+            enemy.target.y
           );
-          
-          if (currentDist <= this.meleeRange * 1.2) { // Grace zone
+
+          if (currentDist <= this.meleeRange * 1.2) {
+            // Grace zone
             hitSomething = true;
-            
+
             // Calculate damage with combo multiplier
-            const baseDamage = enemy.type === 'monster' ? 
-              (Math.floor(Math.random() * 25) + 15) : // 15-40 for monster
-              (Math.floor(Math.random() * 10) + 15);  // 15-25 for others
+            const baseDamage =
+              enemy.type === 'monster'
+                ? Math.floor(Math.random() * 25) + 15 // 15-40 for monster
+                : Math.floor(Math.random() * 10) + 15; // 15-25 for others
             const damage = Math.floor(baseDamage * this.comboMultiplier);
             const isCrit = this.comboCount >= 2; // 3rd hit is always crit
-            
+
             if (enemy.type === 'monster') {
               // Use existing dealMeleeDamage for monster (it handles evolution)
               this.dealMeleeDamage();
-            } else if (enemy.type === 'skeleton' && enemy.target instanceof SkeletonEnemy) {
+            } else if (
+              enemy.type === 'skeleton' &&
+              enemy.target instanceof SkeletonEnemy
+            ) {
               const killed = enemy.target.takeDamage(damage);
-              this.showDamageNumber(enemy.target.x, enemy.target.y - 40, damage, 0xff4444, isCrit);
+              this.showDamageNumber(
+                enemy.target.x,
+                enemy.target.y - 40,
+                damage,
+                0xff4444,
+                isCrit
+              );
               if (killed) {
                 // Check if all enemies are defeated after skeleton dies
                 this.time.delayedCall(600, () => {
                   if (this.isMainMonsterDead && !this.isGameOver) {
-                    const remainingSkeletons = this.skeletons ? this.skeletons.getLength() : 0;
+                    const remainingSkeletons = this.skeletons
+                      ? this.skeletons.getLength()
+                      : 0;
                     if (remainingSkeletons === 0) {
                       this.gameOver(true);
                     }
                   }
                 });
               }
-            } else if (enemy.type === 'slime' && enemy.target instanceof SlimeEnemy) {
+            } else if (
+              enemy.type === 'slime' &&
+              enemy.target instanceof SlimeEnemy
+            ) {
               enemy.target.takeDamage(damage);
-              this.showDamageNumber(enemy.target.x, enemy.target.y - 40, damage, 0xff4444, isCrit);
+              this.showDamageNumber(
+                enemy.target.x,
+                enemy.target.y - 40,
+                damage,
+                0xff4444,
+                isCrit
+              );
             }
           }
         });
-        
+
         if (hitSomething) {
           // Successful hit - update combo
           this.comboCount++;
           this.lastHitTime = this.time.now;
-          
+
           // Update multiplier
           if (this.comboCount === 1) {
             this.comboMultiplier = 1.0;
@@ -1299,12 +1659,12 @@ export class CombatScene extends BaseScene {
           } else if (this.comboCount >= 3) {
             this.comboMultiplier = 1.5;
           }
-          
+
           // Show combo counter
           if (this.comboCount > 1) {
             this.showComboCounter();
           }
-          
+
           // Trigger spin attack on 3rd hit
           if (this.comboCount === 3) {
             this.time.delayedCall(100, () => {
@@ -1348,8 +1708,8 @@ export class CombatScene extends BaseScene {
   }
 
   dealMeleeDamage() {
-    // Don't attack if monster is already dead
-    if (this.monsterHealth <= 0) {
+    // Don't attack if we can't damage the monster
+    if (!this.canDamageMonster()) {
       return;
     }
 
@@ -1365,16 +1725,15 @@ export class CombatScene extends BaseScene {
     }
 
     // For werewolf, check evolution threshold and cap damage
+
     if (
       this.monsterData.tier.name === 'Werewolf' &&
       !this.isEvolved &&
       !this.isEvolving
     ) {
-      const evolutionThreshold = Math.floor(this.monsterMaxHealth * 0.25); // 25% health
-      if (
-        this.monsterHealth > evolutionThreshold &&
-        this.monsterHealth - damage <= evolutionThreshold
-      ) {
+      const evolutionThreshold = Math.floor(this.monsterMaxHealth * 0.1); // 10% health
+      // If damage would bring health to or below 10%, cap at exactly 10%
+      if (this.monsterHealth - damage <= evolutionThreshold) {
         // Cap damage to exactly reach threshold
         damage = this.monsterHealth - evolutionThreshold;
         this.monsterHealth = evolutionThreshold;
@@ -1412,16 +1771,20 @@ export class CombatScene extends BaseScene {
 
     // Play hurt or death animation
     if (this.monsterHealth <= 0) {
-      // Check if this is a werewolf that should evolve (safety check, shouldn't reach here)
+      // Monster died - play death animation
+      // Werewolves should never reach here due to evolution at 10%
       if (
         this.monsterData.tier.name === 'Werewolf' &&
         !this.isEvolved &&
         !this.isEvolving
       ) {
-        // This shouldn't happen with threshold check, but keep as safety
-        this.evolveToWerebear();
-      } else {
-        // Monster died - play death animation
+        console.error(
+          'Warning: Werewolf died without evolving - this should not happen!'
+        );
+      }
+
+      {
+        // Play death animation
         // Use the current sprite key which is 'werebear' if evolved
         const deathKey = `${this.monsterSpriteKey}_death`;
         if (this.anims.exists(deathKey)) {
@@ -1469,7 +1832,10 @@ export class CombatScene extends BaseScene {
   }
 
   performMonsterAttack() {
-    console.log('Monster attacking! Player health before:', this.playerHealth);
+    // Don't attack if monster can't act
+    if (!this.canMonsterAct()) {
+      return;
+    }
 
     // Set attacking flag to prevent idle animation override
     this.isMonsterAttacking = true;
@@ -1526,10 +1892,16 @@ export class CombatScene extends BaseScene {
   }
 
   private applyMonsterDamage() {
+    // Check if player is invincible (from dash)
+    if (this.isInvincible) {
+      // Show dodge feedback
+      this.showBonusText('DODGED!', 0x00ffff);
+      return;
+    }
+
     // Check if player is still in range (they might have moved away)
     const distance = this.getPlayerMonsterDistance();
     if (distance > this.monsterAttackRange * 1.5) {
-      console.log('Player dodged! Out of range when attack landed');
       return; // Attack misses if player moved away
     }
 
@@ -1558,8 +1930,36 @@ export class CombatScene extends BaseScene {
 
     // Deal damage to player based on monster's attack power
     const baseDamage = this.monsterData.tier.attackPower;
-    const damage =
+    let damage =
       Math.floor(Math.random() * baseDamage) + Math.floor(baseDamage / 2);
+    
+    // Apply shield reduction if active
+    if (this.shieldStacks > 0) {
+      damage = Math.floor(damage * 0.2); // 80% damage reduction
+      this.shieldStacks--;
+      
+      // Visual feedback for shield block
+      const shieldText = this.add.text(
+        this.player.x,
+        this.player.y - 40,
+        '🛡️ BLOCKED!',
+        {
+          fontSize: '16px',
+          color: '#ffff00',
+          stroke: '#000000',
+          strokeThickness: 3
+        }
+      ).setOrigin(0.5);
+      
+      this.tweens.add({
+        targets: shieldText,
+        y: shieldText.y - 20,
+        alpha: 0,
+        duration: 800,
+        onComplete: () => shieldText.destroy()
+      });
+    }
+    
     this.playerHealth = Math.max(0, this.playerHealth - damage);
 
     console.log(
@@ -1732,12 +2132,12 @@ export class CombatScene extends BaseScene {
         this.player.y,
         arrowData.sprite
       );
-      
+
       if (!spear) {
         console.error('Failed to create arrow sprite!');
         return;
       }
-      
+
       // Set arrow properties based on type
       spear.setData('arrowType', this.currentArrowType);
       spear.setData('damageMultiplier', arrowData.damage);
@@ -1795,24 +2195,18 @@ export class CombatScene extends BaseScene {
       this.currentSpears--;
       this.lastSpearTime = time;
 
-      console.log(`SPEAR THROWN: ${beforeCount} -> ${this.currentSpears}`);
-
       // Start recharge animation if we have spears to regenerate
       if (this.currentSpears < this.maxSpears) {
         if (!this.spearRechargeIndicator) {
           console.warn('Spear recharge indicator not yet created!');
         } else if (this.spearRechargeIndicator.getIsActive()) {
-          console.log('Spear recharge already active');
         } else {
-          console.log('Starting spear recharge for next spear');
           this.spearRechargeIndicator.startRecharge();
         }
       }
 
       // Emit updated game state
       this.emitGameState();
-
-      console.log('Spear thrown! Remaining:', this.currentSpears);
 
       // Apply movement slowdown penalty
       this.applySpearSlowdown();
@@ -1829,12 +2223,23 @@ export class CombatScene extends BaseScene {
   }
 
   applySpearSlowdown() {
-    // Apply 800ms movement slowdown after throwing spear
-    this.isSlowed = true;
-    this.slowedUntil = this.time.now + 800;
+    // Apply movement slowdown based on arrow type
+    const arrowData = this.arrowTypes[this.currentArrowType];
+    const slowDuration =
+      arrowData.slowDuration !== undefined ? arrowData.slowDuration : 800; // Default to 800ms if not specified
 
-    // Visual feedback: tint player orange to show slowdown
-    this.player.setTint(0xffa500);
+    if (slowDuration > 0) {
+      this.isSlowed = true;
+      this.slowedUntil = this.time.now + slowDuration;
+    } else {
+      // No slow for frost arrows
+      this.isSlowed = false;
+    }
+
+    // Visual feedback: tint player orange to show slowdown (only if slowed)
+    if (this.isSlowed) {
+      this.player.setTint(0xffa500);
+    }
 
     // Emit slowdown feedback
     window.dispatchEvent(
@@ -1908,7 +2313,6 @@ export class CombatScene extends BaseScene {
         const willMiss = spear.getData('willMiss');
 
         if (willMiss) {
-          console.log('Spear hit but was a bad throw - no damage!');
           // Show miss feedback at impact point
           const missText = this.add.text(
             this.monster.x,
@@ -1942,18 +2346,18 @@ export class CombatScene extends BaseScene {
           this.monsterHealth
         );
 
-        // Only damage if monster is alive and still exists
-        if (this.monsterHealth > 0 && this.monster && this.monster.active) {
+        // Only damage if we can damage the monster and it still exists
+        if (this.canDamageMonster() && this.monster && this.monster.active) {
           // Critical hit calculation (20% chance)
           const isCrit = Math.random() < 0.2;
 
           // Get arrow type and damage multiplier
           const arrowType = spear.getData('arrowType') || 'yellow';
           const damageMultiplier = spear.getData('damageMultiplier') || 1.0;
-          
+
           // Deal significantly reduced damage for ranged attack (8-12 instead of 15-40 for melee)
           let damage = Math.floor(Math.random() * 5) + 8; // 8-12 base damage
-          
+
           // Apply arrow type multiplier
           damage = Math.floor(damage * damageMultiplier);
 
@@ -1961,35 +2365,66 @@ export class CombatScene extends BaseScene {
           if (isCrit) {
             damage = Math.floor(damage * 2); // 2x damage for crits
           }
-          
+
           // Handle special arrow effects
           if (arrowType === 'red') {
             // Red arrow: Explosive AOE damage
             this.createExplosion(this.monster.x, this.monster.y);
             // Damage nearby skeletons
-            this.damageNearbyEnemies(this.monster.x, this.monster.y, damage * 0.5, 100);
+            this.damageNearbyEnemies(
+              this.monster.x,
+              this.monster.y,
+              damage * 0.5,
+              100
+            );
           } else if (arrowType === 'blue') {
-            // Blue arrow: Piercing - don't destroy arrow yet
-            spear.setData('hasPierced', true);
-            // Continue through enemy (handled below)
+            // Blue arrow (Frost): Apply slow effect to monster
+            this.monsterSlowedUntil = this.time.now + 2000; // 2 second slow
+
+            // Visual feedback - tint monster blue
+            this.monster.setTint(0x88ccff);
+
+            // Show slow effect text
+            const slowText = this.add
+              .text(this.monster.x, this.monster.y - 60, '❄️ SLOWED', {
+                fontSize: '18px',
+                color: '#88ccff',
+                stroke: '#000000',
+                strokeThickness: 3,
+              })
+              .setOrigin(0.5);
+
+            this.tweens.add({
+              targets: slowText,
+              y: slowText.y - 30,
+              alpha: 0,
+              duration: 1000,
+              onComplete: () => slowText.destroy(),
+            });
           }
 
           // For werewolf, check evolution threshold and cap damage
+          console.log('Spear evolution check:', {
+            tierName: this.monsterData.tier?.name,
+            monsterType: this.monsterData.type,
+            hasEvolutionData: !!this.monsterData.evolution,
+            isEvolved: this.isEvolved,
+            isEvolving: this.isEvolving,
+            currentHealth: this.monsterHealth,
+            maxHealth: this.monsterMaxHealth,
+          });
+
           if (
             this.monsterData.tier.name === 'Werewolf' &&
             !this.isEvolved &&
             !this.isEvolving
           ) {
-            const evolutionThreshold = Math.floor(this.monsterMaxHealth * 0.25); // 25% health
-            if (
-              this.monsterHealth > evolutionThreshold &&
-              this.monsterHealth - damage <= evolutionThreshold
-            ) {
+            const evolutionThreshold = Math.floor(this.monsterMaxHealth * 0.1); // 10% health
+            // If damage would bring health to or below 10%, cap at exactly 10%
+            if (this.monsterHealth - damage <= evolutionThreshold) {
               // Cap damage to exactly reach threshold
               damage = this.monsterHealth - evolutionThreshold;
               this.monsterHealth = evolutionThreshold;
-
-              console.log('Werewolf evolution triggered at 25% health');
 
               // Show capped damage
               this.showDamageNumber(
@@ -2035,16 +2470,20 @@ export class CombatScene extends BaseScene {
           // Play hurt or death animation (ensure monster still exists)
           if (this.monster && this.monster.active) {
             if (this.monsterHealth <= 0) {
-              // Check if this is a werewolf that should evolve (safety check, shouldn't reach here)
+              // Monster died - play death animation
+              // Werewolves should never reach here due to evolution at 10%
               if (
                 this.monsterData.tier.name === 'Werewolf' &&
                 !this.isEvolved &&
                 !this.isEvolving
               ) {
-                // This shouldn't happen with threshold check, but keep as safety
-                this.evolveToWerebear();
-              } else {
-                // Monster died - play death animation
+                console.error(
+                  'Warning: Werewolf died without evolving - this should not happen!'
+                );
+              }
+
+              {
+                // Play death animation
                 // Use the current sprite key which is 'werebear' if evolved
                 const deathKey = `${this.monsterSpriteKey}_death`;
                 if (this.anims.exists(deathKey)) {
@@ -2094,9 +2533,8 @@ export class CombatScene extends BaseScene {
           }
         }
 
-        // Safely destroy the arrow after processing (unless it's piercing)
-        const arrowType = spear.getData('arrowType') || 'yellow';
-        if (spear && spear.active && arrowType !== 'blue') {
+        // Safely destroy the arrow after processing
+        if (spear && spear.active) {
           spear.destroy();
         }
         // Blue arrows continue through enemies
@@ -2112,7 +2550,6 @@ export class CombatScene extends BaseScene {
   private onSpearRecharged(): void {
     // Simple logic: add 1 spear
     this.currentSpears++;
-    console.log(`SPEAR REGENERATED: ${this.currentSpears}/${this.maxSpears}`);
 
     // If still under max, start another recharge
     if (this.currentSpears < this.maxSpears) {
@@ -2134,7 +2571,6 @@ export class CombatScene extends BaseScene {
       this.monster.x,
       this.monster.y
     );
-    const vaultScreenPos = camera.getWorldPoint(this.vault.x, this.vault.y);
 
     window.dispatchEvent(
       new CustomEvent('sprite-positions', {
@@ -2145,7 +2581,6 @@ export class CombatScene extends BaseScene {
             y: monsterScreenPos.y,
             alive: this.monsterHealth > 0,
           },
-          vault: { x: vaultScreenPos.x, y: vaultScreenPos.y },
         },
       })
     );
@@ -2180,10 +2615,12 @@ export class CombatScene extends BaseScene {
 
     if (this.playerHealth <= 0) {
       this.gameOver(false); // Player died
-    } else if (this.monsterHealth <= 0) {
-      // Main monster is dead, but check if there are any remaining hostile enemies (skeletons)
-      const remainingSkeletons = this.skeletons ? this.skeletons.getLength() : 0;
-      
+    } else if (this.monsterHealth <= 0 && !this.isEvolving) {
+      // Main monster is dead (and not evolving), check if there are any remaining hostile enemies (skeletons)
+      const remainingSkeletons = this.skeletons
+        ? this.skeletons.getLength()
+        : 0;
+
       if (remainingSkeletons === 0) {
         // All hostile enemies defeated - player wins
         this.gameOver(true);
@@ -2191,14 +2628,18 @@ export class CombatScene extends BaseScene {
         // Main monster dead but skeletons remain - mark boss as dead to stop spawning
         this.isMainMonsterDead = true;
         this.stopAllSpawning();
-        
+
         // Play main monster death animation if not already playing
         const deathKey = `${this.monsterSpriteKey}_death`;
-        if (this.anims.exists(deathKey) && this.monster && this.monster.active) {
+        if (
+          this.anims.exists(deathKey) &&
+          this.monster &&
+          this.monster.active
+        ) {
           this.currentMonsterAnimation = deathKey;
           this.monster.play(deathKey);
           this.monster.setTint(0x666666);
-          
+
           // Disable monster physics
           if (this.monster.body) {
             const monsterBody = this.monster.body as Phaser.Physics.Arcade.Body;
@@ -2288,9 +2729,11 @@ export class CombatScene extends BaseScene {
         ease: 'Power2',
         onUpdate: (tween) => {
           const value = tween.getValue();
-          shockwave.clear();
-          shockwave.lineStyle(4, 0xffffff, 1 - value / 300);
-          shockwave.strokeCircle(this.monster.x, this.monster.y, value);
+          if (value !== null) {
+            shockwave.clear();
+            shockwave.lineStyle(4, 0xffffff, 1 - value / 300);
+            shockwave.strokeCircle(this.monster.x, this.monster.y, value);
+          }
         },
         onComplete: () => shockwave.destroy(),
       });
@@ -2331,7 +2774,7 @@ export class CombatScene extends BaseScene {
       const dustParticles = this.add.particles(
         this.player.x,
         this.player.y + 20,
-        'spark',
+        'spark-placeholder',
         {
           lifespan: 600,
           speed: { min: 50, max: 150 },
@@ -2370,7 +2813,7 @@ export class CombatScene extends BaseScene {
       const energyParticles = this.add.particles(
         this.monster.x,
         this.monster.y,
-        'spark',
+        'spark-placeholder',
         {
           lifespan: 600,
           speed: { min: 0, max: 50 },
@@ -2382,7 +2825,7 @@ export class CombatScene extends BaseScene {
           emitZone: {
             type: 'random',
             source: new Phaser.Geom.Circle(0, 0, 100),
-          },
+          } as any,
         }
       );
 
@@ -2414,7 +2857,7 @@ export class CombatScene extends BaseScene {
       const explosionParticles = this.add.particles(
         this.monster.x,
         this.monster.y,
-        'spark',
+        'spark-placeholder',
         {
           lifespan: 1000,
           speed: { min: 200, max: 400 },
@@ -2435,12 +2878,15 @@ export class CombatScene extends BaseScene {
         this.isEvolved = true;
 
         // Reset health to werebear's max from evolution data
-        this.monsterHealth = this.monsterData.evolution.hp;
-        this.monsterMaxHealth = this.monsterData.evolution.hp;
-        
-        // Store the evolved monster type for vault scene
-        window.localStorage.setItem('currentMonsterType', this.monsterData.type);
-        
+        this.monsterHealth = this.monsterData.evolution.baseHealth || 100;
+        this.monsterMaxHealth = this.monsterData.evolution.baseHealth || 100;
+
+        // Store the evolved monster type
+        window.localStorage.setItem(
+          'currentMonsterType',
+          this.monsterData.type
+        );
+
         // Emit updated monster info to UI
         this.emitMonsterInfo();
       } else {
@@ -2451,10 +2897,10 @@ export class CombatScene extends BaseScene {
         this.isEvolved = true;
         this.monsterHealth = 100;
         this.monsterMaxHealth = 100;
-        
+
         // Store fallback monster type
         window.localStorage.setItem('currentMonsterType', 'Werebear');
-        
+
         // Emit updated monster info to UI
         this.emitMonsterInfo();
       }
@@ -2563,7 +3009,7 @@ export class CombatScene extends BaseScene {
   gameOver(victory: boolean) {
     this.isGameOver = true;
     const { width, height } = this.cameras.main;
-    
+
     // If victory, mark main monster as dead and stop spawning
     if (victory) {
       this.isMainMonsterDead = true;
@@ -2614,8 +3060,8 @@ export class CombatScene extends BaseScene {
       duration: 500,
       ease: 'Power2.easeOut',
       onComplete: () => {
-        // Phase 2: Animate vault to center (500-1500ms)
-        this.animateVaultToCenter(width, height, backgroundOverlay);
+        // Show victory screen directly
+        this.showVictoryText(width / 2, height / 2);
       },
     });
 
@@ -2641,49 +3087,6 @@ export class CombatScene extends BaseScene {
     if (this.debugGraphics) {
       this.debugGraphics.setVisible(false);
     }
-  }
-
-  animateVaultToCenter(
-    width: number,
-    height: number,
-    backgroundOverlay: Phaser.GameObjects.Rectangle
-  ) {
-    const centerX = width / 2;
-    const centerY = height / 2;
-
-    // Remove golden glow - keep only the vault sprite for consistency
-
-    // Ensure vault is above everything else
-    this.vault.setDepth(100);
-
-    // Animate vault movement and scaling
-    this.tweens.add({
-      targets: this.vault,
-      x: centerX,
-      y: height * 0.52, // Moved higher to avoid button overlap
-      scaleX: 1.8,
-      scaleY: 1.8,
-      alpha: 0.85, // Higher opacity to draw attention
-      duration: 1000,
-      ease: 'Back.easeOut',
-      onComplete: () => {
-        // Phase 3: Add particle explosion (1500-2000ms)
-        this.createParticleExplosion(centerX, centerY);
-        // Phase 4: Show victory text (2000ms+)
-        this.showVictoryText(centerX, centerY);
-      },
-    });
-
-    // Add golden tint to vault
-    this.vault.setTint(0xffffff);
-    this.vault.setAlpha(1); // Ensure vault is fully visible
-    this.tweens.add({
-      targets: this.vault,
-      duration: 1000,
-      onComplete: () => {
-        this.vault.setTint(0xffd700);
-      },
-    });
   }
 
   createParticleExplosion(centerX: number, centerY: number) {
@@ -2754,7 +3157,8 @@ export class CombatScene extends BaseScene {
   }
 
   showVictoryText(centerX: number, centerY: number) {
-    // Keep vault visible - don't hide it
+    // Add particle explosion first
+    this.createParticleExplosion(centerX, centerY);
 
     // Emit victory UI event with monster type
     window.dispatchEvent(
@@ -2784,8 +3188,6 @@ export class CombatScene extends BaseScene {
     };
     window.addEventListener('continue-from-vault', handleContinue);
   }
-
-  // Remove handleVaultChoice and enableVaultInteraction methods as they're no longer needed
 
   hideUIElements() {
     // Emit UI visibility event
@@ -2879,11 +3281,6 @@ export class CombatScene extends BaseScene {
         this.prevMonsterX = this.monster.x;
         this.prevMonsterY = this.monster.y;
       }
-      if (this.vault) {
-        const vaultRelX = this.vault.x / this.previousWidth;
-        const vaultRelY = this.vault.y / this.previousHeight;
-        this.vault.setPosition(width * vaultRelX, height * vaultRelY);
-      }
     }
 
     // Update stored dimensions
@@ -2900,17 +3297,26 @@ export class CombatScene extends BaseScene {
       })
     );
   }
-  
+
   // ========== ENEMY SPAWN SYSTEM ==========
-  
+
   initializeSpawnSystem() {
-    // Wave 1: 3 skeletons at 3 seconds (EARLY!)
-    const timer1 = this.time.delayedCall(3000, () => {
+    // Initial spawn at 2 seconds - VERY EARLY!
+    const timer0 = this.time.delayedCall(2000, () => {
+      this.spawnSkeletonWave(
+        3,
+        Phaser.Math.RND.pick(['corners', 'sides', 'circle'])
+      );
+    });
+    this.spawnTimers.push(timer0);
+
+    // Wave 1: 3 more skeletons at 5 seconds
+    const timer1 = this.time.delayedCall(5000, () => {
       this.spawnSkeletonWave(3, 'corners');
       console.log('💀 Wave 1: 3 skeletons spawned!');
     });
     this.spawnTimers.push(timer1);
-    
+
     // Wave 2: 3 skeletons + 1 slime at 8 seconds
     const timer2 = this.time.delayedCall(8000, () => {
       this.spawnSkeletonWave(3, 'sides');
@@ -2918,14 +3324,14 @@ export class CombatScene extends BaseScene {
       console.log('💀 Wave 2: 3 skeletons + 1 slime spawned!');
     });
     this.spawnTimers.push(timer2);
-    
+
     // Wave 3: 4 skeletons at 12 seconds
     const timer3 = this.time.delayedCall(12000, () => {
       this.spawnSkeletonWave(4, 'circle');
       console.log('💀 Wave 3: 4 skeletons spawned!');
     });
     this.spawnTimers.push(timer3);
-    
+
     // 2 slimes at 15 seconds
     const timer4 = this.time.delayedCall(15000, () => {
       this.spawnSlime();
@@ -2933,33 +3339,33 @@ export class CombatScene extends BaseScene {
       console.log('💚 2 slimes spawned for healing!');
     });
     this.spawnTimers.push(timer4);
-    
+
     // Wave 4: 4 skeletons at 18 seconds
     const timer5 = this.time.delayedCall(18000, () => {
       this.spawnSkeletonWave(4, 'corners');
       console.log('💀 Wave 4: 4 skeletons spawned!');
     });
     this.spawnTimers.push(timer5);
-    
-    // Start continuous spawning at 25 seconds
-    const timer6 = this.time.delayedCall(25000, () => {
+
+    // Start continuous spawning at 22 seconds
+    const timer6 = this.time.delayedCall(22000, () => {
       this.startContinuousSpawning();
       console.log('⚔️ Continuous spawning started!');
     });
     this.spawnTimers.push(timer6);
   }
-  
+
   spawnSkeletonWave(count: number, pattern: string) {
     // Don't spawn if main monster is dead
     if (this.isMainMonsterDead) {
       console.log('Main monster dead - skipping skeleton spawn');
       return;
     }
-    
+
     const { width, height } = this.cameras.main;
     const positions: { x: number; y: number }[] = [];
-    
-    switch(pattern) {
+
+    switch (pattern) {
       case 'corners':
         positions.push(
           { x: 100, y: 100 },
@@ -2968,27 +3374,39 @@ export class CombatScene extends BaseScene {
           { x: width - 100, y: height - 100 }
         );
         break;
-        
+
       case 'sides':
         for (let i = 0; i < count; i++) {
           const side = Phaser.Math.Between(0, 3);
-          switch(side) {
+          switch (side) {
             case 0: // top
-              positions.push({ x: Phaser.Math.Between(100, width - 100), y: 50 });
+              positions.push({
+                x: Phaser.Math.Between(100, width - 100),
+                y: 50,
+              });
               break;
             case 1: // right
-              positions.push({ x: width - 50, y: Phaser.Math.Between(100, height - 100) });
+              positions.push({
+                x: width - 50,
+                y: Phaser.Math.Between(100, height - 100),
+              });
               break;
             case 2: // bottom
-              positions.push({ x: Phaser.Math.Between(100, width - 100), y: height - 50 });
+              positions.push({
+                x: Phaser.Math.Between(100, width - 100),
+                y: height - 50,
+              });
               break;
             case 3: // left
-              positions.push({ x: 50, y: Phaser.Math.Between(100, height - 100) });
+              positions.push({
+                x: 50,
+                y: Phaser.Math.Between(100, height - 100),
+              });
               break;
           }
         }
         break;
-        
+
       case 'circle':
         const centerX = this.player.x;
         const centerY = this.player.y;
@@ -2997,55 +3415,65 @@ export class CombatScene extends BaseScene {
           const angle = (i / count) * Math.PI * 2;
           positions.push({
             x: centerX + Math.cos(angle) * radius,
-            y: centerY + Math.sin(angle) * radius
+            y: centerY + Math.sin(angle) * radius,
           });
         }
         break;
     }
-    
+
     // Spawn skeletons at calculated positions with varied AI
     positions.slice(0, count).forEach((pos, index) => {
       this.time.delayedCall(index * 100, () => {
         if (this.skeletons.getLength() < 10 && !this.isMainMonsterDead) {
           const skeleton = new SkeletonEnemy(this, pos.x, pos.y, this.player);
-          
+
           // Assign varied behaviors based on wave and position
-          const behaviors: ('aggressive' | 'cautious' | 'opportunist' | 'flanker')[] = 
-            ['aggressive', 'aggressive', 'cautious', 'flanker', 'opportunist'];
+          const behaviors: (
+            | 'aggressive'
+            | 'cautious'
+            | 'opportunist'
+            | 'flanker'
+          )[] = [
+            'aggressive',
+            'aggressive',
+            'cautious',
+            'flanker',
+            'opportunist',
+          ];
           skeleton.behavior = Phaser.Math.RND.pick(behaviors);
-          
+
           // Assign skeleton types (70% normal, 15% fast, 10% tank, 5% elite)
           const typeRoll = Math.random();
           if (typeRoll < 0.15) {
             skeleton.skeletonType = 'fast';
           } else if (typeRoll < 0.25) {
             skeleton.skeletonType = 'tank';
-          } else if (typeRoll < 0.30) {
+          } else if (typeRoll < 0.3) {
             skeleton.skeletonType = 'elite';
           }
           // else stays 'normal'
-          
+
           // Apply type properties after setting type
           skeleton.applySkeletonType();
-          
+
           // Make first skeleton in wave more likely to be flanker
           if (index === 0 && Math.random() < 0.5) {
             skeleton.behavior = 'flanker';
           }
-          
+
           this.skeletons.add(skeleton);
         }
       });
     });
   }
-  
+
   spawnSlime() {
     // Don't spawn if main monster is dead
     if (this.isMainMonsterDead) {
       console.log('Main monster dead - skipping slime spawn');
       return;
     }
-    
+
     if (this.slimes.getLength() < 3) {
       const x = Phaser.Math.Between(100, this.cameras.main.width - 100);
       const y = Phaser.Math.Between(100, this.cameras.main.height - 100);
@@ -3053,22 +3481,22 @@ export class CombatScene extends BaseScene {
       this.slimes.add(slime);
     }
   }
-  
+
   startContinuousSpawning() {
     // Don't start if main monster is already dead
     if (this.isMainMonsterDead) {
       console.log('Main monster dead - not starting continuous spawn');
       return;
     }
-    
+
     // Base spawn rate
-    let skeletonSpawnRate = 6000; // Every 6 seconds
-    let slimeSpawnRate = 12000; // Every 12 seconds
-    
+    let skeletonSpawnRate = 4000; // Every 4 seconds
+    let slimeSpawnRate = 10000; // Every 12 seconds
+
     // Adjust based on boss health
     const updateSpawnRate = () => {
       if (this.isMainMonsterDead) return false; // Stop if boss dead
-      
+
       const healthPercent = this.monsterHealth / this.monsterMaxHealth;
       if (healthPercent <= 0.25) {
         skeletonSpawnRate = 3000; // CHAOS MODE!
@@ -3082,7 +3510,7 @@ export class CombatScene extends BaseScene {
       }
       return true; // Continue spawning
     };
-    
+
     // Skeleton spawning
     this.continuousSpawnTimer = this.time.addEvent({
       delay: skeletonSpawnRate,
@@ -3091,52 +3519,57 @@ export class CombatScene extends BaseScene {
           this.continuousSpawnTimer?.destroy();
           return;
         }
-        
+
         const healthPercent = this.monsterHealth / this.monsterMaxHealth;
-        const count = healthPercent <= 0.25 ? Phaser.Math.Between(5, 6) : 
-                     healthPercent <= 0.5 ? Phaser.Math.Between(4, 5) : 
-                     Phaser.Math.Between(3, 4);
-        this.spawnSkeletonWave(count, Phaser.Math.RND.pick(['corners', 'sides', 'circle']));
-        
-        // Update timer delay for next spawn
-        if (this.continuousSpawnTimer) {
-          this.continuousSpawnTimer.delay = skeletonSpawnRate;
-        }
+        const count =
+          healthPercent <= 0.25
+            ? Phaser.Math.Between(5, 6)
+            : healthPercent <= 0.5
+            ? Phaser.Math.Between(4, 5)
+            : Phaser.Math.Between(3, 4);
+        this.spawnSkeletonWave(
+          count,
+          Phaser.Math.RND.pick(['corners', 'sides', 'circle'])
+        );
+
+        // Note: Timer delays cannot be modified in Phaser 3
+        // To change spawn rate, would need to destroy and recreate timer
       },
-      loop: true
+      loop: true,
     });
-    
+
     // Slime spawning
     this.time.addEvent({
       delay: slimeSpawnRate,
       callback: () => {
         if (this.isMainMonsterDead) return;
-        
+
         const healthPercent = this.monsterHealth / this.monsterMaxHealth;
         const count = healthPercent <= 0.5 ? 2 : 1;
         for (let i = 0; i < count; i++) {
           this.time.delayedCall(i * 500, () => this.spawnSlime());
         }
       },
-      loop: true
+      loop: true,
     });
   }
-  
+
   stopAllSpawning() {
     console.log('🛑 Stopping all enemy spawning - boss defeated!');
-    
+
     // Clear all spawn timers
-    this.spawnTimers.forEach(timer => timer?.destroy());
+    this.spawnTimers.forEach((timer) => timer?.destroy());
     this.spawnTimers = [];
-    
+
     // Stop continuous spawning
     if (this.continuousSpawnTimer) {
       this.continuousSpawnTimer.destroy();
       this.continuousSpawnTimer = undefined;
     }
-    
+
     // Show message to player
-    const remainingEnemies = this.skeletons.getLength() + this.slimes.getLength();
+    const remainingEnemies =
+      this.skeletons.getLength() + this.slimes.getLength();
     if (remainingEnemies > 0) {
       const text = this.add.text(
         this.cameras.main.centerX,
@@ -3146,13 +3579,13 @@ export class CombatScene extends BaseScene {
           fontSize: '24px',
           color: '#ffff00',
           stroke: '#000000',
-          strokeThickness: 4
+          strokeThickness: 4,
         }
       );
       text.setOrigin(0.5);
       text.setScrollFactor(0);
       text.setDepth(100);
-      
+
       // Update text as enemies are killed
       const updateText = () => {
         const remaining = this.skeletons.getLength() + this.slimes.getLength();
@@ -3163,16 +3596,16 @@ export class CombatScene extends BaseScene {
           this.time.delayedCall(2000, () => text.destroy());
         }
       };
-      
+
       // Listen for enemy deaths
       this.time.addEvent({
         delay: 500,
         callback: updateText,
-        loop: true
+        loop: true,
       });
     }
   }
-  
+
   setupEnemyCollisions() {
     // Skeleton attacks hurt player
     this.physics.add.overlap(
@@ -3185,10 +3618,10 @@ export class CombatScene extends BaseScene {
       },
       this
     );
-    
+
     // Player can walk through slimes but with collision
     this.physics.add.collider(this.player, this.slimes);
-    
+
     // Spears vs Skeletons
     this.physics.add.overlap(
       this.spears,
@@ -3198,41 +3631,41 @@ export class CombatScene extends BaseScene {
           // Get arrow properties
           const arrowType = spear.getData('arrowType') || 'yellow';
           const damageMultiplier = spear.getData('damageMultiplier') || 1.0;
-          const baseDamage = 30;
+          const baseDamage = 17; // Base damage - Heavy arrows will one-shot skeletons
           const damage = Math.floor(baseDamage * damageMultiplier);
-          
+
           const killed = skeleton.takeDamage(damage);
-          
+
           // If skeleton died, trigger revenge boost for nearby allies
           if (killed) {
             this.triggerRevengeBoost(skeleton.x, skeleton.y);
-            
+
             // Check if all enemies are defeated after skeleton dies
             this.time.delayedCall(600, () => {
               if (this.isMainMonsterDead && !this.isGameOver) {
-                const remainingSkeletons = this.skeletons ? this.skeletons.getLength() : 0;
+                const remainingSkeletons = this.skeletons
+                  ? this.skeletons.getLength()
+                  : 0;
                 if (remainingSkeletons === 0) {
                   this.gameOver(true);
                 }
               }
             });
           }
-          
+
           // Handle special arrow effects
           if (arrowType === 'red') {
             // Explosive damage to nearby enemies
             this.createExplosion(skeleton.x, skeleton.y);
             this.damageNearbyEnemies(skeleton.x, skeleton.y, damage * 0.5, 80);
           }
-          
-          // Destroy arrow unless it's piercing
-          if (arrowType !== 'blue') {
-            spear.destroy();
-          }
+
+          // Destroy arrow after hit
+          spear.destroy();
         }
       }
     );
-    
+
     // Spears vs Slimes
     this.physics.add.overlap(
       this.spears,
@@ -3242,40 +3675,67 @@ export class CombatScene extends BaseScene {
           // Get arrow properties
           const arrowType = spear.getData('arrowType') || 'yellow';
           const damageMultiplier = spear.getData('damageMultiplier') || 1.0;
-          const baseDamage = 30;
+          const baseDamage = 17; // Base damage - Heavy arrows will one-shot skeletons
           const damage = Math.floor(baseDamage * damageMultiplier);
-          
+
           slime.takeDamage(damage);
-          
+
           // Handle special arrow effects
           if (arrowType === 'red') {
             // Explosive damage to nearby enemies
             this.createExplosion(slime.x, slime.y);
             this.damageNearbyEnemies(slime.x, slime.y, damage * 0.5, 80);
           }
-          
-          // Destroy arrow unless it's piercing
-          if (arrowType !== 'blue') {
-            spear.destroy();
-          }
+
+          // Destroy arrow after hit
+          spear.destroy();
         }
       }
     );
-    
+
     // Prevent enemy stacking
     this.physics.add.collider(this.skeletons, this.skeletons);
     this.physics.add.collider(this.skeletons, this.slimes);
     this.physics.add.collider(this.slimes, this.slimes);
-    
+
     // Skeletons collide with monster
     this.physics.add.collider(this.skeletons, this.monster);
   }
-  
+
   handleSkeletonAttack(data: { damage: number; source: SkeletonEnemy }) {
     // Apply damage to player
     if (!this.isGameOver && this.playerHealth > 0) {
-      this.playerHealth -= data.damage;
+      let damage = data.damage;
       
+      // Apply shield reduction if active
+      if (this.shieldStacks > 0) {
+        damage = Math.floor(damage * 0.2); // 80% damage reduction
+        this.shieldStacks--;
+        
+        // Visual feedback for shield block
+        const shieldText = this.add.text(
+          this.player.x,
+          this.player.y - 40,
+          '🛡️ BLOCKED!',
+          {
+            fontSize: '16px',
+            color: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 3
+          }
+        ).setOrigin(0.5);
+        
+        this.tweens.add({
+          targets: shieldText,
+          y: shieldText.y - 20,
+          alpha: 0,
+          duration: 800,
+          onComplete: () => shieldText.destroy()
+        });
+      }
+      
+      this.playerHealth -= damage;
+
       // Show damage effect
       this.cameras.main.shake(100, 0.005);
       this.player.setTint(0xff0000);
@@ -3284,7 +3744,7 @@ export class CombatScene extends BaseScene {
           this.player.clearTint();
         }
       });
-      
+
       // Play hurt animation if it exists
       if (this.anims.exists('soldier_hurt')) {
         this.player.play('soldier_hurt');
@@ -3294,43 +3754,49 @@ export class CombatScene extends BaseScene {
           }
         });
       }
-      
+
       // Update game state
       this.emitGameState();
-      
+
       // Check for player death
       if (this.playerHealth <= 0 && !this.isGameOver) {
         this.gameOver(false);
       }
     }
   }
-  
+
   handleBonusDrop(data: { type: string; x: number; y: number }) {
     // Create visual bonus pickup
     const colors: { [key: string]: number } = {
       damage: 0xff0000,
       speed: 0x0099ff,
       shield: 0xffff00,
-      spear: 0xff00ff
+      spear: 0xff00ff,
     };
-    
+
     const icons: { [key: string]: string } = {
       damage: '⚔',
       speed: '💨',
       shield: '🛡',
-      spear: '🎯'
+      spear: '🎯',
     };
-    
+
     // Create bonus orb
     const orb = this.add.circle(data.x, data.y, 15, colors[data.type], 0.8);
     orb.setDepth(10);
     
+    // Make sure orb is active and visible
+    orb.setActive(true);
+    orb.setVisible(true);
+
     const icon = this.add.text(data.x, data.y, icons[data.type], {
-      fontSize: '20px'
+      fontSize: '20px',
     });
     icon.setOrigin(0.5);
     icon.setDepth(11);
-    
+    icon.setActive(true);
+    icon.setVisible(true);
+
     // Float animation
     this.tweens.add({
       targets: [orb, icon],
@@ -3338,48 +3804,44 @@ export class CombatScene extends BaseScene {
       duration: 1000,
       yoyo: true,
       repeat: -1,
-      ease: 'Sine.easeInOut'
+      ease: 'Sine.easeInOut',
     });
-    
+
     // Pulse effect
     this.tweens.add({
       targets: orb,
       scale: 1.2,
       duration: 500,
       yoyo: true,
-      repeat: -1
+      repeat: -1,
     });
-    
+
     // Set up physics for collection
     this.physics.add.existing(orb);
     const orbBody = orb.body as Phaser.Physics.Arcade.Body;
     orbBody.setCircle(15);
-    
+
     // Check for player collection
-    const checkCollection = this.physics.add.overlap(
-      this.player,
-      orb,
-      () => {
-        // Apply bonus effect
-        this.applyBonus(data.type);
-        
-        // Collection animation
-        this.tweens.add({
-          targets: [orb, icon],
-          scale: 1.5,
-          alpha: 0,
-          duration: 200,
-          onComplete: () => {
-            orb.destroy();
-            icon.destroy();
-          }
-        });
-        
-        // Remove collision check
-        this.physics.world.removeCollider(checkCollection);
-      }
-    );
-    
+    const checkCollection = this.physics.add.overlap(this.player, orb, () => {
+      // Apply bonus effect
+      this.applyBonus(data.type);
+
+      // Collection animation
+      this.tweens.add({
+        targets: [orb, icon],
+        scale: 1.5,
+        alpha: 0,
+        duration: 200,
+        onComplete: () => {
+          orb.destroy();
+          icon.destroy();
+        },
+      });
+
+      // Remove collision check
+      this.physics.world.removeCollider(checkCollection);
+    });
+
     // Auto-destroy after 15 seconds
     this.time.delayedCall(15000, () => {
       if (orb.active) {
@@ -3390,39 +3852,46 @@ export class CombatScene extends BaseScene {
           onComplete: () => {
             orb.destroy();
             icon.destroy();
-          }
+          },
         });
       }
     });
   }
-  
+
   applyBonus(type: string) {
-    switch(type) {
+    switch (type) {
       case 'damage':
         // +20% damage for 8 seconds
         // This would need to be implemented in the damage calculation
         console.log('💪 Damage boost activated!');
         this.showBonusText('DAMAGE +20%', 0xff0000);
         break;
-        
+
       case 'speed':
         // +30% speed for 8 seconds
         this.normalSpeed *= 1.3;
         console.log('⚡ Speed boost activated!');
         this.showBonusText('SPEED +30%', 0x0099ff);
-        
+
         // Reset after duration
         this.time.delayedCall(8000, () => {
           this.normalSpeed /= 1.3;
         });
         break;
-        
+
       case 'shield':
-        // Next 2 hits deal 50% less damage
-        console.log('🛡️ Shield activated!');
+        // Next 2 hits deal 80% less damage (max 2 stacks)
+        const previousStacks = this.shieldStacks;
+        this.shieldStacks = Math.min(2, this.shieldStacks + 2); // Cap at 2 stacks
+        console.log('🛡️ Shield activated! Stacks:', this.shieldStacks);
         this.showBonusText('SHIELD ACTIVE', 0xffff00);
-        break;
         
+        // Only create new orbs if we don't have them already
+        if (previousStacks === 0) {
+          this.createShieldOrbs();
+        }
+        break;
+
       case 'spear':
         // Instant spear refill
         this.currentSpears = this.maxSpears;
@@ -3432,43 +3901,102 @@ export class CombatScene extends BaseScene {
         break;
     }
   }
+
+  createShieldOrbs() {
+    // Clean up any existing orbs
+    this.destroyShieldOrbs();
+    
+    const orbitRadius = 35;
+    let orbitAngle = 0;
+    
+    // Create 2 orbs
+    for (let i = 0; i < 2; i++) {
+      const orb = this.add.graphics();
+      orb.setDepth(15);
+      this.shieldOrbs.push(orb);
+    }
+    
+    // Create update timer
+    this.shieldTimer = this.time.addEvent({
+      delay: 16, // ~60fps
+      callback: () => {
+        orbitAngle += 0.03; // Rotation speed
+        
+        // Update each orb
+        this.shieldOrbs.forEach((orb, index) => {
+          orb.clear();
+          
+          // Only show orbs for remaining stacks
+          if (index < this.shieldStacks) {
+            // Calculate orbit position with proper spacing
+            const activeOrbs = Math.min(this.shieldStacks, 2);
+            const angleOffset = (Math.PI * 2 / activeOrbs) * index;
+            const x = this.player.x + Math.cos(orbitAngle + angleOffset) * orbitRadius;
+            const y = this.player.y + Math.sin(orbitAngle + angleOffset) * orbitRadius;
+            
+            // Draw orb with glow effect
+            orb.fillStyle(0xffff00, 0.3);
+            orb.fillCircle(x, y, 8); // Outer glow
+            orb.fillStyle(0xffff00, 0.6);
+            orb.fillCircle(x, y, 5); // Middle glow
+            orb.fillStyle(0xffffaa, 0.9);
+            orb.fillCircle(x, y, 3); // Inner bright core
+            
+            orb.setVisible(true);
+          } else {
+            orb.setVisible(false);
+          }
+        });
+        
+        // Clean up when no stacks left
+        if (this.shieldStacks <= 0) {
+          this.destroyShieldOrbs();
+        }
+      },
+      loop: true
+    });
+  }
+  
+  destroyShieldOrbs() {
+    this.shieldOrbs.forEach(orb => orb.destroy());
+    this.shieldOrbs = [];
+    if (this.shieldTimer) {
+      this.shieldTimer.destroy();
+      this.shieldTimer = undefined;
+    }
+  }
   
   showBonusText(text: string, color: number) {
     // Convert integer color to hex string
     const hexColor = '#' + color.toString(16).padStart(6, '0');
-    
-    const bonusText = this.add.text(
-      this.player.x,
-      this.player.y - 60,
-      text,
-      {
-        fontSize: '20px',
-        color: hexColor,
-        stroke: '#000000',
-        strokeThickness: 3
-      }
-    );
+
+    const bonusText = this.add.text(this.player.x, this.player.y - 60, text, {
+      fontSize: '20px',
+      color: hexColor,
+      stroke: '#000000',
+      strokeThickness: 3,
+    });
     bonusText.setOrigin(0.5);
     bonusText.setDepth(100);
-    
+
     this.tweens.add({
       targets: bonusText,
       y: bonusText.y - 30,
       alpha: 0,
       duration: 1500,
       ease: 'Power2',
-      onComplete: () => bonusText.destroy()
+      onComplete: () => bonusText.destroy(),
     });
   }
-  
+
   handleHealingOrbDrop(data: { x: number; y: number; healAmount: number }) {
     // Create healing orb
     const orb = this.add.circle(data.x, data.y, 20, 0x00ff00, 0.6);
     orb.setDepth(10);
-    
+
     const glow = this.add.circle(data.x, data.y, 25, 0x00ff00, 0.3);
     glow.setDepth(9);
-    
+
     // Pulse animation
     this.tweens.add({
       targets: [orb, glow],
@@ -3476,29 +4004,33 @@ export class CombatScene extends BaseScene {
       alpha: 0.8,
       duration: 800,
       yoyo: true,
-      repeat: -1
+      repeat: -1,
     });
-    
+
     // Set up physics
     this.physics.add.existing(orb);
     const orbBody = orb.body as Phaser.Physics.Arcade.Body;
     orbBody.setCircle(20);
-    
+
     // Magnetic attraction when player is near
     const attractionUpdate = () => {
       if (!orb.active) return;
-      
+
       const distance = Phaser.Math.Distance.Between(
-        orb.x, orb.y,
-        this.player.x, this.player.y
+        orb.x,
+        orb.y,
+        this.player.x,
+        this.player.y
       );
-      
+
       if (distance < 100) {
         const angle = Phaser.Math.Angle.Between(
-          orb.x, orb.y,
-          this.player.x, this.player.y
+          orb.x,
+          orb.y,
+          this.player.x,
+          this.player.y
         );
-        
+
         const pullStrength = (100 - distance) * 2;
         orb.x += Math.cos(angle) * pullStrength * 0.01;
         orb.y += Math.sin(angle) * pullStrength * 0.01;
@@ -3506,58 +4038,57 @@ export class CombatScene extends BaseScene {
         glow.y = orb.y;
       }
     };
-    
+
     // Add to update loop
     const updateEvent = this.time.addEvent({
       delay: 16,
       callback: attractionUpdate,
-      loop: true
+      loop: true,
     });
-    
+
     // Check for collection
-    const checkCollection = this.physics.add.overlap(
-      this.player,
-      orb,
-      () => {
-        // Heal player
-        const oldHealth = this.playerHealth;
-        this.playerHealth = Math.min(this.playerMaxHealth, this.playerHealth + data.healAmount);
-        const actualHeal = this.playerHealth - oldHealth;
-        
-        if (actualHeal > 0) {
-          // Show healing effect
-          this.showBonusText(`+${actualHeal} HP`, 0x00ff00);
-          
-          // Flash green
-          this.player.setTint(0x00ff00);
-          this.time.delayedCall(200, () => {
-            if (!this.isGameOver) {
-              this.player.clearTint();
-            }
-          });
-        }
-        
-        // Update game state
-        this.emitGameState();
-        
-        // Collection animation
-        this.tweens.add({
-          targets: [orb, glow],
-          scale: 2,
-          alpha: 0,
-          duration: 200,
-          onComplete: () => {
-            orb.destroy();
-            glow.destroy();
-            updateEvent.destroy();
+    const checkCollection = this.physics.add.overlap(this.player, orb, () => {
+      // Heal player
+      const oldHealth = this.playerHealth;
+      this.playerHealth = Math.min(
+        this.playerMaxHealth,
+        this.playerHealth + data.healAmount
+      );
+      const actualHeal = this.playerHealth - oldHealth;
+
+      if (actualHeal > 0) {
+        // Show healing effect
+        this.showBonusText(`+${actualHeal} HP`, 0x00ff00);
+
+        // Flash green
+        this.player.setTint(0x00ff00);
+        this.time.delayedCall(200, () => {
+          if (!this.isGameOver) {
+            this.player.clearTint();
           }
         });
-        
-        // Remove collision check
-        this.physics.world.removeCollider(checkCollection);
       }
-    );
-    
+
+      // Update game state
+      this.emitGameState();
+
+      // Collection animation
+      this.tweens.add({
+        targets: [orb, glow],
+        scale: 2,
+        alpha: 0,
+        duration: 200,
+        onComplete: () => {
+          orb.destroy();
+          glow.destroy();
+          updateEvent.destroy();
+        },
+      });
+
+      // Remove collision check
+      this.physics.world.removeCollider(checkCollection);
+    });
+
     // Auto-destroy after 10 seconds
     this.time.delayedCall(10000, () => {
       if (orb.active) {
@@ -3569,20 +4100,20 @@ export class CombatScene extends BaseScene {
             orb.destroy();
             glow.destroy();
             updateEvent.destroy();
-          }
+          },
         });
       }
     });
   }
-  
+
   // ========== COMBO SYSTEM ==========
-  
+
   showComboCounter() {
     // Remove existing combo text if any
     if (this.comboText) {
       this.comboText.destroy();
     }
-    
+
     // Create combo text
     this.comboText = this.add.text(
       this.player.x,
@@ -3593,12 +4124,12 @@ export class CombatScene extends BaseScene {
         color: this.comboCount >= 3 ? '#ff00ff' : '#ffff00',
         stroke: '#000000',
         strokeThickness: 4,
-        fontStyle: 'bold'
+        fontStyle: 'bold',
       }
     );
     this.comboText.setOrigin(0.5);
     this.comboText.setDepth(101);
-    
+
     // Animate combo text
     this.tweens.add({
       targets: this.comboText,
@@ -3611,13 +4142,13 @@ export class CombatScene extends BaseScene {
           this.comboText.destroy();
           this.comboText = undefined;
         }
-      }
+      },
     });
   }
-  
+
   performSpinAttack() {
     console.log('⚔️ SPIN ATTACK!');
-    
+
     // Show special effect text
     const spinText = this.add.text(
       this.player.x,
@@ -3628,12 +4159,12 @@ export class CombatScene extends BaseScene {
         color: '#ff00ff',
         stroke: '#000000',
         strokeThickness: 5,
-        fontStyle: 'bold'
+        fontStyle: 'bold',
       }
     );
     spinText.setOrigin(0.5);
     spinText.setDepth(102);
-    
+
     // Animate text
     this.tweens.add({
       targets: spinText,
@@ -3641,12 +4172,12 @@ export class CombatScene extends BaseScene {
       alpha: 0,
       duration: 1000,
       ease: 'Power2',
-      onComplete: () => spinText.destroy()
+      onComplete: () => spinText.destroy(),
     });
-    
+
     // Play attack animation
     this.player.play('soldier_attack02');
-    
+
     // Spin the player sprite
     this.tweens.add({
       targets: this.player,
@@ -3655,142 +4186,217 @@ export class CombatScene extends BaseScene {
       ease: 'Power1',
       onComplete: () => {
         this.player.angle = 0;
-      }
+      },
     });
-    
+
     // Create expanding shockwave effect
-    const shockwave = this.add.circle(this.player.x, this.player.y, 10, 0xffff00, 0.8);
+    const shockwave = this.add.circle(
+      this.player.x,
+      this.player.y,
+      10,
+      0xffff00,
+      0.8
+    );
     shockwave.setDepth(15);
-    
+
     this.tweens.add({
       targets: shockwave,
       radius: this.meleeRange * 2,
       alpha: 0,
       duration: 400,
       ease: 'Power2',
-      onComplete: () => shockwave.destroy()
+      onComplete: () => shockwave.destroy(),
     });
-    
+
     // Damage all enemies in extended range
     const spinDamage = 40; // High damage for spin attack
     const spinRange = this.meleeRange * 1.8; // Larger range
-    
+
     // Check all enemies
     const allEnemies: any[] = [];
-    
+
     // Main monster
     if (this.monsterHealth > 0) {
       const dist = Phaser.Math.Distance.Between(
-        this.player.x, this.player.y,
-        this.monster.x, this.monster.y
+        this.player.x,
+        this.player.y,
+        this.monster.x,
+        this.monster.y
       );
       if (dist <= spinRange) {
         allEnemies.push({ target: this.monster, type: 'monster' });
       }
     }
-    
+
     // Skeletons
     this.skeletons.getChildren().forEach((skeleton: any) => {
       if (skeleton.active) {
         const dist = Phaser.Math.Distance.Between(
-          this.player.x, this.player.y,
-          skeleton.x, skeleton.y
+          this.player.x,
+          this.player.y,
+          skeleton.x,
+          skeleton.y
         );
         if (dist <= spinRange) {
           allEnemies.push({ target: skeleton, type: 'skeleton' });
         }
       }
     });
-    
+
     // Slimes
     this.slimes.getChildren().forEach((slime: any) => {
       if (slime.active) {
         const dist = Phaser.Math.Distance.Between(
-          this.player.x, this.player.y,
-          slime.x, slime.y
+          this.player.x,
+          this.player.y,
+          slime.x,
+          slime.y
         );
         if (dist <= spinRange) {
           allEnemies.push({ target: slime, type: 'slime' });
         }
       }
     });
-    
+
     // Deal damage and knockback to all enemies
     allEnemies.forEach((enemy, index) => {
       this.time.delayedCall(index * 50, () => {
         if (enemy.type === 'monster') {
-          // Damage monster
-          this.monsterHealth = Math.max(0, this.monsterHealth - spinDamage);
-          this.showDamageNumber(enemy.target.x, enemy.target.y - 40, spinDamage, 0xff00ff, true);
-          this.emitGameState();
-          
-          // Check for monster death
-          if (this.monsterHealth <= 0) {
-            this.checkGameOver();
+          // Check for werewolf evolution at 10% health
+          if (this.canDamageMonster()) {
+            const prevHealth = this.monsterHealth;
+
+            // Check if this is a werewolf that should evolve
+            if (
+              this.monsterData.tier?.name === 'Werewolf' &&
+              !this.isEvolved &&
+              !this.isEvolving
+            ) {
+              const evolutionThreshold = Math.floor(
+                this.monsterMaxHealth * 0.1
+              );
+              if (this.monsterHealth - spinDamage <= evolutionThreshold) {
+                // Cap damage to exactly reach threshold
+                const cappedDamage = this.monsterHealth - evolutionThreshold;
+                this.monsterHealth = evolutionThreshold;
+                this.showDamageNumber(
+                  enemy.target.x,
+                  enemy.target.y - 40,
+                  cappedDamage,
+                  0xff00ff,
+                  true
+                );
+                this.emitGameState();
+                console.log(
+                  'Werewolf evolution triggered at 10% health (spin attack)'
+                );
+                this.evolveToWerebear();
+                return; // Exit early
+              }
+            }
+
+            // Apply normal damage if not evolving
+            this.monsterHealth = Math.max(0, this.monsterHealth - spinDamage);
+            this.showDamageNumber(
+              enemy.target.x,
+              enemy.target.y - 40,
+              spinDamage,
+              0xff00ff,
+              true
+            );
+            this.emitGameState();
+
+            // Check for monster death
+            if (this.monsterHealth <= 0) {
+              this.checkGameOver();
+            }
           }
-        } else if (enemy.type === 'skeleton' && enemy.target instanceof SkeletonEnemy) {
+        } else if (
+          enemy.type === 'skeleton' &&
+          enemy.target instanceof SkeletonEnemy
+        ) {
           enemy.target.takeDamage(spinDamage);
-          this.showDamageNumber(enemy.target.x, enemy.target.y - 40, spinDamage, 0xff00ff, true);
-          
+          this.showDamageNumber(
+            enemy.target.x,
+            enemy.target.y - 40,
+            spinDamage,
+            0xff00ff,
+            true
+          );
+
           // Knockback (check if body exists)
           if (enemy.target.body) {
             const angle = Phaser.Math.Angle.Between(
-              this.player.x, this.player.y,
-              enemy.target.x, enemy.target.y
+              this.player.x,
+              this.player.y,
+              enemy.target.x,
+              enemy.target.y
             );
             const body = enemy.target.body as Phaser.Physics.Arcade.Body;
-            body.setVelocity(
-              Math.cos(angle) * 300,
-              Math.sin(angle) * 300
-            );
+            body.setVelocity(Math.cos(angle) * 300, Math.sin(angle) * 300);
           }
-        } else if (enemy.type === 'slime' && enemy.target instanceof SlimeEnemy) {
+        } else if (
+          enemy.type === 'slime' &&
+          enemy.target instanceof SlimeEnemy
+        ) {
           enemy.target.takeDamage(spinDamage);
-          this.showDamageNumber(enemy.target.x, enemy.target.y - 40, spinDamage, 0xff00ff, true);
+          this.showDamageNumber(
+            enemy.target.x,
+            enemy.target.y - 40,
+            spinDamage,
+            0xff00ff,
+            true
+          );
         }
       });
     });
-    
+
     // Camera shake for impact
     this.cameras.main.shake(200, 0.01);
   }
-  
+
   // ========== CROWD CONTROL ABILITIES ==========
-  
+
   performGroundSlam() {
     if (this.slamCooldown > 0) return;
-    
+
     console.log('💥 GROUND SLAM!');
     this.slamCooldown = this.slamCooldownMax;
-    
+
     // Animation
     this.player.play('soldier_attack01');
-    
+
     // Crouch effect
     this.tweens.add({
       targets: this.player,
       scaleY: 1.5,
       duration: 100,
       yoyo: true,
-      ease: 'Power1'
+      ease: 'Power1',
     });
-    
+
     // Screen shake
     this.cameras.main.shake(300, 0.02);
-    
+
     // Create expanding shockwave
-    const shockwave = this.add.circle(this.player.x, this.player.y, 10, 0xffffff, 0.8);
+    const shockwave = this.add.circle(
+      this.player.x,
+      this.player.y,
+      10,
+      0xffffff,
+      0.8
+    );
     shockwave.setDepth(15);
-    
+
     this.tweens.add({
       targets: shockwave,
       radius: 200,
       alpha: 0,
       duration: 400,
       ease: 'Power2',
-      onComplete: () => shockwave.destroy()
+      onComplete: () => shockwave.destroy(),
     });
-    
+
     // Ground crack effect
     const cracks = this.add.graphics();
     cracks.lineStyle(2, 0x666666, 0.8);
@@ -3804,153 +4410,252 @@ export class CombatScene extends BaseScene {
     }
     cracks.strokePath();
     cracks.setDepth(2);
-    
+
     this.tweens.add({
       targets: cracks,
       alpha: 0,
       duration: 1000,
-      onComplete: () => cracks.destroy()
+      onComplete: () => cracks.destroy(),
     });
-    
+
     // Damage and knockback all enemies in radius
     const slamRadius = 200;
     const allEnemies: any[] = [];
-    
+
     // Check all enemy types
     if (this.monsterHealth > 0) {
       const dist = Phaser.Math.Distance.Between(
-        this.player.x, this.player.y,
-        this.monster.x, this.monster.y
+        this.player.x,
+        this.player.y,
+        this.monster.x,
+        this.monster.y
       );
       if (dist <= slamRadius) {
-        allEnemies.push({ target: this.monster, type: 'monster', distance: dist });
+        allEnemies.push({
+          target: this.monster,
+          type: 'monster',
+          distance: dist,
+        });
       }
     }
-    
+
     this.skeletons.getChildren().forEach((skeleton: any) => {
       if (skeleton.active) {
         const dist = Phaser.Math.Distance.Between(
-          this.player.x, this.player.y,
-          skeleton.x, skeleton.y
+          this.player.x,
+          this.player.y,
+          skeleton.x,
+          skeleton.y
         );
         if (dist <= slamRadius) {
-          allEnemies.push({ target: skeleton, type: 'skeleton', distance: dist });
+          allEnemies.push({
+            target: skeleton,
+            type: 'skeleton',
+            distance: dist,
+          });
         }
       }
     });
-    
+
     this.slimes.getChildren().forEach((slime: any) => {
       if (slime.active) {
         const dist = Phaser.Math.Distance.Between(
-          this.player.x, this.player.y,
-          slime.x, slime.y
+          this.player.x,
+          this.player.y,
+          slime.x,
+          slime.y
         );
         if (dist <= slamRadius) {
           allEnemies.push({ target: slime, type: 'slime', distance: dist });
         }
       }
     });
-    
+
     // Apply damage and knockback
-    allEnemies.forEach(enemy => {
+    allEnemies.forEach((enemy) => {
       // Damage based on distance (closer = more damage)
       const damage = Math.floor(40 * (1 - enemy.distance / slamRadius));
-      
+
       if (enemy.type === 'skeleton' && enemy.target instanceof SkeletonEnemy) {
         enemy.target.takeDamage(damage);
-        
+
         // Strong knockback (check if body exists)
         if (enemy.target.body) {
           const angle = Phaser.Math.Angle.Between(
-            this.player.x, this.player.y,
-            enemy.target.x, enemy.target.y
+            this.player.x,
+            this.player.y,
+            enemy.target.x,
+            enemy.target.y
           );
           const force = 400 * (1 - enemy.distance / slamRadius);
           const body = enemy.target.body as Phaser.Physics.Arcade.Body;
-          body.setVelocity(
-            Math.cos(angle) * force,
-            Math.sin(angle) * force
-          );
+          body.setVelocity(Math.cos(angle) * force, Math.sin(angle) * force);
         }
       } else if (enemy.type === 'slime' && enemy.target instanceof SlimeEnemy) {
         enemy.target.takeDamage(damage);
       } else if (enemy.type === 'monster') {
-        // Damage monster but no knockback (too heavy)
-        this.monsterHealth = Math.max(0, this.monsterHealth - damage);
-        this.emitGameState();
+        // Check for werewolf evolution at 10% health
+        if (this.canDamageMonster()) {
+          // Check if this is a werewolf that should evolve
+          if (
+            this.monsterData.tier?.name === 'Werewolf' &&
+            !this.isEvolved &&
+            !this.isEvolving
+          ) {
+            const evolutionThreshold = Math.floor(this.monsterMaxHealth * 0.1);
+            if (this.monsterHealth - damage <= evolutionThreshold) {
+              // Cap damage to exactly reach threshold
+              const cappedDamage = this.monsterHealth - evolutionThreshold;
+              this.monsterHealth = evolutionThreshold;
+              this.showDamageNumber(
+                enemy.target.x,
+                enemy.target.y - 40,
+                cappedDamage,
+                0xffffff,
+                false
+              );
+              this.emitGameState();
+              console.log(
+                'Werewolf evolution triggered at 10% health (slam attack)'
+              );
+              this.evolveToWerebear();
+              return; // Exit early
+            }
+          }
+
+          // Apply normal damage if not evolving
+          this.monsterHealth = Math.max(0, this.monsterHealth - damage);
+          this.showDamageNumber(
+            enemy.target.x,
+            enemy.target.y - 40,
+            damage,
+            0xffffff,
+            false
+          );
+          this.emitGameState();
+        } else {
+          // Still show damage number even if can't damage
+          this.showDamageNumber(
+            enemy.target.x,
+            enemy.target.y - 40,
+            damage,
+            0xffffff,
+            false
+          );
+        }
+      } else {
+        // Show damage for other enemy types
+        this.showDamageNumber(
+          enemy.target.x,
+          enemy.target.y - 40,
+          damage,
+          0xffffff,
+          false
+        );
       }
-      
-      // Show damage
-      this.showDamageNumber(enemy.target.x, enemy.target.y - 40, damage, 0xffffff, false);
     });
-    
+
     // Show cooldown indicator
     this.showBonusText('SLAM READY IN 5s', 0xffffff);
   }
-  
+
   performDash(direction: { x: number; y: number }) {
     if (this.dashCooldown > 0 || this.isDashing) return;
-    
+
     console.log('💨 DASH!');
     this.isDashing = true;
+    this.isInvincible = true; // Enable invincibility
     this.dashCooldown = 2000; // 2 second cooldown
-    
-    // Calculate dash velocity
+
+    // Calculate target position
+    const targetX = this.player.x + direction.x * this.dashDistance;
+    const targetY = this.player.y + direction.y * this.dashDistance;
+
+    // Get world bounds
+    const { width, height } = this.cameras.main;
+    const margin = 40; // Account for border width
+
+    // Clamp to world bounds
+    const finalX = Phaser.Math.Clamp(targetX, margin, width - margin);
+    const finalY = Phaser.Math.Clamp(targetY, margin, height - margin);
+
+    // Store original position for trail effect
+    const startX = this.player.x;
+    const startY = this.player.y;
+
+    // Instant teleport to new position
+    this.player.setPosition(finalX, finalY);
     const body = this.player.body as Phaser.Physics.Arcade.Body;
-    body.setVelocity(direction.x * this.dashSpeed, direction.y * this.dashSpeed);
-    
-    // Visual trail effect
-    for (let i = 0; i < 5; i++) {
-      this.time.delayedCall(i * 40, () => {
-        const afterimage = this.add.sprite(this.player.x, this.player.y, 'soldier_idle');
-        afterimage.setScale(this.player.scale);
-        afterimage.setAlpha(0.5 - i * 0.1);
-        afterimage.setTint(0x0099ff);
-        afterimage.setDepth(this.player.depth - 1);
-        
-        this.tweens.add({
-          targets: afterimage,
-          alpha: 0,
-          duration: 300,
-          onComplete: () => afterimage.destroy()
-        });
+    body.setVelocity(0, 0); // Stop any existing velocity
+
+    // Visual feedback - make player semi-transparent during invincibility
+    this.player.setAlpha(0.6);
+    this.player.setTint(0x00ffff); // Cyan tint for invincibility
+
+    // Create trail effect from start to end position
+    const trailSteps = 5;
+    for (let i = 0; i < trailSteps; i++) {
+      const ratio = i / trailSteps;
+      const trailX = startX + (finalX - startX) * ratio;
+      const trailY = startY + (finalY - startY) * ratio;
+
+      const afterimage = this.add.sprite(trailX, trailY, 'soldier_idle');
+      afterimage.setScale(this.player.scale);
+      afterimage.setAlpha(0.4 - i * 0.08);
+      afterimage.setTint(0x0099ff);
+      afterimage.setDepth(this.player.depth - 1);
+      afterimage.setFlipX(this.player.flipX);
+
+      this.tweens.add({
+        targets: afterimage,
+        alpha: 0,
+        duration: 400,
+        delay: i * 20,
+        onComplete: () => afterimage.destroy(),
       });
     }
-    
-    // End dash after duration
+
+    // Camera shake for impact
+    this.cameras.main.shake(100, 0.003);
+
+    // End dash and invincibility after duration
     this.time.delayedCall(this.dashDuration, () => {
       this.isDashing = false;
-      // Slow down gradually
-      const currentVelocity = body.velocity;
-      this.tweens.add({
-        targets: currentVelocity,
-        x: currentVelocity.x * 0.3,
-        y: currentVelocity.y * 0.3,
-        duration: 200,
-        onUpdate: () => {
-          body.setVelocity(currentVelocity.x, currentVelocity.y);
-        }
-      });
+      this.isInvincible = false;
+
+      // Remove invincibility visual effects
+      this.player.setAlpha(1);
+      this.player.clearTint();
     });
   }
-  
+
   handleDoubleTapDash(direction: string) {
     const currentTime = this.time.now;
-    
-    if (this.lastDashDirection === direction && 
-        currentTime - this.lastDashTime < this.doubleTapTime) {
+
+    if (
+      this.lastDashDirection === direction &&
+      currentTime - this.lastDashTime < this.doubleTapTime
+    ) {
       // Double tap detected!
       let dashDir = { x: 0, y: 0 };
-      
-      switch(direction) {
-        case 'left': dashDir = { x: -1, y: 0 }; break;
-        case 'right': dashDir = { x: 1, y: 0 }; break;
-        case 'up': dashDir = { x: 0, y: -1 }; break;
-        case 'down': dashDir = { x: 0, y: 1 }; break;
+
+      switch (direction) {
+        case 'left':
+          dashDir = { x: -1, y: 0 };
+          break;
+        case 'right':
+          dashDir = { x: 1, y: 0 };
+          break;
+        case 'up':
+          dashDir = { x: 0, y: -1 };
+          break;
+        case 'down':
+          dashDir = { x: 0, y: 1 };
+          break;
       }
-      
+
       this.performDash(dashDir);
-      
+
       // Reset to prevent triple tap
       this.lastDashDirection = '';
       this.lastDashTime = 0;

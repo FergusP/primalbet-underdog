@@ -99,7 +99,7 @@ export class MenuScene extends BaseScene {
     this.registerUIElement('particles', particles);
 
     // Add main title with cartoon styling - COMMENTED OUT (using React UI instead)
-    // const titleText = this.add.text(width / 2, height * 0.15, 'BETBEAST', {
+    // const titleText = this.add.text(width / 2, height * 0.15, 'PRIMALBET', {
     //   fontSize: '72px',
     //   fontFamily: '"Fredoka One", "Luckiest Guy", "Bungee", "MedievalSharp", serif',
     //   color: '#FFD700',
@@ -397,6 +397,80 @@ export class MenuScene extends BaseScene {
         window.dispatchEvent(new CustomEvent('connectWallet'));
       }
     });
+    
+    // DEV: Add buttons to jump directly to scenes (always show during development)
+    // TEMPORARILY HIDDEN FOR SCREENSHOTS
+    /*
+    // Vault Scene button
+    const devVaultButton = this.add.text(width / 2 - 100, buttonY + 120, '[DEV] Vault', {
+      fontSize: '24px',
+      color: '#ffff00',
+      backgroundColor: '#000000',
+      padding: { x: 15, y: 8 },
+      stroke: '#ff0000',
+      strokeThickness: 2
+    });
+    devVaultButton.setOrigin(0.5);
+    devVaultButton.setDepth(100); // Make sure it's on top
+    devVaultButton.setInteractive({ useHandCursor: true });
+    
+    devVaultButton.on('pointerup', () => {
+      // Jump directly to vault scene with mock data
+      this.scene.start('VaultScene', {
+        victory: true,
+        walletAddress: 'DEV_MODE',
+        monsterDefeated: 'Werewolf',
+        vrfSuccess: true,
+        prizeAmount: 100
+      });
+    });
+    
+    this.registerUIElement('devVaultButton', devVaultButton);
+    
+    // Combat Scene (Arena) button
+    const devArenaButton = this.add.text(width / 2 + 100, buttonY + 120, '[DEV] Arena', {
+      fontSize: '24px',
+      color: '#ffff00',
+      backgroundColor: '#000000',
+      padding: { x: 15, y: 8 },
+      stroke: '#ff0000',
+      strokeThickness: 2
+    });
+    devArenaButton.setOrigin(0.5);
+    devArenaButton.setDepth(100); // Make sure it's on top
+    devArenaButton.setInteractive({ useHandCursor: true });
+    
+    devArenaButton.on('pointerup', () => {
+      // Jump directly to combat scene with mock monster data
+      this.scene.start('CombatScene', {
+        walletAddress: 'DEV_MODE',
+        monster: {
+          id: 'dev_monster',
+          type: 'Werewolf',
+          tier: {
+            name: 'Werewolf',
+            sprite: 'werewolf',
+            attackPower: 45,
+            defenseMultiplier: 0.7,
+            vaultCrackChance: 0
+          },
+          baseHealth: 100,
+          currentHealth: 100,
+          spawnedAt: Date.now(),
+          evolution: {
+            name: 'Werebear',
+            sprite: 'werebear',
+            baseHealth: 100,
+            attackPower: 55,
+            defenseMultiplier: 0.65,
+            vaultCrackChance: 95
+          }
+        }
+      });
+    });
+    
+    this.registerUIElement('devArenaButton', devArenaButton);
+    */
   }
   
   private updateWoodenButtonState() {

@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 
 export class SkeletonEnemy extends Phaser.Physics.Arcade.Sprite {
   public health: number = 25;
@@ -27,7 +27,7 @@ export class SkeletonEnemy extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
     
-    this.setScale(2);
+    this.setScale(1.8); // Smaller than boss for clear differentiation
     this.setDepth(5);
     
     // Physics setup
@@ -109,7 +109,7 @@ export class SkeletonEnemy extends Phaser.Physics.Arcade.Sprite {
     this.y += 50;
     
     // Particle effect for spawn
-    const particles = this.scene.add.particles(this.x, this.y, 'spark', {
+    const particles = this.scene.add.particles(this.x, this.y, 'spark-placeholder', {
       color: [0x666666, 0x999999],
       scale: { start: 0.5, end: 0 },
       speed: { min: 50, max: 100 },
@@ -345,7 +345,7 @@ export class SkeletonEnemy extends Phaser.Physics.Arcade.Sprite {
     this.dropBonus();
     
     // Death particles
-    const particles = this.scene.add.particles(this.x, this.y, 'spark', {
+    const particles = this.scene.add.particles(this.x, this.y, 'spark-placeholder', {
       color: [0xcccccc, 0x666666],
       scale: { start: 0.5, end: 0 },
       speed: { min: 50, max: 150 },
@@ -424,7 +424,7 @@ export class SkeletonEnemy extends Phaser.Physics.Arcade.Sprite {
     this.setTint(0xff0000);
     
     // Create anger particles
-    const particles = this.scene.add.particles(this.x, this.y - 20, 'spark', {
+    const particles = this.scene.add.particles(this.x, this.y - 20, 'spark-placeholder', {
       color: [0xff0000, 0xaa0000],
       scale: { start: 0.3, end: 0 },
       speed: { min: 20, max: 50 },

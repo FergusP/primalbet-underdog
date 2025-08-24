@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   
   // Environment variables
   env: {
-    CUSTOM_KEY: 'betbeast-arena',
+    CUSTOM_KEY: 'primalbet-arena',
   }
 };
 

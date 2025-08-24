@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { JackpotDisplay } from '../game/displays/JackpotDisplay';
 import { ForestFightButtonWrapper } from '../game/buttons/ForestFightButtonWrapper';
 import { MonsterLabel } from '../game/displays/MonsterLabel';
+import { ForestDesignSystem } from '../../styles/forestDesignSystem';
 
 interface GameState {
   jackpot: number;
@@ -119,10 +120,30 @@ export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({
       style={{ zIndex: UILayer.HUD }}
     >
       {/* Title */}
-      <div className="absolute top-2 left-1/2 transform -translate-x-1/2 pointer-events-auto">
-        <h1 className="text-xl text-white" 
-            style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
-          BETBEAST ARENA
+      <div className="absolute left-1/2 transform -translate-x-1/2 pointer-events-auto"
+           style={{ top: '30px' }}>
+        <h1 
+          className="text-center"
+          style={{ 
+            fontFamily: ForestDesignSystem.typography.display,
+            fontSize: '2rem',
+            fontWeight: 900,
+            letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
+            background: `linear-gradient(
+              135deg,
+              ${ForestDesignSystem.colors.goldShine} 0%,
+              ${ForestDesignSystem.colors.goldDeep} 35%,
+              ${ForestDesignSystem.colors.goldAntique} 65%,
+              ${ForestDesignSystem.colors.goldShine} 100%
+            )`,
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            filter: `drop-shadow(${ForestDesignSystem.shadows.deep}) drop-shadow(0 0 15px rgba(255, 215, 0, 0.4))`,
+            textTransform: 'uppercase',
+          }}
+        >
+          PRIMALBET
         </h1>
       </div>
 

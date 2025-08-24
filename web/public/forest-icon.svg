@@ -9,6 +9,6 @@
   <circle cx="40" cy="50" r="3" fill="#FFD700"/>
   <circle cx="60" cy="50" r="3" fill="#FFD700"/>
   
-  <!-- Text "BB" for BetBeast -->
-  <text x="50" y="85" font-family="Arial Black" font-size="16" font-weight="bold" fill="#FFD700" text-anchor="middle">BB</text>
+  <!-- Text "PB" for PrimalBet -->
+  <text x="50" y="85" font-family="Arial Black" font-size="16" font-weight="bold" fill="#FFD700" text-anchor="middle">PB</text>
 </svg>

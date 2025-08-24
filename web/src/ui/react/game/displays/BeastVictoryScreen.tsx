@@ -162,7 +162,7 @@ export const BeastVictoryScreen: React.FC<BeastVictoryScreenProps> = ({
             transition: `all ${ForestDesignSystem.animation.normal} ease-out 0.6s`,
           }}
         >
-          {ForestText.general.glory}
+          GLORIOUS VICTORY!
         </div>
 
         {/* Defeated Monster Information */}
@@ -265,7 +265,7 @@ export const BeastVictoryScreen: React.FC<BeastVictoryScreenProps> = ({
         >
           <span>🌿</span>
           <span style={{ letterSpacing: ForestDesignSystem.typography.letterSpacing.widest }}>
-            {ForestText.general.spqr}
+            PRIMALBET
           </span>
           <span>🌿</span>
         </div>

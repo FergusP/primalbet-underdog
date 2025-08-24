@@ -15,8 +15,6 @@ export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
   isPlayer = false
 }) => {
   const healthPercentage = Math.max(0, Math.min(100, (currentHealth / maxHealth) * 100));
-  const currentHealthDisplay = ForestIcons.toNumber(Math.max(0, currentHealth));
-  const maxHealthDisplay = ForestIcons.toNumber(maxHealth);
   
   // Determine health bar color based on percentage
   const getHealthColor = (percentage: number) => {
@@ -32,88 +30,57 @@ export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
       className="relative"
       style={{
         fontFamily: ForestDesignSystem.typography.inscription,
-        minWidth: '200px',
-        maxWidth: '300px',
+        width: '320px',
+        height: '55px',
       }}
     >
-      {/* Stone Tablet Background */}
+      {/* Horizontal Health Bar Container */}
       <div
         style={{
-          background: ForestDesignSystem.textures.marble.background,
-          backgroundImage: ForestDesignSystem.textures.marble.pattern,
-          border: `3px solid ${ForestDesignSystem.colors.stoneGray}`,
+          background: `linear-gradient(135deg, 
+            ${isPlayer ? 'rgba(34, 139, 34, 0.95)' : 'rgba(139, 0, 0, 0.95)'} 0%, 
+            ${isPlayer ? 'rgba(0, 100, 0, 0.9)' : 'rgba(80, 0, 0, 0.9)'} 100%)`,
+          border: `3px solid ${isPlayer ? ForestDesignSystem.colors.goldDeep : ForestDesignSystem.colors.bloodRed}`,
           borderRadius: ForestDesignSystem.borderRadius.md,
-          boxShadow: ForestDesignSystem.shadows.raised,
-          padding: ForestDesignSystem.spacing.md,
+          boxShadow: `0 4px 12px rgba(0, 0, 0, 0.7), inset 0 1px 2px rgba(255, 255, 255, 0.2)`,
+          padding: '10px 15px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '15px',
+          height: '100%',
           position: 'relative',
-          overflow: 'hidden',
         }}
       >
-        {/* Decorative Corner Eagles */}
+        {/* Label Section */}
         <div
           style={{
-            position: 'absolute',
-            top: '4px',
-            left: '4px',
-            fontSize: '12px',
-            color: ForestDesignSystem.colors.goldAntique,
-            textShadow: ForestDesignSystem.shadows.inscription,
+            fontSize: ForestDesignSystem.typography.sizes.base,
+            fontWeight: ForestDesignSystem.typography.weights.black,
+            color: '#FFFFFF',
+            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.9)',
+            letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
+            textTransform: 'uppercase',
+            minWidth: '75px',
+            textAlign: 'center',
           }}
         >
-          🦉
-        </div>
-        <div
-          style={{
-            position: 'absolute',
-            top: '4px',
-            right: '4px',
-            fontSize: '12px',
-            color: ForestDesignSystem.colors.goldAntique,
-            textShadow: ForestDesignSystem.shadows.inscription,
-            transform: 'scaleX(-1)', // Mirror the eagle
-          }}
-        >
-          🦉
+          {isPlayer ? 'PLAYER' : 'ENEMY'}
         </div>
 
-        {/* Header with Label */}
+        {/* Health Bar */}
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: ForestDesignSystem.spacing.sm,
-            gap: ForestDesignSystem.spacing.sm,
-          }}
-        >
-          {/* Label */}
-          <div
-            style={{
-              fontSize: ForestDesignSystem.typography.sizes.sm,
-              fontWeight: ForestDesignSystem.typography.weights.bold,
-              color: ForestDesignSystem.colors.textDark,
-              textShadow: ForestDesignSystem.shadows.inscription,
-              letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
-              textTransform: 'uppercase',
-            }}
-          >
-            {label}
-          </div>
-        </div>
-
-        {/* Health Bar Container - Carved Stone Effect */}
-        <div
-          style={{
+            flex: 1,
             position: 'relative',
-            height: '20px',
-            background: ForestDesignSystem.colors.autumnOrange,
-            border: `2px solid ${ForestDesignSystem.colors.umberBurnt}`,
+            height: '25px',
+            background: 'rgba(0, 0, 0, 0.6)',
+            border: `2px solid rgba(255, 255, 255, 0.3)`,
             borderRadius: ForestDesignSystem.borderRadius.sm,
-            boxShadow: ForestDesignSystem.shadows.carved,
+            boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.8)',
             overflow: 'hidden',
           }}
         >
-          {/* Health Fill - Animated */}
+          {/* Health Fill */}
           <div
             style={{
               position: 'absolute',
@@ -123,28 +90,16 @@ export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
               width: `${healthPercentage}%`,
               background: `linear-gradient(90deg, 
                 ${healthColor} 0%, 
-                ${healthColor}CC 100%)`,
+                ${healthColor}EE 50%,
+                ${healthColor} 100%)`,
               transition: `width ${ForestDesignSystem.animation.normal} ease-out`,
-              boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.3)',
+              boxShadow: `inset 0 2px 4px rgba(255, 255, 255, 0.4), 
+                         0 0 10px ${healthColor}88`,
             }}
           />
 
-          {/* Decorative Stone Texture Overlay */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: ForestDesignSystem.textures.stone.texture,
-              opacity: 0.3,
-              pointerEvents: 'none',
-            }}
-          />
-
-          {/* Carved Divider Lines (every 20%) */}
-          {[20, 40, 60, 80].map((position) => (
+          {/* Divider Lines (every 25%) */}
+          {[25, 50, 75].map((position) => (
             <div
               key={position}
               style={{
@@ -152,118 +107,59 @@ export const BeastHealthBar: React.FC<BeastHealthBarProps> = ({
                 left: `${position}%`,
                 top: 0,
                 bottom: 0,
-                width: '1px',
-                background: 'rgba(0, 0, 0, 0.4)',
-                boxShadow: '1px 0 0 rgba(255, 255, 255, 0.2)',
+                width: '2px',
+                background: 'rgba(255, 255, 255, 0.2)',
+                boxShadow: '1px 0 1px rgba(0, 0, 0, 0.5)',
               }}
             />
           ))}
         </div>
 
-        {/* Health Display - Both Arabic and formatted */}
+        {/* Health Numbers */}
         <div
           style={{
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            marginTop: ForestDesignSystem.spacing.sm,
-            gap: '2px',
-          }}
-        >
-          {/* Arabic numerals - Large and clear */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: ForestDesignSystem.spacing.xs,
-            }}
-          >
-            <span
-              style={{
-                fontSize: ForestDesignSystem.typography.sizes.xl,
-                fontWeight: ForestDesignSystem.typography.weights.black,
-                color: currentHealth > 0 ? healthColor : ForestDesignSystem.colors.bloodRed,
-                textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
-                letterSpacing: ForestDesignSystem.typography.letterSpacing.normal,
-              }}
-            >
-              {currentHealth}
-            </span>
-            <span
-              style={{
-                fontSize: ForestDesignSystem.typography.sizes.lg,
-                color: ForestDesignSystem.colors.mossGreen,
-                fontWeight: ForestDesignSystem.typography.weights.bold,
-              }}
-            >
-              /
-            </span>
-            <span
-              style={{
-                fontSize: ForestDesignSystem.typography.sizes.xl,
-                fontWeight: ForestDesignSystem.typography.weights.bold,
-                color: ForestDesignSystem.colors.mossGreen,
-                textShadow: '1px 1px 2px rgba(0, 0, 0, 0.6)',
-                letterSpacing: ForestDesignSystem.typography.letterSpacing.normal,
-              }}
-            >
-              {maxHealth}
-            </span>
-          </div>
-          
-          {/* Formatted numbers - Smaller, decorative */}
-          <div
-            style={{
-              fontSize: ForestDesignSystem.typography.sizes.xs,
-              color: ForestDesignSystem.colors.goldAntique,
-              opacity: 0.7,
-              letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
-            }}
-          >
-            ({currentHealthDisplay} / {maxHealthDisplay})
-          </div>
-        </div>
-
-        {/* Bottom Decorative Border */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '4px',
-            left: '12px',
-            right: '12px',
-            height: '2px',
-            background: `linear-gradient(90deg, 
-              transparent 0%, 
-              ${ForestDesignSystem.colors.goldAntique} 50%, 
-              transparent 100%)`,
-            opacity: 0.6,
-          }}
-        />
-      </div>
-
-      {/* Optional Player Indicator */}
-      {isPlayer && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '-8px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: ForestDesignSystem.textures.goldShimmer.background,
-            border: `2px solid ${ForestDesignSystem.colors.goldDeep}`,
-            borderRadius: ForestDesignSystem.borderRadius.full,
+            gap: '4px',
+            minWidth: '90px',
+            justifyContent: 'center',
+            background: 'rgba(0, 0, 0, 0.4)',
             padding: '4px 8px',
-            fontSize: ForestDesignSystem.typography.sizes.xs,
-            fontWeight: ForestDesignSystem.typography.weights.bold,
-            color: ForestDesignSystem.colors.textDark,
-            textShadow: '1px 1px 0px rgba(255, 255, 255, 0.8)',
-            letterSpacing: ForestDesignSystem.typography.letterSpacing.wider,
-            boxShadow: ForestDesignSystem.shadows.raised,
+            borderRadius: ForestDesignSystem.borderRadius.sm,
+            border: '1px solid rgba(255, 255, 255, 0.2)',
           }}
         >
-          YOU
+          <span
+            style={{
+              fontSize: ForestDesignSystem.typography.sizes.lg,
+              fontWeight: ForestDesignSystem.typography.weights.black,
+              color: '#FFFFFF',
+              textShadow: `2px 2px 4px rgba(0, 0, 0, 0.9), 0 0 8px ${healthColor}66`,
+            }}
+          >
+            {currentHealth}
+          </span>
+          <span
+            style={{
+              fontSize: ForestDesignSystem.typography.sizes.base,
+              color: '#CCCCCC',
+              fontWeight: ForestDesignSystem.typography.weights.bold,
+            }}
+          >
+            /
+          </span>
+          <span
+            style={{
+              fontSize: ForestDesignSystem.typography.sizes.lg,
+              fontWeight: ForestDesignSystem.typography.weights.bold,
+              color: '#FFFFFF',
+              textShadow: '2px 2px 4px rgba(0, 0, 0, 0.9)',
+            }}
+          >
+            {maxHealth}
+          </span>
         </div>
-      )}
+      </div>
 
       {/* Damage/Healing Animation Container */}
       <div

@@ -4,12 +4,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { GameService } from '../../../services/GameService';
-import { 
-  Transaction, 
-  LAMPORTS_PER_SOL, 
-  PublicKey, 
+import {
+  Transaction,
+  LAMPORTS_PER_SOL,
+  PublicKey,
   TransactionInstruction,
-  SystemProgram 
+  SystemProgram,
 } from '@solana/web3.js';
 import { WalletReconnect } from '../wallet/WalletReconnect';
 import { ClientWalletButton } from '../wallet/ClientWalletButton';
@@ -22,7 +22,7 @@ import { MenuSceneUI } from '../scenes/MenuSceneUI';
 import { CombatSceneUI } from '../scenes/CombatSceneUI';
 import { VaultSceneUI } from '../scenes/VaultSceneUI';
 import { LoadingScreen } from './LoadingScreen';
-import type { PaymentOptions } from '../types';
+import type { PaymentOptions } from '../../../types';
 
 interface Props {
   className?: string;
@@ -33,27 +33,32 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
   const gameInstanceRef = useRef<any | null>(null);
   const [isGameReady, setIsGameReady] = useState(false);
   const [currentScene, setCurrentScene] = useState<string>('');
-  const [backendStatus, setBackendStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
+  const [backendStatus, setBackendStatus] = useState<
+    'connecting' | 'connected' | 'error'
+  >('connecting');
   const [mounted, setMounted] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingError, setLoadingError] = useState<{ message: string; canRetry: boolean } | null>(null);
-  
+  const [loadingError, setLoadingError] = useState<{
+    message: string;
+    canRetry: boolean;
+  } | null>(null);
+  const [isGuideVisible, setIsGuideVisible] = useState(false);
+
   // Payment UI states - only for LobbyScene
-  const [paymentOptions, setPaymentOptions] = useState<PaymentOptions | null>(null);
+  const [paymentOptions, setPaymentOptions] = useState<PaymentOptions | null>(
+    null
+  );
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'wallet' | 'pda'>('wallet');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
+    'wallet' | 'pda'
+  >('wallet');
   const [isCombatProcessing, setIsCombatProcessing] = useState(false);
-  
-  const { 
-    publicKey, 
-    connected, 
-    disconnect, 
-    sendTransaction,
-    wallet
-  } = useWallet();
-  
+
+  const { publicKey, connected, disconnect, sendTransaction, wallet } =
+    useWallet();
+
   const { connection } = useConnection();
 
   // Set mounted state
@@ -64,7 +69,7 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
   // Initialize Phaser game - client-side only
   useEffect(() => {
     if (!gameRef.current || typeof window === 'undefined') return;
-    
+
     // Prevent multiple initializations
     if (gameInstanceRef.current) return;
 
@@ -72,14 +77,14 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
 
     const initGame = async () => {
       try {
-        const { BetBeastGame } = await import('../../../game/Game');
-        
+        const { PrimalBetGame } = await import('../../../game/Game');
+
         // Double-check we haven't been cancelled and no game exists
         if (isCancelled || gameInstanceRef.current) return;
-        
-        const gameInstance = new BetBeastGame();
+
+        const gameInstance = new PrimalBetGame();
         gameInstance.init('game-container');
-        
+
         if (!isCancelled) {
           gameInstanceRef.current = gameInstance;
           setIsGameReady(true);
@@ -109,23 +114,25 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
     if (connected && publicKey) {
       // Store wallet address for vault attempts
       window.localStorage.setItem('walletAddress', publicKey.toString());
-      
+
       // Small delay to ensure game is ready to receive the event
       const timeoutId = setTimeout(() => {
         // Notify Phaser game about wallet connection
-        window.dispatchEvent(new CustomEvent('walletConnected', {
-          detail: { 
-            address: publicKey.toString(),
-            wallet: wallet?.adapter.name 
-          }
-        }));
+        window.dispatchEvent(
+          new CustomEvent('walletConnected', {
+            detail: {
+              address: publicKey.toString(),
+              wallet: wallet?.adapter.name,
+            },
+          })
+        );
       }, 100);
-      
+
       return () => clearTimeout(timeoutId);
     } else {
       // Clear wallet address on disconnect
       window.localStorage.removeItem('walletAddress');
-      
+
       // Notify about disconnection
       window.dispatchEvent(new CustomEvent('walletDisconnected'));
     }
@@ -143,12 +150,12 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
     };
 
     checkBackend();
-    
+
     // Check every 30 seconds
     const interval = setInterval(checkBackend, 30000);
     return () => clearInterval(interval);
   }, []);
-  
+
   // Fetch payment options when wallet connects and we're in LobbyScene
   useEffect(() => {
     const fetchPaymentOptions = async () => {
@@ -156,38 +163,35 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
         setPaymentOptions(null);
         return;
       }
-      
+
       try {
-        const options = await GameService.getPaymentOptions(publicKey.toString());
+        const options = await GameService.getPaymentOptions(
+          publicKey.toString()
+        );
         setPaymentOptions(options);
-        
+
         // Check localStorage first for last used payment method
         const savedPaymentMethod = localStorage.getItem('lastPaymentMethod');
-        console.log('Loading payment method - saved:', savedPaymentMethod, 'canUsePDA:', options.canUsePDA);
-        
+
         // Always respect the user's saved preference if it exists
         if (savedPaymentMethod === 'pda') {
-          console.log('Setting payment method to PDA (from localStorage)');
           setSelectedPaymentMethod('pda');
         } else if (savedPaymentMethod === 'wallet') {
-          console.log('Setting payment method to wallet (from localStorage)');
           setSelectedPaymentMethod('wallet');
         } else if (options.lastPaymentMethod === 'pda' && options.canUsePDA) {
           // Fall back to backend's last method only if no saved preference
-          console.log('Setting payment method to PDA (from backend)');
           setSelectedPaymentMethod('pda');
         } else {
-          console.log('Setting payment method to wallet (default)');
           setSelectedPaymentMethod('wallet');
         }
       } catch (error) {
         console.error('Failed to fetch payment options:', error);
       }
     };
-    
+
     fetchPaymentOptions();
   }, [publicKey, connected, currentScene]);
-  
+
   const handleBalanceUpdate = () => {
     // Refresh payment options after deposit/withdraw
     if (publicKey && connected && currentScene === 'LobbyScene') {
@@ -206,49 +210,57 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       setIsCombatProcessing(true);
       // Dispatch combat starting event to disable button
       window.dispatchEvent(new CustomEvent('combatStarting'));
-      
+
       try {
         const { paymentMethod } = event.detail;
-        
+
         if (paymentMethod === 'pda') {
           // For PDA payment, use the gasless endpoint
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/combat/enter-gasless`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              playerWallet: publicKey.toString()
-            })
-          });
-          
+          const response = await fetch(
+            `${
+              process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'
+            }/combat/enter-gasless`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                playerWallet: publicKey.toString(),
+              }),
+            }
+          );
+
           if (!response.ok) {
             const error = await response.json();
             throw new Error(error.error || 'Failed to enter combat');
           }
-          
+
           const result = await response.json();
-          
+
           // Generate and store combat ID
-          const combatId = `combat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const combatId = `combat_${Date.now()}_${Math.random()
+            .toString(36)
+            .substr(2, 9)}`;
           window.localStorage.setItem('currentCombatId', combatId);
-          
+
           // Save payment method to localStorage
           localStorage.setItem('lastPaymentMethod', 'pda');
-          
+
           // Notify game that combat can proceed
-          window.dispatchEvent(new CustomEvent('combatStarted', {
-            detail: { 
-              txSignature: result.txSignature,
-              combatId: combatId,
-              paymentMethod: 'pda'
-            }
-          }));
-          
+          window.dispatchEvent(
+            new CustomEvent('combatStarted', {
+              detail: {
+                txSignature: result.txSignature,
+                combatId: combatId,
+                paymentMethod: 'pda',
+              },
+            })
+          );
         } else {
           // For wallet payment, build transaction directly
           const programId = new PublicKey(process.env.NEXT_PUBLIC_PROGRAM_ID!);
-          
+
           // Derive PDAs
           const [gameStatePDA] = PublicKey.findProgramAddressSync(
             [Buffer.from('game_state')],
@@ -262,13 +274,17 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
             [Buffer.from('player'), publicKey.toBuffer()],
             programId
           );
-          
+
           // Treasury address from backend
-          const treasuryPubkey = new PublicKey('EsRy4vmaHbnj3kfj2X9rpRRgbKcA6a9DtdXrBddnNoVi');
-          
+          const treasuryPubkey = new PublicKey(
+            'EsRy4vmaHbnj3kfj2X9rpRRgbKcA6a9DtdXrBddnNoVi'
+          );
+
           // Build enter_combat instruction
-          const discriminator = Buffer.from([206, 145, 23, 55, 61, 45, 122, 210]); // enter_combat
-          
+          const discriminator = Buffer.from([
+            206, 145, 23, 55, 61, 45, 122, 210,
+          ]); // enter_combat
+
           const instruction = new TransactionInstruction({
             programId,
             keys: [
@@ -277,72 +293,95 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
               { pubkey: potVaultPDA, isSigner: false, isWritable: true },
               { pubkey: publicKey, isSigner: true, isWritable: true },
               { pubkey: treasuryPubkey, isSigner: false, isWritable: true },
-              { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+              {
+                pubkey: SystemProgram.programId,
+                isSigner: false,
+                isWritable: false,
+              },
             ],
             data: discriminator,
           });
-          
+
           // Create and send transaction
           const transaction = new Transaction().add(instruction);
           const { blockhash } = await connection.getLatestBlockhash();
           transaction.recentBlockhash = blockhash;
           transaction.feePayer = publicKey;
-          
+
           // Send transaction - user will see wallet popup
           const signature = await sendTransaction(transaction, connection);
-          
+
           // Wait for confirmation
           await connection.confirmTransaction(signature, 'confirmed');
-          
+
           // Generate and store combat ID
-          const combatId = `combat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const combatId = `combat_${Date.now()}_${Math.random()
+            .toString(36)
+            .substr(2, 9)}`;
           window.localStorage.setItem('currentCombatId', combatId);
-          
+
           // Save payment method to localStorage
           localStorage.setItem('lastPaymentMethod', 'wallet');
-          
-          // Notify game that combat can proceed
-          window.dispatchEvent(new CustomEvent('combatStarted', {
-            detail: { 
-              txSignature: signature,
-              combatId: combatId,
-              paymentMethod: 'wallet'
-            }
-          }));
-        }
 
+          // Notify game that combat can proceed
+          window.dispatchEvent(
+            new CustomEvent('combatStarted', {
+              detail: {
+                txSignature: signature,
+                combatId: combatId,
+                paymentMethod: 'wallet',
+              },
+            })
+          );
+        }
       } catch (error) {
         console.error('Combat transaction failed:', error);
-        
+
         // Clear loading state
         setIsCombatProcessing(false);
-        
+
         // Show error to user
-        window.dispatchEvent(new CustomEvent('combatError', {
-          detail: { 
-            error: (error as Error).message,
-            paymentMethod: event.detail.paymentMethod
-          }
-        }));
+        window.dispatchEvent(
+          new CustomEvent('combatError', {
+            detail: {
+              error: (error as Error).message,
+              paymentMethod: event.detail.paymentMethod,
+            },
+          })
+        );
       }
     };
-    
+
     // Listen for fight button click from the UI overlay
     const handleFightButtonClick = async (event: CustomEvent) => {
       const { paymentMethod } = event.detail;
-      
+
       // Dispatch start combat event with payment method
-      window.dispatchEvent(new CustomEvent('startCombat', {
-        detail: { paymentMethod }
-      }));
+      window.dispatchEvent(
+        new CustomEvent('startCombat', {
+          detail: { paymentMethod },
+        })
+      );
     };
 
-    window.addEventListener('startCombat', handleStartCombat as unknown as EventListener);
-    window.addEventListener('fightButtonClicked', handleFightButtonClick as unknown as EventListener);
-    
+    window.addEventListener(
+      'startCombat',
+      handleStartCombat as unknown as EventListener
+    );
+    window.addEventListener(
+      'fightButtonClicked',
+      handleFightButtonClick as unknown as EventListener
+    );
+
     return () => {
-      window.removeEventListener('startCombat', handleStartCombat as unknown as EventListener);
-      window.removeEventListener('fightButtonClicked', handleFightButtonClick as unknown as EventListener);
+      window.removeEventListener(
+        'startCombat',
+        handleStartCombat as unknown as EventListener
+      );
+      window.removeEventListener(
+        'fightButtonClicked',
+        handleFightButtonClick as unknown as EventListener
+      );
     };
   }, [connected, publicKey, connection, sendTransaction]);
 
@@ -350,23 +389,25 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
   useEffect(() => {
     const handleConnectWallet = () => {
       // The wallet modal will be triggered by the button click
-      const button = document.querySelector('.wallet-adapter-button') as HTMLButtonElement;
+      const button = document.querySelector(
+        '.wallet-adapter-button'
+      ) as HTMLButtonElement;
       button?.click();
     };
 
     window.addEventListener('connectWallet', handleConnectWallet);
-    
+
     return () => {
       window.removeEventListener('connectWallet', handleConnectWallet);
     };
   }, []);
-  
+
   // Refresh payment options when combat starts (after successful payment)
   useEffect(() => {
     const handleCombatStarted = () => {
       // Clear loading state
       setIsCombatProcessing(false);
-      
+
       // Small delay to ensure payment has been processed
       setTimeout(() => {
         handleBalanceUpdate();
@@ -374,7 +415,7 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
     };
 
     window.addEventListener('combatStarted', handleCombatStarted);
-    
+
     return () => {
       window.removeEventListener('combatStarted', handleCombatStarted);
     };
@@ -383,9 +424,8 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
   // Listen for scene changes
   useEffect(() => {
     const handleSceneChange = (event: CustomEvent) => {
-      console.log('Scene changed to:', event.detail.sceneName);
       setCurrentScene(event.detail.sceneName);
-      
+
       // Refresh payment options when returning to LobbyScene
       if (event.detail.sceneName === 'LobbyScene' && publicKey && connected) {
         handleBalanceUpdate();
@@ -393,9 +433,12 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
     };
 
     window.addEventListener('sceneChanged', handleSceneChange as EventListener);
-    
+
     return () => {
-      window.removeEventListener('sceneChanged', handleSceneChange as EventListener);
+      window.removeEventListener(
+        'sceneChanged',
+        handleSceneChange as EventListener
+      );
     };
   }, [publicKey, connected]);
 
@@ -420,45 +463,63 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
     const handleLoadingError = (event: CustomEvent) => {
       setLoadingError({
         message: event.detail.message,
-        canRetry: event.detail.canRetry
+        canRetry: event.detail.canRetry,
       });
       setLoadingProgress(0);
     };
 
     window.addEventListener('loadingStarted', handleLoadingStarted);
-    window.addEventListener('loadingProgress', handleLoadingProgress as EventListener);
+    window.addEventListener(
+      'loadingProgress',
+      handleLoadingProgress as EventListener
+    );
     window.addEventListener('loadingComplete', handleLoadingComplete);
-    window.addEventListener('loadingError', handleLoadingError as EventListener);
+    window.addEventListener(
+      'loadingError',
+      handleLoadingError as EventListener
+    );
 
     return () => {
       window.removeEventListener('loadingStarted', handleLoadingStarted);
-      window.removeEventListener('loadingProgress', handleLoadingProgress as EventListener);
+      window.removeEventListener(
+        'loadingProgress',
+        handleLoadingProgress as EventListener
+      );
       window.removeEventListener('loadingComplete', handleLoadingComplete);
-      window.removeEventListener('loadingError', handleLoadingError as EventListener);
+      window.removeEventListener(
+        'loadingError',
+        handleLoadingError as EventListener
+      );
     };
   }, []);
 
   const getStatusColor = () => {
     switch (backendStatus) {
-      case 'connected': return 'text-green-500';
-      case 'error': return 'text-red-500';
-      default: return 'text-yellow-500';
+      case 'connected':
+        return 'text-green-500';
+      case 'error':
+        return 'text-red-500';
+      default:
+        return 'text-yellow-500';
     }
   };
 
   const getStatusText = () => {
     switch (backendStatus) {
-      case 'connected': return 'Online';
-      case 'error': return 'Offline';
-      default: return 'Connecting...';
+      case 'connected':
+        return 'Online';
+      case 'error':
+        return 'Offline';
+      default:
+        return 'Connecting...';
     }
   };
 
   return (
     <div className={`relative w-full h-screen bg-gray-900 ${className || ''}`}>
       {/* Loading Screen */}
-      <LoadingScreen 
-        progress={loadingProgress} 
+      <LoadingScreen
+        progress={loadingProgress}
         isVisible={isLoading}
         error={loadingError || undefined}
         onRetry={() => {
@@ -466,18 +527,23 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
           window.dispatchEvent(new CustomEvent('enterArena'));
         }}
       />
-      
+
       {/* Wallet reconnection helper */}
       <WalletReconnect />
-      
+
       {/* Backend status - Top left - Hide during combat and vault scenes */}
       {currentScene !== 'CombatScene' && currentScene !== 'VaultScene' && (
         <div className="absolute top-4 left-4" style={{ zIndex: 9999 }}>
           <div className="flex items-center gap-2 bg-black bg-opacity-50 px-3 py-2 rounded-lg">
-            <div className={`w-2 h-2 rounded-full ${
-              backendStatus === 'connected' ? 'bg-green-500' : 
-              backendStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
-            }`}></div>
+            <div
+              className={`w-2 h-2 rounded-full ${
+                backendStatus === 'connected'
+                  ? 'bg-green-500'
+                  : backendStatus === 'error'
+                  ? 'bg-red-500'
+                  : 'bg-yellow-500'
+              }`}
+            ></div>
             <span className={`text-sm font-medium ${getStatusColor()}`}>
               {getStatusText()}
             </span>
@@ -485,11 +551,17 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
         </div>
       )}
 
-      {/* Header with wallet button - Moved left to give room for dropdown - Hide during combat and vault scenes */}
-      {currentScene !== 'CombatScene' && currentScene !== 'VaultScene' && (
-        <div className="absolute top-4 right-32 flex items-center gap-4" style={{ zIndex: 9999 }}>
-          {/* Integrated Payment UI - only show in LobbyScene when wallet connected */}
-          {currentScene === 'LobbyScene' && connected && publicKey && paymentOptions && (
+      {/* Debug alignment lines - to verify wallet and PDA alignment */}
+
+      {/* PDA Payment UI - Left side - only show in LobbyScene when wallet connected */}
+      {currentScene === 'LobbyScene' &&
+        connected &&
+        publicKey &&
+        paymentOptions && (
+          <div
+            className="absolute left-32"
+            style={{ top: '30px', zIndex: 9999 }}
+          >
             <IntegratedPaymentUI
               pdaBalance={paymentOptions.pdaBalance}
               selectedMethod={selectedPaymentMethod}
@@ -498,16 +570,23 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
               onWithdraw={() => setShowWithdrawModal(true)}
               entryFee={0.01 * LAMPORTS_PER_SOL}
               showPDAOptions={
-                paymentOptions.canUsePDA || 
-                paymentOptions.pdaBalance > 0 || 
+                paymentOptions.canUsePDA ||
+                paymentOptions.pdaBalance > 0 ||
                 localStorage.getItem('lastPaymentMethod') === 'pda'
               }
             />
-          )}
-          
+          </div>
+        )}
+
+      {/* Header with wallet button - Right side - Hide during combat and vault scenes */}
+      {currentScene !== 'CombatScene' && currentScene !== 'VaultScene' && (
+        <div
+          className="absolute right-32 flex items-center gap-4"
+          style={{ top: '23px', zIndex: 9999 }}
+        >
           {/* Wallet connection */}
           <ClientWalletButton className="!bg-red-600 hover:!bg-red-700 !text-white !font-bold !px-4 !py-2 !rounded-lg transition-colors" />
-          
+
           {/* Manual reconnect for development - only show on client */}
           {mounted && !connected && wallet && (
             <button
@@ -527,16 +606,16 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       )}
 
       {/* Game container */}
-      <div 
-        id="game-container" 
+      <div
+        id="game-container"
         ref={gameRef}
         className="absolute inset-0 w-full h-full"
         style={{ zIndex: 1 }}
       />
-      
+
       {/* UI Root Container */}
-      <div 
-        id="game-ui-root" 
+      <div
+        id="game-ui-root"
         className="absolute inset-0 pointer-events-none"
         style={{ zIndex: 10 }}
       />
@@ -544,8 +623,8 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       {/* UI Overlays - Scene-specific rendering */}
       {isGameReady && currentScene === 'MenuScene' && <MenuSceneUI />}
       {isGameReady && currentScene === 'LobbyScene' && (
-        <GameUIOverlay 
-          selectedPaymentMethod={selectedPaymentMethod} 
+        <GameUIOverlay
+          selectedPaymentMethod={selectedPaymentMethod}
           isPaymentOptionsReady={!!paymentOptions}
           pdaBalance={paymentOptions?.pdaBalance || 0}
           entryFee={0.01 * LAMPORTS_PER_SOL}
@@ -554,21 +633,17 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       )}
       {isGameReady && currentScene === 'CombatScene' && <CombatSceneUI />}
       {isGameReady && currentScene === 'VaultScene' && <VaultSceneUI />}
-      
-      {/* Debug: Show current scene */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="absolute bottom-4 left-4 text-white bg-black bg-opacity-50 px-2 py-1 rounded text-sm" style={{ zIndex: 9999 }}>
-          Current Scene: {currentScene || 'None'}
-        </div>
-      )}
+
 
       {/* Loading overlay */}
       {!isGameReady && (
         <div className="absolute inset-0 bg-black flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-yellow-500 mx-auto mb-4"></div>
-            <h2 className="text-2xl font-bold text-white mb-2">🌲 BETBEAST ARENA 🌲</h2>
-            <p className="text-gray-400">Loading the arena...</p>
+            <h2 className="text-2xl font-bold text-white mb-2">
+              🌲 PRIMALBET 🌲
+            </h2>
+            <p className="text-gray-400">Loading the game...</p>
           </div>
         </div>
       )}
@@ -577,12 +652,15 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       {backendStatus === 'error' && (
         <div className="absolute inset-0 bg-black bg-opacity-80 flex items-center justify-center z-20">
           <div className="text-center bg-gray-800 p-8 rounded-lg">
-            <h3 className="text-xl font-bold text-red-500 mb-4">⚠️ CONNECTION LOST</h3>
+            <h3 className="text-xl font-bold text-red-500 mb-4">
+              ⚠️ CONNECTION LOST
+            </h3>
             <p className="text-gray-300 mb-4">
-              Unable to connect to the game server.<br />
+              Unable to connect to the game server.
+              <br />
               Please check your internet connection and try again.
             </p>
-            <button 
+            <button
               onClick={() => window.location.reload()}
               className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition-colors"
             >
@@ -591,7 +669,7 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
           </div>
         </div>
       )}
-      
+
       {/* Deposit Modal - only for LobbyScene */}
       {currentScene === 'LobbyScene' && showDepositModal && (
         <PDADepositModal
@@ -600,7 +678,7 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
           onSuccess={handleBalanceUpdate}
         />
       )}
-      
+
       {/* Withdraw Modal - only for LobbyScene */}
       {currentScene === 'LobbyScene' && showWithdrawModal && paymentOptions && (
         <PDAWithdrawModal

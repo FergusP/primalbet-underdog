@@ -7,7 +7,7 @@ export class VaultScene extends BaseScene {
   private walletAddress: string = '';
   private vrfSuccess: boolean = false;
   private prizeAmount: number = 0;
-  private bgRect!: Phaser.GameObjects.Rectangle;
+  private bgImage!: Phaser.GameObjects.Image;
   private particles!: Phaser.GameObjects.Particles.ParticleEmitter;
   private vault!: Phaser.GameObjects.Sprite;
   
@@ -88,37 +88,77 @@ export class VaultScene extends BaseScene {
       detail: { sceneName: 'VaultScene' } 
     }));
 
-    // Forest treasure chamber background - wood/gold tone
-    this.bgRect = this.add.rectangle(width/2, height/2, width, height, 0x2a2520);
-    this.registerUIElement('bg', this.bgRect);
+    // Add vault room background image
+    this.bgImage = this.add.image(width/2, height/2, 'vault-room-bg');
+    // Scale down to show more of the scene
+    const bgScale = 1.0; // Show full image without zoom
+    this.bgImage.setScale(bgScale);
+    // Center the image
+    this.bgImage.setPosition(width * 0.5, height * 0.5);
+    this.bgImage.setDepth(0);
+    this.registerUIElement('bg', this.bgImage);
     
-    // Add subtle gradient overlay for depth
+    // Add very light overlay to slightly dim the background
+    const darkOverlay = this.add.rectangle(width/2, height/2, width, height, 0x000000);
+    darkOverlay.setAlpha(0.1); // Only 10% black overlay for minimal dimming
+    darkOverlay.setDepth(1);
+    this.registerUIElement('darkOverlay', darkOverlay);
+    
+    // Add ONLY a dark backdrop box to make the background title more visible
+    // No text overlay - just a contrast box
+    const titleBackdrop = this.add.graphics();
+    titleBackdrop.fillStyle(0x000000, 0.85); // Darker opacity for better contrast
+    titleBackdrop.fillRoundedRect(width/2 - 230, height * 0.065, 460, 150, 10); // Moved down
+    titleBackdrop.lineStyle(3, 0xffd700, 0.8); // Golden border
+    titleBackdrop.strokeRoundedRect(width/2 - 230, height * 0.065, 460, 150, 10);
+    titleBackdrop.setDepth(1); // Place it between background and text
+    this.registerUIElement('titleBackdrop', titleBackdrop);
+    
+    // Add subtle gradient for depth (but lighter)
     const gradient = this.add.graphics();
-    gradient.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.0, 0.3, 0.0, 0.0);
+    gradient.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.0, 0.1, 0.0, 0.0);
     gradient.fillRect(0, 0, width, height);
     gradient.setDepth(1);
     
-    // Add golden particles falling like forest treasures
-    this.particles = this.add.particles(0, 0, 'spark-placeholder', {
-      x: { min: 0, max: width },
-      y: 0,
-      lifespan: 4000,
-      speed: { min: 30, max: 80 },
-      scale: { start: 0.8, end: 0.3 },
-      blendMode: 'ADD',
-      tint: [0xffd700, 0xffaa00, 0xffcc00],
-      quantity: 1,
-      frequency: 500
+    // Add golden falling sparkles using simple circles
+    const particleContainer = this.add.container(0, 0);
+    particleContainer.setDepth(2);
+    this.registerUIElement('particles', particleContainer);
+    
+    // Create falling gold sparkles
+    this.time.addEvent({
+      delay: 500,
+      loop: true,
+      callback: () => {
+        const sparkle = this.add.circle(
+          Phaser.Math.Between(0, width),
+          0,
+          Phaser.Math.Between(2, 4),
+          Phaser.Math.RND.pick([0xffd700, 0xffaa00, 0xffcc00]),
+          1
+        );
+        sparkle.setBlendMode(Phaser.BlendModes.ADD);
+        particleContainer.add(sparkle);
+        
+        // Animate falling
+        this.tweens.add({
+          targets: sparkle,
+          y: height + 20,
+          scale: 0.3,
+          alpha: 0,
+          duration: 4000,
+          ease: 'Linear',
+          onComplete: () => sparkle.destroy()
+        });
+      }
     });
-    this.registerUIElement('particles', this.particles);
-    this.particles.setDepth(2);
 
     // Hide the single vault sprite (we'll show 3 vaults instead)
     this.vault = this.add.sprite(0, 0, 'vault-placeholder');
     this.vault.setVisible(false);
     this.registerUIElement('vault', this.vault);
 
-    // Title is now handled by HTML overlay
+    // Title is already in the background image, no need for overlay
 
     // Position elements
     this.positionElements(width, height);
@@ -401,64 +441,78 @@ export class VaultScene extends BaseScene {
   private createSlot(symbol: string, x: number, y: number): Phaser.GameObjects.Container {
     const slot = this.add.container(x, y);
     
-    // Slot background - darker for better contrast
-    const slotBg = this.add.rectangle(0, 0, 120, 160, 0x1a1a1a);
-    slotBg.setStrokeStyle(2, 0x666666);
+    // Slot background - wooden/treasure chest theme
+    const slotBg = this.add.rectangle(0, 0, 120, 160, 0x2a1810);
+    slotBg.setStrokeStyle(3, 0x8b4513); // Brown wood border
     slot.add(slotBg);
+    
+    // Add inner glow effect
+    const innerGlow = this.add.rectangle(0, 0, 110, 150, 0x3a2820);
+    innerGlow.setAlpha(0.5);
+    slot.add(innerGlow);
     
     // Create visual representations for each outcome
     switch (symbol) {
       case 'win':
-        // Golden star for WIN
-        const star = this.add.graphics();
-        star.fillStyle(0xffd700, 1);
-        star.lineStyle(2, 0xffff00);
+        // Golden treasure chest or coin for WIN
+        const treasureBg = this.add.circle(0, -10, 35, 0x4a3c00);
+        treasureBg.setStrokeStyle(3, 0xffd700);
+        slot.add(treasureBg);
         
-        // Draw star shape
-        const points = [];
-        for (let i = 0; i < 10; i++) {
-          const angle = (i * Math.PI) / 5;
-          const radius = i % 2 === 0 ? 35 : 15;
-          points.push(new Phaser.Math.Vector2(
-            Math.cos(angle - Math.PI / 2) * radius,
-            Math.sin(angle - Math.PI / 2) * radius
-          ));
-        }
-        star.fillPoints(points);
-        star.strokePoints(points);
-        slot.add(star);
+        // Create golden coin/treasure icon
+        const coin = this.add.circle(0, -10, 28, 0xffd700);
+        coin.setStrokeStyle(2, 0xffed4e);
+        slot.add(coin);
         
-        // Add WIN text
-        const winText = this.add.text(0, 50, 'WIN', {
-          fontSize: '18px',
+        // Add treasure symbol (dollar sign or coin mark)
+        const treasureSymbol = this.add.text(0, -10, '$', {
+          fontSize: '36px',
+          color: '#4a3c00',
+          fontFamily: 'Arial',
+          fontStyle: 'bold',
+          stroke: '#ffed4e',
+          strokeThickness: 1
+        }).setOrigin(0.5);
+        slot.add(treasureSymbol);
+        
+        // Add shimmer effect
+        const shimmer = this.add.graphics();
+        shimmer.fillStyle(0xffffff, 0.3);
+        shimmer.fillEllipse(0, -10, 50, 20);
+        slot.add(shimmer);
+        
+        // Add WIN text with glow
+        const winText = this.add.text(0, 45, 'TREASURE', {
+          fontSize: '16px',
           color: '#ffd700',
           fontFamily: 'Arial',
-          fontStyle: 'bold'
+          fontStyle: 'bold',
+          stroke: '#4a3c00',
+          strokeThickness: 2
         }).setOrigin(0.5);
         slot.add(winText);
         break;
         
       case 'miss':
-        // Red X for MISS
-        const missBg = this.add.circle(0, 0, 30, 0x440000);
-        missBg.setStrokeStyle(3, 0xff0000);
-        slot.add(missBg);
+        // Skull or trap for MISS
+        const trapBg = this.add.circle(0, -10, 30, 0x1a0a0a);
+        trapBg.setStrokeStyle(2, 0x8b0000);
+        slot.add(trapBg);
         
-        // Add X symbol
-        const missX = this.add.text(0, 0, '✕', {
-          fontSize: '40px',
-          color: '#ff0000',
-          fontFamily: 'Arial',
-          fontStyle: 'bold'
+        // Add skull emoji or X
+        const skull = this.add.text(0, -10, '💀', {
+          fontSize: '40px'
         }).setOrigin(0.5);
-        slot.add(missX);
+        slot.add(skull);
         
-        // Add text label
-        const missText = this.add.text(0, 50, 'MISS', {
+        // Add TRAP text
+        const missText = this.add.text(0, 45, 'TRAP', {
           fontSize: '16px',
           color: '#ff6666',
           fontFamily: 'Arial',
-          fontStyle: 'bold'
+          fontStyle: 'bold',
+          stroke: '#1a0a0a',
+          strokeThickness: 2
         }).setOrigin(0.5);
         slot.add(missText);
         break;
@@ -1075,21 +1129,47 @@ export class VaultScene extends BaseScene {
       });
     }
     
-    // Create sparkle particles
-    const sparkles = this.add.particles(vaultX, vaultY - 30, 'spark-placeholder', {
-      speed: { min: 100, max: 300 },
-      scale: { start: 0.8, end: 0 },
-      blendMode: 'ADD',
-      lifespan: 1000,
-      quantity: 3,
-      frequency: 100,
-      x: { min: -30, max: 30 },
-      y: { min: -30, max: 30 },
-      tint: [0xffd700, 0xffff00, 0xffaa00]
+    // Create sparkle effect with simple circles
+    const sparkleContainer = this.add.container(vaultX, vaultY - 30);
+    this.registerUIElement('sparkles', sparkleContainer);
+    
+    // Create sparkles periodically
+    const sparkleTimer = this.time.addEvent({
+      delay: 100,
+      loop: true,
+      callback: () => {
+        // Create 3 sparkles
+        for (let i = 0; i < 3; i++) {
+          const sparkle = this.add.circle(
+            Phaser.Math.Between(-30, 30),
+            Phaser.Math.Between(-30, 30),
+            Phaser.Math.Between(2, 4),
+            Phaser.Math.RND.pick([0xffd700, 0xffff00, 0xffaa00]),
+            1
+          );
+          sparkle.setBlendMode(Phaser.BlendModes.ADD);
+          sparkleContainer.add(sparkle);
+          
+          // Animate sparkle
+          const angle = Math.random() * Math.PI * 2;
+          const distance = Phaser.Math.Between(100, 300);
+          
+          this.tweens.add({
+            targets: sparkle,
+            x: sparkle.x + Math.cos(angle) * distance,
+            y: sparkle.y + Math.sin(angle) * distance,
+            scale: 0,
+            alpha: 0,
+            duration: 1000,
+            ease: 'Power2',
+            onComplete: () => sparkle.destroy()
+          });
+        }
+      }
     });
     
-    // Store sparkles reference to stop when leaving scene
-    this.registerUIElement('sparkles', sparkles);
+    // Store timer reference for cleanup (not as UI element since it's not a GameObject)
+    (this as any).sparkleTimer = sparkleTimer;
   }
 
   private async vaultEmpty() {
@@ -1126,9 +1206,10 @@ export class VaultScene extends BaseScene {
 
   protected repositionUI(width: number, height: number) {
     // Update background
-    if (this.bgRect) {
-      this.bgRect.setSize(width, height);
-      this.bgRect.setPosition(this.centerX(width), this.centerY(height));
+    if (this.bgImage) {
+      const bgScale = 1.0; // Full view without zoom
+      this.bgImage.setScale(bgScale);
+      this.bgImage.setPosition(width * 0.5, height * 0.5);
     }
 
     // Update particles
