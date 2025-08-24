@@ -445,6 +445,8 @@ export class MenuScene extends BaseScene {
     });
     
     // DEV: Add buttons to jump directly to scenes (always show during development)
+    // Dev buttons are commented out for production
+    /*
     // Vault Scene button
     const devVaultButton = this.add.text(width / 2 - 100, buttonY + 120, '[DEV] Vault', {
       fontSize: '24px',
@@ -514,6 +516,7 @@ export class MenuScene extends BaseScene {
     });
     
     this.registerUIElement('devArenaButton', devArenaButton);
+    */
   }
   
   private updateWoodenButtonState() {
