@@ -6,10 +6,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-aurelius = "J18DRpsrSncmgAqbjVXdfF5qUdBpXJZZYPqRWY3pyV8z"
+primalbet = "J18DRpsrSncmgAqbjVXdfF5qUdBpXJZZYPqRWY3pyV8z"
 
 [programs.devnet]
-aurelius = "J18DRpsrSncmgAqbjVXdfF5qUdBpXJZZYPqRWY3pyV8z"
+primalbet = "J18DRpsrSncmgAqbjVXdfF5qUdBpXJZZYPqRWY3pyV8z"
 
 [registry]
 url = "https://api.apr.dev"
