@@ -1,7 +1,7 @@
 {
-  "name": "aurelius-backend",
+  "name": "primalbet-backend",
   "version": "1.0.0",
-  "description": "Backend service for Aurelius Colosseum game",
+  "description": "Backend service for PrimalBet game",
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/index.ts",
