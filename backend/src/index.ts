@@ -34,6 +34,43 @@ app.use('/api', createRouter(solanaService));
 // Arena Routes
 app.use('/api/arena', arenaRoutes);
 
+// Viewer test route - simulates package purchases
+app.post('/api/viewer', (req, res) => {
+  try {
+    const { playerWallet, packageId, packageName } = req.body;
+
+    if (!playerWallet || !packageId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: playerWallet, packageId',
+      });
+    }
+
+    console.log(`[Viewer] Package received: ${packageName} (${packageId}) for ${playerWallet}`);
+
+    // Broadcast package event to frontend
+    const packageEvent = {
+      playerWallet,
+      itemId: packageId,
+      itemName: packageName || 'Unknown Package',
+      timestamp: Date.now(),
+    };
+
+    arenaService.broadcastPackage(packageEvent);
+
+    res.json({
+      success: true,
+      message: `Package ${packageName} delivered to player`,
+    });
+  } catch (error: any) {
+    console.error('[Viewer] Package delivery error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 // WebSocket for real-time pot updates to frontend clients
 wss.on('connection', (ws) => {
   console.log('New client WebSocket connection');
