@@ -94,7 +94,7 @@ export interface ItemDrop {
  */
 export class ArenaGameService {
   private socket: Socket | null = null;
-  private gameState: GameState | null = null;
+  private gameState: GameState | undefined = undefined;
   private userToken: string = '';
 
   /**
@@ -171,7 +171,7 @@ export class ArenaGameService {
           resolve(true);
         });
 
-        this.socket?.on('connect_error', (error) => {
+        this.socket?.on('connect_error', (error: Error) => {
           console.error('[ArenaGame] WebSocket connection failed:', error);
           resolve(false);
         });
@@ -187,65 +187,65 @@ export class ArenaGameService {
    */
   private setupEventListeners(): void {
     // Arena Events
-    this.socket?.on('arena_countdown_started', (data) => {
+    this.socket?.on('arena_countdown_started', (data: any) => {
       console.log('[ArenaGame] Arena countdown started:', data);
       this.onArenaCountdownStarted?.(data);
     });
 
-    this.socket?.on('countdown_update', (data) => {
+    this.socket?.on('countdown_update', (data: any) => {
       console.log('[ArenaGame] Countdown update:', data);
       this.onCountdownUpdate?.(data);
     });
 
-    this.socket?.on('arena_begins', (data) => {
+    this.socket?.on('arena_begins', (data: any) => {
       console.log('[ArenaGame] Arena begins:', data);
       this.onArenaBegins?.(data);
     });
 
     // Boost Events
-    this.socket?.on('player_boost_activated', (data) => {
+    this.socket?.on('player_boost_activated', (data: any) => {
       console.log('[ArenaGame] Player boost activated:', data);
       this.onPlayerBoostActivated?.(data);
     });
 
-    this.socket?.on('boost_cycle_update', (data) => {
+    this.socket?.on('boost_cycle_update', (data: any) => {
       console.log('[ArenaGame] Boost cycle update:', data);
       this.onBoostCycleUpdate?.(data);
     });
 
-    this.socket?.on('boost_cycle_complete', (data) => {
+    this.socket?.on('boost_cycle_complete', (data: any) => {
       console.log('[ArenaGame] Boost cycle complete:', data);
       this.onBoostCycleComplete?.(data);
     });
 
     // Package Events
-    this.socket?.on('package_drop', (data) => {
+    this.socket?.on('package_drop', (data: any) => {
       console.log('[ArenaGame] Package drop:', data);
       this.onPackageDrop?.(data);
     });
 
-    this.socket?.on('immediate_item_drop', (data) => {
+    this.socket?.on('immediate_item_drop', (data: any) => {
       console.log('[ArenaGame] Immediate item drop:', data);
       this.onImmediateItemDrop?.(data);
     });
 
     // Game Events
-    this.socket?.on('event_triggered', (data) => {
+    this.socket?.on('event_triggered', (data: any) => {
       console.log('[ArenaGame] Event triggered:', data);
       this.onEventTriggered?.(data);
     });
 
-    this.socket?.on('player_joined', (data) => {
+    this.socket?.on('player_joined', (data: any) => {
       console.log('[ArenaGame] Player joined:', data);
       this.onPlayerJoined?.(data);
     });
 
-    this.socket?.on('game_completed', (data) => {
+    this.socket?.on('game_completed', (data: any) => {
       console.log('[ArenaGame] Game completed:', data);
       this.onGameCompleted?.(data);
     });
 
-    this.socket?.on('game_stopped', (data) => {
+    this.socket?.on('game_stopped', (data: any) => {
       console.log('[ArenaGame] Game stopped:', data);
       this.onGameStopped?.(data);
     });
@@ -434,14 +434,14 @@ export class ArenaGameService {
   disconnect(): void {
     this.socket?.disconnect();
     this.socket = null;
-    this.gameState = null;
+    this.gameState = undefined;
     console.log('[ArenaGame] Disconnected');
   }
 
   /**
    * Get current game state
    */
-  getGameState(): GameState | null {
+  getGameState(): GameState | undefined {
     return this.gameState;
   }
 }
