@@ -35,7 +35,7 @@ const INSTRUCTION_DISCRIMINATORS = {
 require('dotenv').config();
 
 async function beFirstPlayer() {
-  console.log('🎮 Aurelius First Player Initialization Script\n');
+  console.log('🎮 PrimalBet First Player Initialization Script\n');
 
   // Use backend wallet from env
   const backendPrivateKey = process.env.BACKEND_WALLET_PRIVATE_KEY;
@@ -160,7 +160,7 @@ async function beFirstPlayer() {
     console.log('🎯 Transaction signature:', txSig);
 
     if (!gameStateInfo) {
-      console.log('\n🎉 Congratulations! You initialized the Aurelius game!');
+      console.log('\n🎉 Congratulations! You initialized the PrimalBet game!');
       console.log(
         'The game will now run forever without needing initialization.'
       );

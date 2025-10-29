@@ -1,12 +1,12 @@
-// Aurelius VRF Simple Contract for ProofNetwork
+// PrimalBet VRF Simple Contract for ProofNetwork
 const state = {
   owner: null,
   totalRequests: 0,
   metadata: {
-    title: "Aurelius VRF Simple",
-    description: "Simple VRF service for Aurelius Colosseum",
+    title: "PrimalBet VRF Simple",
+    description: "Simple VRF service for PrimalBet",
     version: "1.0.0",
-    game: "Aurelius Colosseum"
+    game: "PrimalBet"
   }
 };
 
