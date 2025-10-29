@@ -25,7 +25,8 @@ export default function ViewerTestPage() {
       id: '69008f47eb39e74d32d2fce8',
       name: 'Damage Boost',
       icon: '🔥',
-      description: 'Doubles player damage output for 10 seconds. Help crush the monster!',
+      description:
+        'Doubles player damage output for 10 seconds. Help crush the monster!',
       cost: '50 Arena Coins',
       effect: '2x DMG',
       type: 'damage',
@@ -115,38 +116,35 @@ export default function ViewerTestPage() {
     : 'Not set';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 text-white p-5">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-4xl font-bold text-center mb-2 text-cyan-400 drop-shadow-[0_0_10px_rgba(0,217,255,0.5)]">
-          🎮 Arena Viewer Test Interface
+    <div className='min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 text-white p-5'>
+      <div className='max-w-2xl mx-auto'>
+        <h1 className='text-4xl font-bold text-center mb-2 text-cyan-400 drop-shadow-[0_0_10px_rgba(0,217,255,0.5)]'>
+          🎮 Arena Viewer Interface
         </h1>
-        <p className="text-center text-gray-400 mb-8 text-sm">
-          Simulate viewer package purchases
-        </p>
 
-        <div className="bg-white/5 border border-white/10 rounded-xl p-5 mb-5">
-          <h3 className="mb-4 text-lg font-semibold">Arena Status</h3>
-          <div className="flex justify-between mb-2">
-            <span className="text-gray-400">Backend:</span>
-            <span className="font-bold" style={{ color: backendColor }}>
+        <div className='bg-white/5 border border-white/10 rounded-xl p-5 mb-5'>
+          <h3 className='mb-4 text-lg font-semibold'>Arena Status</h3>
+          <div className='flex justify-between mb-2'>
+            <span className='text-gray-400'>Backend:</span>
+            <span className='font-bold' style={{ color: backendColor }}>
               {backendStatus}
             </span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Player Wallet:</span>
-            <span className="font-bold text-cyan-400">{displayWallet}</span>
+          <div className='flex justify-between'>
+            <span className='text-gray-400'>Player Wallet:</span>
+            <span className='font-bold text-cyan-400'>{displayWallet}</span>
           </div>
         </div>
 
         <input
-          type="text"
-          className="w-full p-3 bg-white/5 border border-white/20 rounded-lg text-white mb-5 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-          placeholder="Enter player wallet address to test with..."
+          type='text'
+          className='w-full p-3 bg-white/5 border border-white/20 rounded-lg text-white mb-5 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20'
+          placeholder='Enter player wallet address to test with...'
           value={wallet}
           onChange={(e) => setWallet(e.target.value)}
         />
 
-        <div className="space-y-4">
+        <div className='space-y-4'>
           {packages.map((pkg) => (
             <div
               key={pkg.id}
@@ -162,14 +160,16 @@ export default function ViewerTestPage() {
               `}
               onClick={() => sendPackage(pkg.id, pkg.name)}
             >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="text-3xl">{pkg.icon}</div>
-                <div className="text-xl font-bold">{pkg.name}</div>
+              <div className='flex items-center gap-3 mb-2'>
+                <div className='text-3xl'>{pkg.icon}</div>
+                <div className='text-xl font-bold'>{pkg.name}</div>
               </div>
-              <div className="text-gray-400 mb-2 text-sm">{pkg.description}</div>
-              <div className="flex justify-between items-center">
-                <div className="text-yellow-400 font-bold">{pkg.cost}</div>
-                <div className="text-gray-400 text-xs">{pkg.effect}</div>
+              <div className='text-gray-400 mb-2 text-sm'>
+                {pkg.description}
+              </div>
+              <div className='flex justify-between items-center'>
+                <div className='text-yellow-400 font-bold'>{pkg.cost}</div>
+                <div className='text-gray-400 text-xs'>{pkg.effect}</div>
               </div>
             </div>
           ))}
