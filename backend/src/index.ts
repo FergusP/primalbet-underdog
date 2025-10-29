@@ -6,7 +6,9 @@ import WebSocket from 'ws';
 import dotenv from 'dotenv';
 
 import createRouter from './api/routes';
+import arenaRoutes from './routes/arena-routes';
 import { SolanaService } from './services/solana-service';
+import { arenaService } from './services/arena-service';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
 // Load environment variables
@@ -28,6 +30,9 @@ app.use(express.json());
 
 // API Routes - pass solanaService to router
 app.use('/api', createRouter(solanaService));
+
+// Arena Routes
+app.use('/api/arena', arenaRoutes);
 
 // WebSocket for real-time pot updates to frontend clients
 wss.on('connection', (ws) => {
@@ -52,6 +57,22 @@ function broadcastPotUpdate(currentPot: number) {
   const message = JSON.stringify({
     type: 'pot-update',
     currentPot,
+    timestamp: Date.now()
+  });
+
+  wss.clients.forEach(client => {
+    if (client.readyState === 1) { // WebSocket.OPEN
+      client.send(message);
+    }
+  });
+}
+
+// Broadcast arena events to all connected clients
+function broadcastArenaEvent(eventType: string, playerWallet: string, data: any) {
+  const message = JSON.stringify({
+    type: eventType,
+    playerWallet,
+    data,
     timestamp: Date.now()
   });
 
@@ -137,6 +158,51 @@ function connectHeliusWebSocket() {
     setTimeout(connectHeliusWebSocket, 5000);
   });
 }
+
+// Setup Arena Service event handlers to relay to WebSocket clients
+arenaService.onArenaCountdownStarted = (playerWallet, data) => {
+  console.log(`[Arena] Countdown started for ${playerWallet}`);
+  broadcastArenaEvent('arena-countdown-started', playerWallet, data);
+};
+
+arenaService.onCountdownUpdate = (playerWallet, data) => {
+  broadcastArenaEvent('arena-countdown-update', playerWallet, data);
+};
+
+arenaService.onArenaBegins = (playerWallet, data) => {
+  console.log(`[Arena] Arena begins for ${playerWallet}`);
+  broadcastArenaEvent('arena-begins', playerWallet, data);
+};
+
+arenaService.onImmediateItemDrop = (playerWallet, data) => {
+  console.log(`[Arena] Item dropped for ${playerWallet}:`, data);
+  broadcastArenaEvent('arena-item-drop', playerWallet, data);
+};
+
+arenaService.onPlayerBoostActivated = (playerWallet, data) => {
+  console.log(`[Arena] Player boosted for ${playerWallet}:`, data);
+  broadcastArenaEvent('arena-player-boost', playerWallet, data);
+};
+
+arenaService.onPackageDrop = (playerWallet, data) => {
+  console.log(`[Arena] Package drop for ${playerWallet}:`, data);
+  broadcastArenaEvent('arena-package-drop', playerWallet, data);
+};
+
+arenaService.onGameCompleted = (playerWallet, data) => {
+  console.log(`[Arena] Game completed for ${playerWallet}`);
+  broadcastArenaEvent('arena-game-completed', playerWallet, data);
+};
+
+arenaService.onGameStopped = (playerWallet, data) => {
+  console.log(`[Arena] Game stopped for ${playerWallet}`);
+  broadcastArenaEvent('arena-game-stopped', playerWallet, data);
+};
+
+arenaService.onPackageBroadcast = (data) => {
+  console.log(`[Arena] Broadcasting package to all clients:`, data);
+  broadcastArenaEvent('arena-item-drop', data.playerWallet, data);
+};
 
 // Start server
 const PORT = process.env.PORT || 3001;

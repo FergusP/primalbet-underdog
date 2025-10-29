@@ -4,6 +4,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { GameService } from '../../../services/GameService';
+import { backendWebSocket } from '../../../services/backend-websocket';
 import {
   Transaction,
   LAMPORTS_PER_SOL,
@@ -17,6 +18,7 @@ import { GameUIOverlay } from '../scenes/GameUIOverlay';
 import { IntegratedPaymentUI } from '../wallet/IntegratedPaymentUI';
 import { PDADepositModal } from '../wallet/PDADepositModal';
 import { PDAWithdrawModal } from '../wallet/PDAWithdrawModal';
+import { AuthStatusButton } from '../auth/AuthStatusButton';
 // Import UI components
 import { MenuSceneUI } from '../scenes/MenuSceneUI';
 import { CombatSceneUI } from '../scenes/CombatSceneUI';
@@ -65,6 +67,15 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
   // Set mounted state
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Connect to backend WebSocket
+  useEffect(() => {
+    backendWebSocket.connect();
+
+    return () => {
+      backendWebSocket.disconnect();
+    };
   }, []);
 
   // Listen for preload progress
@@ -551,9 +562,10 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
       {/* Wallet reconnection helper */}
       <WalletReconnect />
 
-      {/* Backend status - Top left - Hide during combat and vault scenes */}
+      {/* Backend status & Auth - Top left - Hide during combat and vault scenes */}
       {currentScene !== 'CombatScene' && currentScene !== 'VaultScene' && (
-        <div className="absolute top-4 left-4" style={{ zIndex: 9999 }}>
+        <div className="absolute top-4 left-4 flex flex-col gap-2" style={{ zIndex: 9999 }}>
+          {/* Backend Status */}
           <div className="flex items-center gap-2 bg-black bg-opacity-50 px-3 py-2 rounded-lg">
             <div
               className={`w-2 h-2 rounded-full ${
@@ -568,6 +580,8 @@ export const GameWrapper: React.FC<Props> = ({ className }) => {
               {getStatusText()}
             </span>
           </div>
+          {/* Auth Button */}
+          <AuthStatusButton />
         </div>
       )}
 
