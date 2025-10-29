@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { JackpotDisplay } from '../game/displays/JackpotDisplay';
 import { ForestFightButtonWrapper } from '../game/buttons/ForestFightButtonWrapper';
 import { MonsterLabel } from '../game/displays/MonsterLabel';
+import { AuthStatusButton } from '../auth/AuthStatusButton';
 import { ForestDesignSystem } from '../../styles/forestDesignSystem';
 
 interface GameState {
@@ -169,16 +170,55 @@ export const GameUIOverlay: React.FC<GameUIOverlayProps> = ({
 
 
       {/* Fight Button - Bottom center */}
-      <div className="absolute left-1/2 transform -translate-x-1/2 pointer-events-auto" 
-           style={{ bottom: '120px' }}>
-        <ForestFightButtonWrapper 
-          onClick={handleFightClick} 
+      <div className="absolute left-1/2 transform -translate-x-1/2 pointer-events-auto"
+           style={{ bottom: 'clamp(105px, 19.44vh, 140px)' }}> {/* 140px @ 720px = 19.44vh */}
+        <ForestFightButtonWrapper
+          onClick={handleFightClick}
           disabled={isFightButtonDisabled || !isPaymentOptionsReady}
           isLoading={isLoading || isFightButtonDisabled}
           paymentMethod={selectedPaymentMethod}
           pdaBalance={pdaBalance / 1e9} // Convert lamports to SOL
           entryFee={entryFee / 1e9} // Convert lamports to SOL
         />
+      </div>
+
+      {/* Login Button - Below Fight Button */}
+      <div className="absolute left-1/2 transform -translate-x-1/2 pointer-events-auto"
+           style={{ bottom: 'clamp(60px, 11.11vh, 80px)' }}> {/* 80px @ 720px = 11.11vh */}
+        <AuthStatusButton />
+      </div>
+
+      {/* Viewer Button - Below Login Button */}
+      <div className="absolute left-1/2 transform -translate-x-1/2 pointer-events-auto"
+           style={{ bottom: 'clamp(20px, 4.17vh, 30px)' }}> {/* 30px @ 720px = 4.17vh */}
+        <button
+          onClick={() => window.open('/viewer', '_blank')}
+          style={{
+            fontFamily: ForestDesignSystem.typography.display,
+            fontSize: '0.9rem',
+            fontWeight: 700,
+            letterSpacing: ForestDesignSystem.typography.letterSpacing.wide,
+            padding: '8px 20px',
+            background: `linear-gradient(135deg, ${ForestDesignSystem.colors.mossGreen} 0%, ${ForestDesignSystem.colors.emeraldGlow} 100%)`,
+            border: `2px solid ${ForestDesignSystem.colors.goldAntique}`,
+            borderRadius: '8px',
+            color: ForestDesignSystem.colors.textLight,
+            cursor: 'pointer',
+            textTransform: 'uppercase',
+            boxShadow: `${ForestDesignSystem.shadows.raised}, 0 0 10px rgba(80, 200, 120, 0.3)`,
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.05)';
+            e.currentTarget.style.boxShadow = `${ForestDesignSystem.shadows.deep}, 0 0 20px rgba(80, 200, 120, 0.5)`;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.boxShadow = `${ForestDesignSystem.shadows.raised}, 0 0 10px rgba(80, 200, 120, 0.3)`;
+          }}
+        >
+          🎮 Open Viewer Interface
+        </button>
       </div>
 
       {/* Dynamic Labels */}

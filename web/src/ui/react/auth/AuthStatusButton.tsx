@@ -37,10 +37,31 @@ export function AuthStatusButton() {
   return (
     <button
       onClick={() => router.push('/auth/login')}
-      className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg border border-gray-600 transition flex items-center gap-2"
+      style={{
+        fontFamily: 'inherit',
+        fontSize: '0.9rem',
+        fontWeight: 700,
+        letterSpacing: '0.05em',
+        padding: '8px 20px',
+        background: 'linear-gradient(135deg, #4a5d23 0%, #50c878 100%)',
+        border: '2px solid #d4af37',
+        borderRadius: '8px',
+        color: '#f5f5dc',
+        cursor: 'pointer',
+        textTransform: 'uppercase',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3), 0 0 10px rgba(80, 200, 120, 0.3)',
+        transition: 'all 0.2s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'scale(1.05)';
+        e.currentTarget.style.boxShadow = '0 6px 8px rgba(0, 0, 0, 0.4), 0 0 20px rgba(80, 200, 120, 0.5)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'scale(1)';
+        e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.3), 0 0 10px rgba(80, 200, 120, 0.3)';
+      }}
     >
-      <span className="text-gray-300">Login</span>
-      <span className="text-xs text-gray-500">(Optional)</span>
+      🔐 Login (Optional)
     </button>
   );
 }

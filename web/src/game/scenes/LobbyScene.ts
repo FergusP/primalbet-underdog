@@ -1047,8 +1047,8 @@ export class LobbyScene extends BaseScene {
       });
     }
     
-    // Create a separate toggle hint below the center bottom (where battle button is)
-    const toggleHintText = this.add.text(width/2, height - 60, 
+    // Create a separate toggle hint above the battle button
+    const toggleHintText = this.add.text(width/2, height - 280,
       'Press [G] for controls guide', {
       fontSize: '12px',
       fontFamily: 'Arial, sans-serif',
