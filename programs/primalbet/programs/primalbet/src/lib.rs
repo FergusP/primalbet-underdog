@@ -13,7 +13,7 @@ const TREASURY_WALLET: &str = "EsRy4vmaHbnj3kfj2X9rpRRgbKcA6a9DtdXrBddnNoVi";
 const BACKEND_SIGNER: &str = "2pde6PGeMLbXhFkLWzEhpSGFqkhU9eica8RjbrEkwvb5";
 
 #[program]
-pub mod aurelius {
+pub mod primalbet {
     use super::*;
 
     // t combat - pay entry fee and add to pot

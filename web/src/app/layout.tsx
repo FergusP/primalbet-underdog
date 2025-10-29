@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "@/ui/styles/wallet-button.css";
 import { PrimalBetWalletProvider } from "@/ui/react/wallet/WalletProvider";
+import { VorldAuthProvider } from "@/contexts/VorldAuthContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,9 +48,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-900 text-white overflow-hidden`}
       >
-        <PrimalBetWalletProvider>
-          {children}
-        </PrimalBetWalletProvider>
+        <VorldAuthProvider>
+          <PrimalBetWalletProvider>
+            {children}
+          </PrimalBetWalletProvider>
+        </VorldAuthProvider>
       </body>
     </html>
   );

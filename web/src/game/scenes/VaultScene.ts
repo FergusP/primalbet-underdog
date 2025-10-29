@@ -1,5 +1,7 @@
 // Vault Scene - Attempt to crack the treasure vault
 import { BaseScene } from './BaseScene';
+import { ArenaIntegrationService } from '../../services/arena-integration';
+import { EVENTS } from '../../config/arena-config';
 
 export class VaultScene extends BaseScene {
   private victory: boolean = false;
@@ -1032,6 +1034,24 @@ export class VaultScene extends BaseScene {
   private async vaultSuccess() {
     const { width, height } = this.cameras.main;
 
+    // Emit arena event for vault cracked
+    if (this.walletAddress) {
+      ArenaIntegrationService.emitGameEvent(
+        this.walletAddress,
+        EVENTS.VAULT_CRACKED.id,
+        {
+          prizeAmount: this.prizeAmount,
+          monsterDefeated: this.monsterDefeated,
+        }
+      ).then((result) => {
+        if (result.success) {
+          console.log('[Vault] Vault cracked event emitted');
+        }
+      }).catch((error) => {
+        console.error('[Vault] Failed to emit vault cracked event:', error);
+      });
+    }
+
     // Golden flash effect
     this.cameras.main.flash(500, 255, 215, 0);
     
@@ -1174,6 +1194,23 @@ export class VaultScene extends BaseScene {
 
   private async vaultEmpty() {
     const { width, height } = this.cameras.main;
+
+    // Emit arena event for vault failed
+    if (this.walletAddress) {
+      ArenaIntegrationService.emitGameEvent(
+        this.walletAddress,
+        EVENTS.VAULT_FAILED_ATTEMPT.id,
+        {
+          monsterDefeated: this.monsterDefeated,
+        }
+      ).then((result) => {
+        if (result.success) {
+          console.log('[Vault] Vault failed event emitted');
+        }
+      }).catch((error) => {
+        console.error('[Vault] Failed to emit vault failed event:', error);
+      });
+    }
 
     // Spinner fades away in defeat
     if (this.spinnerContainer) {

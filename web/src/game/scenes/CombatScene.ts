@@ -4,6 +4,9 @@ import { Monster } from '../../types';
 import { SpearRechargeIndicatorHTML } from '../../ui/phaser/SpearRechargeIndicatorHTML';
 import { SkeletonEnemy } from '../sprites/SkeletonEnemy';
 import { SlimeEnemy } from '../sprites/SlimeEnemy';
+import { ArenaIntegrationService } from '../../services/arena-integration';
+import { backendWebSocket } from '../../services/backend-websocket';
+import { PACKAGES, EVENTS } from '../../config/arena-config';
 
 export class CombatScene extends BaseScene {
   private player!: Phaser.GameObjects.Sprite;
@@ -96,6 +99,12 @@ export class CombatScene extends BaseScene {
   private shieldStacks: number = 0;
   private shieldOrbs: Phaser.GameObjects.Graphics[] = [];
   private shieldTimer?: Phaser.Time.TimerEvent;
+
+  // Arena Arcade Game integration
+  private damageBoostMultiplier: number = 1.0;
+  private damageBoostEndTime: number = 0;
+  private arenaItemDropHandler?: (data: any) => void;
+  private playerWalletAddress?: string;
 
   // Enemy spawn system
   private skeletons!: Phaser.GameObjects.Group;
@@ -213,6 +222,42 @@ export class CombatScene extends BaseScene {
     this.dashCooldown = 0;
     this.slamCooldown = 0;
     this.isDashing = false;
+
+    // Reset arena effects
+    this.damageBoostMultiplier = 1.0;
+    this.damageBoostEndTime = 0;
+
+    // Store wallet address for arena events
+    this.playerWalletAddress = data.walletAddress;
+
+    // Initialize arena if user is authenticated
+    if (data.walletAddress) {
+      ArenaIntegrationService.initializeArena(data.walletAddress)
+        .then((result) => {
+          if (result.success) {
+            console.log('[Combat] Arena initialized:', result.gameId);
+
+            // Emit combat started event
+            ArenaIntegrationService.emitGameEvent(
+              data.walletAddress!,
+              EVENTS.COMBAT_STARTED.id,
+              {
+                monsterType: this.monsterData.tier.name,
+                monsterHealth: this.monsterMaxHealth,
+              }
+            ).then((emitResult) => {
+              if (emitResult.success) {
+                console.log('[Combat] Combat started event emitted');
+              }
+            });
+          } else {
+            console.log('[Combat] Arena initialization skipped:', result.error);
+          }
+        })
+        .catch((error) => {
+          console.error('[Combat] Arena init error:', error);
+        });
+    }
   }
 
   protected createScene() {
@@ -259,6 +304,9 @@ export class CombatScene extends BaseScene {
       window.removeEventListener('combat-ui-ready', handleUIReady);
       sendMonsterInfo();
     });
+
+    // Setup arena event listeners
+    this.setupArenaEventListeners();
 
     const { width, height } = this.cameras.main;
 
@@ -881,14 +929,15 @@ export class CombatScene extends BaseScene {
       );
       // Only damage if monster is nearby but not the primary target (avoid double damage)
       if (monsterDist > 10 && monsterDist <= range) {
-        // Deal explosion damage to monster
-        this.monsterHealth = Math.max(0, this.monsterHealth - damage);
+        // Deal explosion damage to monster (with arena damage boost if active)
+        const finalDamage = damage * this.damageBoostMultiplier;
+        this.monsterHealth = Math.max(0, this.monsterHealth - finalDamage);
         
         // Show damage number
         this.showDamageNumber(
           this.monster.x,
           this.monster.y - 40,
-          damage,
+          finalDamage,
           0xff8800
         );
         
@@ -1781,12 +1830,14 @@ export class CombatScene extends BaseScene {
       }
     }
 
-    this.monsterHealth = Math.max(0, this.monsterHealth - damage);
+    // Apply arena damage boost if active
+    const finalDamage = damage * this.damageBoostMultiplier;
+    this.monsterHealth = Math.max(0, this.monsterHealth - finalDamage);
 
     this.showDamageNumber(
       this.monster.x,
       this.monster.y - 40,
-      damage,
+      finalDamage,
       0xff4444,
       isCrit
     );
@@ -2487,12 +2538,15 @@ export class CombatScene extends BaseScene {
             }
           }
 
-          this.monsterHealth = Math.max(0, this.monsterHealth - damage);
+          // Apply arena damage boost if active
+          const finalDamage = damage * this.damageBoostMultiplier;
+          this.monsterHealth = Math.max(0, this.monsterHealth - finalDamage);
 
           console.log(
             'Spear damage dealt:',
-            damage,
+            finalDamage,
             isCrit ? '(CRITICAL!)' : '',
+            this.damageBoostMultiplier > 1 ? '(BOOSTED!)' : '',
             'New HP:',
             this.monsterHealth
           );
@@ -2501,7 +2555,7 @@ export class CombatScene extends BaseScene {
           this.showDamageNumber(
             this.monster.x,
             this.monster.y - 40,
-            damage,
+            finalDamage,
             0xffaa00,
             isCrit
           );
@@ -3076,6 +3130,29 @@ export class CombatScene extends BaseScene {
         },
       })
     );
+
+    // Emit arena event for victory/defeat
+    if (this.playerWalletAddress) {
+      const eventId = victory ? EVENTS.MONSTER_DEFEATED.id : EVENTS.PLAYER_DIED.id;
+      const eventData = {
+        monsterType: this.monsterData?.tier.name || 'unknown',
+        monsterHealth: this.monsterHealth,
+        playerHealth: this.playerHealth,
+        timeElapsed: Date.now(), // Could track actual time if needed
+      };
+
+      ArenaIntegrationService.emitGameEvent(
+        this.playerWalletAddress,
+        eventId,
+        eventData
+      ).then((result) => {
+        if (result.success) {
+          console.log(`[Combat] ${victory ? 'Monster defeated' : 'Player died'} event emitted`);
+        }
+      }).catch((error) => {
+        console.error('[Combat] Failed to emit game over event:', error);
+      });
+    }
 
     if (victory) {
       this.createVictoryAnimation(width, height);
@@ -4337,12 +4414,13 @@ export class CombatScene extends BaseScene {
               }
             }
 
-            // Apply normal damage if not evolving
-            this.monsterHealth = Math.max(0, this.monsterHealth - spinDamage);
+            // Apply normal damage if not evolving (with arena boost if active)
+            const finalSpinDamage = spinDamage * this.damageBoostMultiplier;
+            this.monsterHealth = Math.max(0, this.monsterHealth - finalSpinDamage);
             this.showDamageNumber(
               enemy.target.x,
               enemy.target.y - 40,
-              spinDamage,
+              finalSpinDamage,
               0xff00ff,
               true
             );
@@ -4565,12 +4643,13 @@ export class CombatScene extends BaseScene {
             }
           }
 
-          // Apply normal damage if not evolving
-          this.monsterHealth = Math.max(0, this.monsterHealth - damage);
+          // Apply normal damage if not evolving (with arena boost if active)
+          const finalDamage = damage * this.damageBoostMultiplier;
+          this.monsterHealth = Math.max(0, this.monsterHealth - finalDamage);
           this.showDamageNumber(
             enemy.target.x,
             enemy.target.y - 40,
-            damage,
+            finalDamage,
             0xffffff,
             false
           );
@@ -4705,6 +4784,213 @@ export class CombatScene extends BaseScene {
       // First tap
       this.lastDashDirection = direction;
       this.lastDashTime = currentTime;
+    }
+  }
+
+  /**
+   * Setup arena event listeners for viewer interaction
+   */
+  setupArenaEventListeners() {
+    // Clean up any existing handler
+    if (this.arenaItemDropHandler) {
+      backendWebSocket.off('arena-item-drop', this.arenaItemDropHandler);
+    }
+
+    // Create and register new handler
+    this.arenaItemDropHandler = (data: any) => {
+      console.log('[Combat] Arena item drop:', data);
+      this.handleArenaItemDrop(data);
+    };
+
+    backendWebSocket.on('arena-item-drop', this.arenaItemDropHandler);
+  }
+
+  /**
+   * Handle arena item drop from viewer
+   */
+  handleArenaItemDrop(data: any) {
+    const { itemId, itemName } = data;
+
+    // Map item IDs to effects
+    if (itemId === PACKAGES.HEALTH_POTION.id) {
+      this.applyHealthPotion();
+      this.showArenaNotification(`💚 ${itemName}! +20 HP`, 0x00ff00);
+    } else if (itemId === PACKAGES.DAMAGE_BOOST.id) {
+      this.applyDamageBoost();
+      this.showArenaNotification(`⚔️ ${itemName}! 2x Damage`, 0xff6600);
+    } else if (itemId === PACKAGES.MONSTER_HEAL.id) {
+      this.applyMonsterHeal();
+      this.showArenaNotification(`🩹 ${itemName}! Monster +50 HP`, 0xff0000);
+    }
+  }
+
+  /**
+   * Apply Health Potion effect
+   */
+  applyHealthPotion() {
+    const healAmount = 20;
+    const oldHealth = this.playerHealth;
+
+    this.playerHealth = Math.min(
+      this.playerMaxHealth,
+      this.playerHealth + healAmount
+    );
+
+    const actualHeal = this.playerHealth - oldHealth;
+
+    // Show healing effect
+    this.showDamageNumber(
+      this.player.x,
+      this.player.y - 40,
+      actualHeal,
+      0x00ff00
+    );
+
+    // Green flash on player
+    this.player.setTint(0x00ff00);
+    this.time.delayedCall(200, () => {
+      this.player.clearTint();
+    });
+
+    // Emit updated state
+    this.emitGameState();
+
+    console.log(`[Combat] Health Potion applied: +${actualHeal} HP`);
+  }
+
+  /**
+   * Apply Damage Boost effect
+   */
+  applyDamageBoost() {
+    const duration = 10000; // 10 seconds
+    this.damageBoostMultiplier = 2.0;
+    this.damageBoostEndTime = this.time.now + duration;
+
+    // Orange glow effect on player
+    this.player.setTint(0xff6600);
+
+    // Remove tint when boost ends
+    this.time.delayedCall(duration, () => {
+      this.player.clearTint();
+      this.damageBoostMultiplier = 1.0;
+      console.log('[Combat] Damage Boost expired');
+    });
+
+    console.log('[Combat] Damage Boost applied: 2x damage for 10s');
+  }
+
+  /**
+   * Apply Monster Heal effect
+   */
+  applyMonsterHeal() {
+    const healAmount = 50;
+    const oldHealth = this.monsterHealth;
+
+    this.monsterHealth = Math.min(
+      this.monsterMaxHealth,
+      this.monsterHealth + healAmount
+    );
+
+    const actualHeal = this.monsterHealth - oldHealth;
+
+    // Show healing on monster
+    this.showDamageNumber(
+      this.monster.x,
+      this.monster.y - 40,
+      actualHeal,
+      0x00ff00
+    );
+
+    // Green flash on monster
+    this.monster.setTint(0x00ff00);
+    this.time.delayedCall(200, () => {
+      this.monster.setTint(0xffcccc); // Return to normal red tint
+    });
+
+    // Emit updated state
+    this.emitGameState();
+
+    console.log(`[Combat] Monster Heal applied: +${actualHeal} HP`);
+  }
+
+  /**
+   * Show arena notification as toast
+   */
+  showArenaNotification(message: string, color: number) {
+    const { width, height } = this.cameras.main;
+
+    // Create notification text at top center
+    const notification = this.add.text(
+      width / 2,
+      height * 0.15,
+      message,
+      {
+        fontSize: '28px',
+        fontFamily: 'Arial Black',
+        color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 4,
+        align: 'center',
+      }
+    );
+    notification.setOrigin(0.5);
+    notification.setDepth(1000); // On top of everything
+    notification.setAlpha(0);
+
+    // Animate in
+    this.tweens.add({
+      targets: notification,
+      alpha: 1,
+      y: height * 0.12,
+      duration: 300,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        // Hold for 2 seconds
+        this.time.delayedCall(2000, () => {
+          // Animate out
+          this.tweens.add({
+            targets: notification,
+            alpha: 0,
+            y: height * 0.09,
+            duration: 300,
+            ease: 'Power2',
+            onComplete: () => {
+              notification.destroy();
+            },
+          });
+        });
+      },
+    });
+
+    // Particle effect
+    this.createArenaNotificationParticles(width / 2, height * 0.15, color);
+  }
+
+  /**
+   * Create particles for arena notification
+   */
+  createArenaNotificationParticles(x: number, y: number, color: number) {
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const distance = 40;
+
+      const particle = this.add.graphics();
+      particle.fillStyle(color);
+      particle.fillCircle(0, 0, 4);
+      particle.setPosition(x, y);
+      particle.setDepth(999);
+
+      this.tweens.add({
+        targets: particle,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
+        alpha: 0,
+        duration: 500,
+        ease: 'Power2',
+        onComplete: () => {
+          particle.destroy();
+        },
+      });
     }
   }
 }
