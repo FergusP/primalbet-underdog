@@ -25,7 +25,7 @@ export class ArenaIntegrationService {
 
       // Get access token from authenticated session
       const profileResponse = await VorldAuthService.getProfile();
-      if (!profileResponse.success || !profileResponse.user) {
+      if (!profileResponse.success || !profileResponse.data?.profile) {
         console.log('[Arena] Failed to get profile, skipping arena initialization');
         return { success: false, error: 'Not authenticated' };
       }

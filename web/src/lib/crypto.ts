@@ -16,7 +16,7 @@ export async function sha256(password: string): Promise<string> {
   const data = encoder.encode(password);
 
   // Hash using Web Crypto API
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data as BufferSource);
 
   // Convert ArrayBuffer to hex string
   const hashArray = Array.from(new Uint8Array(hashBuffer));
