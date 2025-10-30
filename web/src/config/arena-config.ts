@@ -90,6 +90,36 @@ export const PACKAGES = {
     description: 'Heals the monster (troll mode)',
     icon: '💚',
   },
+  BLACKOUT_CURSE: {
+    id: '69031e9be15317b2fd1c05cc',
+    name: 'Blackout Curse',
+    targetActor: ACTORS.PLAYER.id,
+    effect: 'screen_blackout',
+    value: 3,
+    cost: 100,
+    description: 'Plunge the player into darkness',
+    icon: '💀',
+  },
+  DRUNK_VISION: {
+    id: '69031ec8e15317b2fd1c05dd',
+    name: 'Drunk Vision',
+    targetActor: ACTORS.PLAYER.id,
+    effect: 'screen_drunk',
+    value: 3,
+    cost: 100,
+    description: 'Distort the player\'s vision',
+    icon: '🍺',
+  },
+  STROBE_FLASH: {
+    id: '69031ef6e15317b2fd1c05ef',
+    name: 'Strobe Flash',
+    targetActor: ACTORS.PLAYER.id,
+    effect: 'screen_strobe',
+    value: 3,
+    cost: 100,
+    description: 'Blind them with rapid flashes',
+    icon: '⚡',
+  },
 } as const;
 
 // Package metadata for easy lookup
@@ -97,6 +127,9 @@ export const PACKAGE_BY_ID = {
   [PACKAGES.HEALTH_POTION.id]: PACKAGES.HEALTH_POTION,
   [PACKAGES.DAMAGE_BOOST.id]: PACKAGES.DAMAGE_BOOST,
   [PACKAGES.MONSTER_HEAL.id]: PACKAGES.MONSTER_HEAL,
+  [PACKAGES.BLACKOUT_CURSE.id]: PACKAGES.BLACKOUT_CURSE,
+  [PACKAGES.DRUNK_VISION.id]: PACKAGES.DRUNK_VISION,
+  [PACKAGES.STROBE_FLASH.id]: PACKAGES.STROBE_FLASH,
 } as const;
 
 // Helper functions

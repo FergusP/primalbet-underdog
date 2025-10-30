@@ -4821,6 +4821,15 @@ export class CombatScene extends BaseScene {
     } else if (itemId === PACKAGES.MONSTER_HEAL.id) {
       this.applyMonsterHeal();
       this.showArenaNotification(`🩹 ${itemName}! Monster +50 HP`, 0xff0000);
+    } else if (itemId === PACKAGES.BLACKOUT_CURSE.id) {
+      this.applyBlackoutEffect();
+      this.showArenaNotification(`💀 ${itemName}! Can't see!`, 0x000000);
+    } else if (itemId === PACKAGES.DRUNK_VISION.id) {
+      this.applyDrunkEffect();
+      this.showArenaNotification(`🍺 ${itemName}! Vision impaired!`, 0xffaa00);
+    } else if (itemId === PACKAGES.STROBE_FLASH.id) {
+      this.applyStrobeEffect();
+      this.showArenaNotification(`⚡ ${itemName}! Blinded!`, 0xffffff);
     }
   }
 
@@ -4831,12 +4840,16 @@ export class CombatScene extends BaseScene {
     const healAmount = 20;
     const oldHealth = this.playerHealth;
 
+    console.log(`[Combat] BEFORE Health Potion - playerHealth: ${this.playerHealth}, playerMaxHealth: ${this.playerMaxHealth}`);
+
     this.playerHealth = Math.min(
       this.playerMaxHealth,
       this.playerHealth + healAmount
     );
 
     const actualHeal = this.playerHealth - oldHealth;
+
+    console.log(`[Combat] AFTER Health Potion - playerHealth: ${this.playerHealth}, actualHeal: ${actualHeal}`);
 
     // Show healing effect
     this.showDamageNumber(
@@ -4855,7 +4868,7 @@ export class CombatScene extends BaseScene {
     // Emit updated state
     this.emitGameState();
 
-    console.log(`[Combat] Health Potion applied: +${actualHeal} HP`);
+    console.log(`[Combat] Health Potion applied: +${actualHeal} HP, New Health: ${this.playerHealth}/${this.playerMaxHealth}`);
   }
 
   /**
@@ -4886,12 +4899,16 @@ export class CombatScene extends BaseScene {
     const healAmount = 50;
     const oldHealth = this.monsterHealth;
 
+    console.log(`[Combat] BEFORE Monster Heal - monsterHealth: ${this.monsterHealth}, monsterMaxHealth: ${this.monsterMaxHealth}`);
+
     this.monsterHealth = Math.min(
       this.monsterMaxHealth,
       this.monsterHealth + healAmount
     );
 
     const actualHeal = this.monsterHealth - oldHealth;
+
+    console.log(`[Combat] AFTER Monster Heal - monsterHealth: ${this.monsterHealth}, actualHeal: ${actualHeal}`);
 
     // Show healing on monster
     this.showDamageNumber(
@@ -4910,7 +4927,101 @@ export class CombatScene extends BaseScene {
     // Emit updated state
     this.emitGameState();
 
-    console.log(`[Combat] Monster Heal applied: +${actualHeal} HP`);
+    console.log(`[Combat] Monster Heal applied: +${actualHeal} HP, New Health: ${this.monsterHealth}/${this.monsterMaxHealth}`);
+  }
+
+  /**
+   * Apply Blackout Curse screen effect
+   */
+  applyBlackoutEffect() {
+    const duration = 3000; // 3 seconds
+
+    // Create blackout overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'blackout-effect';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: black;
+      z-index: 9999;
+      pointer-events: none;
+      animation: fadeIn 0.5s ease-in;
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Remove after duration
+    this.time.delayedCall(duration, () => {
+      overlay.style.animation = 'fadeOut 0.5s ease-out';
+      setTimeout(() => overlay.remove(), 500);
+    });
+
+    console.log('[Combat] Blackout Curse applied for 3 seconds');
+  }
+
+  /**
+   * Apply Drunk Vision screen effect
+   */
+  applyDrunkEffect() {
+    const duration = 3000; // 3 seconds
+
+    // Create drunk overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'drunk-effect';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      backdrop-filter: blur(8px);
+      z-index: 9998;
+      pointer-events: none;
+      animation: sway 2s ease-in-out infinite;
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Remove after duration
+    this.time.delayedCall(duration, () => {
+      overlay.remove();
+    });
+
+    console.log('[Combat] Drunk Vision applied for 3 seconds');
+  }
+
+  /**
+   * Apply Strobe Flash screen effect
+   */
+  applyStrobeEffect() {
+    const duration = 3000; // 3 seconds
+
+    // Create strobe overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'strobe-effect';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: white;
+      z-index: 9999;
+      pointer-events: none;
+      animation: strobe 0.2s linear infinite;
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Remove after duration
+    this.time.delayedCall(duration, () => {
+      overlay.remove();
+    });
+
+    console.log('[Combat] Strobe Flash applied for 3 seconds');
   }
 
   /**
